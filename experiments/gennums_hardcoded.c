@@ -9,8 +9,8 @@ int main(void) {
 	buffer_wait_for_monitor(shm);
 	printf("Got monitor...\n");
 	assert(shm);
-	for (int i = 0; i < 1000000; ++i) {
-		printf("%d\n", i);
+	for (int i = 0; i < 53; ++i) {
 		buffer_write(shm, &i, sizeof(i));
 	}
+	destroy_shared_buffer(shm);
 }

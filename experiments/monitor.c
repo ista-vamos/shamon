@@ -16,14 +16,21 @@ int main(void) {
 
 	buffer_register_sync_monitor(shm);
 	unsigned char *data = buffer_get_beginning(local);
-	while (1) {
+	union IT {
+		int *i;
+		unsigned char *raw;
+	} ptr;
+	while (buffer_is_ready(shm)) {
 		printf("--- read ---\n");
 		size_t size = buffer_read(shm, local);
-		for (int *a = (int*)data, *end = (int*)(data + size); a < end; ++a) {
-			printf("%d\n", *a);
+		ptr.raw = data;
+		for (; ptr.raw - data < size; ++ptr.i) {
+			printf("%d\n", *ptr.i);
 		}
+		fflush(stdout);
 	}
 
 	free(local);
-	release_shared_buffer(shm);
+	// FIXME: we do not have the right filedescr.
+	//release_shared_buffer(shm);
 }

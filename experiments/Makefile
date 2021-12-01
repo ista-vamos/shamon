@@ -1,5 +1,5 @@
 CPPFLAGS=-I..
-CFLAGS=-g
+CFLAGS=-g -fsanitize=address,undefined
 
 all: monitor gennums_hardcoded
 
