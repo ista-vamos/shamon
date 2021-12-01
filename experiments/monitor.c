@@ -6,8 +6,8 @@
 
 int main(void) {
 	struct buffer *shm = get_shared_buffer();
-	assert(shm);
-	void *local = get_local_buffer(shm);
+	assert(shm && "Failed getting shared buffer");
+	struct buffer *local = get_local_buffer(shm);
 	if (!local) {
 		release_shared_buffer(shm);
 		fprintf(stderr, "Out of memory");
@@ -15,8 +15,13 @@ int main(void) {
 	}
 
 	buffer_register_sync_monitor(shm);
+	unsigned char *data = buffer_get_beginning(local);
 	while (1) {
-		size_t size = buffer_sync(shm, local);
+		printf("--- read ---\n");
+		size_t size = buffer_read(shm, local);
+		for (int *a = (int*)data, *end = (int*)(data + size); a < end; ++a) {
+			printf("%d\n", *a);
+		}
 	}
 
 	free(local);
