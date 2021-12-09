@@ -4,6 +4,8 @@
 #include "monitor.h"
 #include "shm.h"
 
+int isprime(int);
+
 int main(void) {
 	struct buffer *shm = get_shared_buffer();
 	assert(shm && "Failed getting shared buffer");
@@ -17,18 +19,21 @@ int main(void) {
 	buffer_register_sync_monitor(shm);
 	unsigned char *data = buffer_get_beginning(local);
 	union IT {
-		int *i;
+		unsigned *i;
 		unsigned char *raw;
 	} ptr;
+	size_t n = 0;
 	while (buffer_is_ready(shm)) {
-		printf("--- read ---\n");
 		size_t size = buffer_read(shm, local);
 		ptr.raw = data;
 		for (; ptr.raw - data < size; ++ptr.i) {
-			printf("%d\n", *ptr.i);
+			if (!isprime(*ptr.i)) {
+				fprintf(stderr, "Is not prime: %u\n", *ptr.i);
+			}
 		}
-		fflush(stdout);
 	}
+
+	//printf("Number of primes: %lu\n", n);
 
 	free(local);
 	// FIXME: we do not have the right filedescr.
