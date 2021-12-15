@@ -3,6 +3,7 @@
 #include <assert.h>
 #include "monitor.h"
 #include "shm.h"
+#include "drfun/events.h"
 
 int isprime(int);
 
@@ -19,16 +20,33 @@ int main(void) {
 	buffer_register_sync_monitor(shm);
 	unsigned char *data = buffer_get_beginning(local);
 	union IT {
+		size_t *fun_off;
 		unsigned *i;
 		unsigned char *raw;
 	} ptr;
-	size_t n = 0;
+	unsigned short n = 0;
+	struct call_event_1i ev;
 	while (buffer_is_ready(shm)) {
 		size_t size = buffer_read(shm, local);
+		printf("read %lu bytes\n", size);
 		ptr.raw = data;
-		for (; ptr.raw - data < size; ++ptr.i) {
-			if (!isprime(*ptr.i)) {
-				fprintf(stderr, "Is not prime: %u\n", *ptr.i);
+		for (; ptr.raw - data < size;) {
+			if (n == 0) {
+				ev.addr = *ptr.fun_off;
+				++ptr.fun_off;
+				n += sizeof(size_t);
+			} else {
+				assert(n == sizeof(size_t));
+				ev.argument = *ptr.i;
+				++ptr.i;
+				n = 0;
+
+				// we've got all
+				printf("fun: %lu\n", ev.addr);
+				printf("arg0: %u\n", ev.argument);
+				if (!isprime(ev.argument)) {
+					printf("Not a prime: %u\n");
+				}
 			}
 		}
 	}

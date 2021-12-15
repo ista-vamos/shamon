@@ -1,26 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <time.h>
 #include "shm.h"
 #include "client.h"
 
-int isprime(int);
+int  __attribute__((noinline)) isprime(int p) {
+	printf("prime: %u\n", p);
+	return 1;
+}
 
 #define NUM 300000
 
-int main(void) {
-#ifdef INSTR
-	struct buffer *shm = initialize_shared_buffer();
-	printf("Waiting for monitor...\n");
-	buffer_wait_for_monitor(shm);
-	printf("Got monitor...\n");
-	assert(shm);
-#endif // INSTR
 
+int main(void) {
+	struct timespec begin, end;
 	unsigned primes[NUM];
 	unsigned primes_num = 0;
 	unsigned cur = 2;
 	unsigned n = 0;
+	if (clock_gettime(CLOCK_MONOTONIC, &begin) == -1)
+		perror("clock_gettime");
 	while (n++ < NUM) {
 		int prime = 1;
 		for (unsigned i = 0; i < primes_num; ++i) {
@@ -29,18 +29,19 @@ int main(void) {
 		}
 		if (prime) {
 			primes[primes_num++] = cur;
-			printf("prime: %u\n", cur);
-#ifdef INSTR
-			buffer_write(shm, &cur, sizeof(cur));
-#else
+			isprime(cur);
+#if 0
 			if (!isprime(cur)) {
 				fprintf(stderr, "Not a prime: %u\n", cur);
 			}
-#endif // INSTR
+#endif
 		}
 		++cur;
 	}
-#ifdef INSTR
-	destroy_shared_buffer(shm);
-#endif // INSTR
+	if (clock_gettime(CLOCK_MONOTONIC, &end) == -1)
+		perror("clock_gettime");
+	long seconds = end.tv_sec - begin.tv_sec;
+	long nanoseconds = end.tv_nsec - begin.tv_nsec;
+	double elapsed = seconds + nanoseconds*1e-9;
+	printf("Time: %lf seconds.\n", elapsed);
 }
