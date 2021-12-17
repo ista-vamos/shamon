@@ -2,6 +2,7 @@
 #include "common.h"
 
 Account_list * stdGetAccounts(User * self);
+Account * stdGetAccount(User * self, uint64_t number);
 
 void stdDeposit(Account* self, int64_t amount)
 {
@@ -36,7 +37,8 @@ int stdTransfer(Account* self, Account* other, int64_t amount)
 }
 
 static User_ops stduserops = {
-	.getAccounts = &stdGetAccounts
+	.getAccounts = &stdGetAccounts,
+	.getAccount = &stdGetAccount
 };
 
 static Account_ops stdaccountops = {
@@ -164,6 +166,19 @@ Account_list * stdGetAccounts(User * self)
 	else if(self==&seconduser)
 	{
 		return acclst2;
+	}
+	return NULL;
+}
+Account * stdGetAccount(User * self, uint64_t number)
+{
+	Account_list *current=self->ops->getAccounts(self);
+	while(current!=NULL)
+	{
+		if(current->element->number==number)
+		{
+			return current->element;
+		}
+		current=current->next;
 	}
 	return NULL;
 }

@@ -1,3 +1,4 @@
+#pragma once
 #include <stdint.h>
 
 #define TXTYPE_DEPOSIT 1
@@ -29,6 +30,7 @@ struct User;
 
 typedef struct User_ops {
 	Account_list * (*getAccounts)(struct User * self);
+	Account * (*getAccount)(struct User * self, uint64_t number);
 } User_ops;
 
 typedef struct User {

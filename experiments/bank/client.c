@@ -1,3 +1,8 @@
+#ifndef CLIENTTYPE
+#define CLIENTTYPE 1
+#endif
+
+#if CLIENTTYPE==1
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -337,3 +342,4 @@ int main(int argc, char **args)
 		}
 	}
 }
+#endif
