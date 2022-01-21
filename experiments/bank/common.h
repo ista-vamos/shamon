@@ -4,6 +4,16 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#ifdef SHM_DOMONITOR_WAIT
+#define SHM_DOMONITOR
+#include "../../fastbuf/shm_monitored.h"
+#define SHM_MONFUN(...) push_data_wait(__VA_ARGS__)
+#endif
+#ifdef SHM_DOMONITOR_NOWAIT
+#define SHM_DOMONITOR
+#include "../../fastbuf/shm_monitored.h"
+#define SHM_MONFUN(...) push_data_nowait(__VA_ARGS__)
+#endif
 
 static int hash(char* str)
 {
@@ -38,6 +48,12 @@ static char * getLine()
 	}
 	size_t zero = 0;
 	ssize_t	lineSize = getline(&linebuf[linebufpos], &zero, stdin);
+	#ifdef SHM_DOMONITOR
+	char readbuf[1024];
+	*((int*)readbuf)=STDIN_FILENO;
+	memcpy(readbuf+4, linebuf[linebufpos], lineSize+1);
+	SHM_MONFUN(2, readbuf, lineSize+5);
+	#endif
 	if(lineSize>=0)
 	{
 		return linebuf[linebufpos];
@@ -72,3 +88,9 @@ static int strsplit(char* str, char delim, int count)
 	}
 	return actual;
 }
+
+#ifdef SHM_DOMONITOR
+#define mprint(...) { char cmn_printbuf[2048]; sprintf(cmn_printbuf+4, __VA_ARGS__); int cmn_wlen = strlen(cmn_printbuf+4); *((int *)(cmn_printbuf)) = STDOUT_FILENO; SHM_MONFUN(1, cmn_printbuf, cmn_wlen+5); write(STDOUT_FILENO, cmn_printbuf+4, cmn_wlen); }
+#else
+#define mprint(...) printf(__VA_ARGS__)
+#endif
