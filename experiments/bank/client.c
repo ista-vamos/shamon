@@ -70,8 +70,8 @@ int main(int argc, char **args)
 
 	#ifdef SHM_DOMONITOR
 	initialize_application_buffer();
-	intialize_thread_buffer(1,2);
 	app_buffer_wait_for_client();
+	intialize_thread_buffer(1,2);
 	#endif
 
 	if (clock_gettime(CLOCK_MONOTONIC, &begin) == -1)
