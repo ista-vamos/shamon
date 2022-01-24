@@ -27,11 +27,11 @@ int monitoring_thread(void* arg)
 			{
 				if(buffer_buffer[i].kind==1)
 				{
-					printf("Write: %s\n", (char*)(buffer_buffer[i].payload64_1+4));
+					printf("Write: %s\n", ((char*)(buffer_buffer[i].payload64_1))+sizeof(size_t)+sizeof(int64_t));
 				}
 				else
 				{
-					printf("Read: %s\n", (char*)(buffer_buffer[i].payload64_1+4));	
+					printf("Read: %s\n", ((char*)(buffer_buffer[i].payload64_1))+sizeof(size_t)+sizeof(int64_t));	
 				}
 			}
 			free((void*)buffer_buffer[i].payload64_1);
