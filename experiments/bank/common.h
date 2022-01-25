@@ -42,6 +42,8 @@ static void resetLinebuf()
 
 static char * getLine()
 {
+	printf(">");
+	fflush(stdout);
 	if(linebufpos>=16)
 	{
 		return NULL;

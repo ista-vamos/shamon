@@ -279,6 +279,7 @@ int main(int argc, char **args)
 					}
 					else if(strcmp(line, "5\n")==0)
 					{
+						cur_acc=NULL;
 						selectAccount(&cur_user,&cur_acc,&message);
 					}
 					else if(strcmp(line, "0\n")==0)

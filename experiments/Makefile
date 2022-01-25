@@ -1,7 +1,10 @@
 CPPFLAGS=-I..
 CFLAGS=-O2 -g #-fsanitize=address,undefined
 
-all: monitor gennums_hardcoded #gennums_hardcoded-instr
+all: monitor gennums_hardcoded interact #gennums_hardcoded-instr
+
+interact: interact.c
+	$(CC) $^ -o $@
 
 monitor: monitor.o ../libshamon.a isprime.o
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -lrt -lm
