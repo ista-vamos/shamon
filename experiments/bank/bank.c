@@ -11,7 +11,7 @@ void stdDeposit(Account* self, int64_t amount)
 }
 int stdWithdraw(Account* self, int64_t amount)
 {
-	if(self->balance>amount)
+	if(self->balance>=amount)
 	{
 		self->balance-=amount;
 		self->lastversion++;
@@ -25,7 +25,7 @@ int64_t stdCheckBalance(Account* self)
 }
 int stdTransfer(Account* self, Account* other, int64_t amount)
 {
-	if(self->balance>amount)
+	if(self->balance>=amount)
 	{
 		self->balance-=amount;
 		other->balance+=amount;
