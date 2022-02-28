@@ -11,6 +11,7 @@
 #include "common.h"
 #include <time.h>
 
+uint64_t errors_generated = 0;
 void selectAccount(User **cur_user, Account **cur_acc, char **message)
 {
 	resetLinebuf();
@@ -220,6 +221,7 @@ int main(int argc, char **args)
 								if (has_errors > 0 && random() % has_errors == 0)
 								{
 									message = "Withdrawal failed!";
+									errors_generated++;
 								}
 							}
 							else
@@ -228,6 +230,7 @@ int main(int argc, char **args)
 								if (has_errors > 0 && random() % has_errors == 0)
 								{
 									message = "Withdrawal successful!";
+									errors_generated++;
 								}
 							}
 						}
@@ -243,6 +246,7 @@ int main(int argc, char **args)
 						if (has_errors > 0 && random() % has_errors == 0)
 						{
 							mprint("%lu\n", cur_acc->balance + 3);
+							errors_generated++;
 						}
 						else
 						{
@@ -282,6 +286,7 @@ int main(int argc, char **args)
 											if (has_errors > 0 && random() % has_errors == 0)
 											{
 												message = "Transfer failed!";
+												errors_generated++;
 											}
 										}
 										else
@@ -290,6 +295,7 @@ int main(int argc, char **args)
 											if (has_errors > 0 && random() % has_errors == 0)
 											{
 												message = "Transfer successful!";
+												errors_generated++;
 											}
 										}
 									}
@@ -344,6 +350,10 @@ int main(int argc, char **args)
 	long seconds = end.tv_sec - begin.tv_sec;
 	long nanoseconds = end.tv_nsec - begin.tv_nsec;
 	double elapsed = seconds + nanoseconds * 1e-9;
+	if(has_errors)
+	{
+		printf("\nErrors generated: %lu\n", errors_generated);
+	}
 	printf("\nTime: %lf seconds.\n", elapsed);
 
 #ifdef SHM_DOMONITOR

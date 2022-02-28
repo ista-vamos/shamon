@@ -39,19 +39,42 @@ int main(int argc, char** argv)
 	{
 		return -1;
 	}
-	if(getdelim(&inputline, &inputlinesize, 'T', stdin)<0)
+	while(getdelim(&inputline, &inputlinesize, ':', stdin)>=0)
 	{
-		return -1;
+		if(strncmp(inputline+strlen(inputline)-17,"Errors generated:",17)==0)
+		{
+			if(getdelim(&inputline, &inputlinesize, '\n', stdin)<0)
+			{
+				return -1;
+			}
+			long errorcount=atol(inputline+1);
+			printf("Errors generated: %li\n",errorcount);
+		}
+		else if(strncmp(inputline+strlen(inputline)-5,"Time:",5)==0)
+		{
+			if(getdelim(&inputline, &inputlinesize, 's', stdin)<0)
+			{
+				return -1;
+			}
+			double time = atof(inputline+1);
+			printf("Time: %f\n",time);
+			return 0;
+		}
 	}
-	if(getdelim(&inputline, &inputlinesize, 's', stdin)<0)
-	{
-		return -1;
-	}
-	if(strncmp(inputline, "ime: ", 5)==0)
-	{
-		double time = atof(inputline+5);
-		printf("Time: %f\n",time);
-	}
-	return 0;
+	return -1;
+	// if(getdelim(&inputline, &inputlinesize, 'T', stdin)<0)
+	// {
+	// 	return -1;
+	// }
+	// if(getdelim(&inputline, &inputlinesize, 's', stdin)<0)
+	// {
+	// 	return -1;
+	// }
+	// if(strncmp(inputline, "ime: ", 5)==0)
+	// {
+	// 	double time = atof(inputline+5);
+	// 	printf("Time: %f\n",time);
+	// }
+	// return 0;
 }
 
