@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <time.h>
-#include "shm.h"
-#include "client.h"
+#include "shmbuf/shm.h"
+#include "shmbuf/client.h"
 
 int  __attribute__((noinline)) isprime(int p) {
 	printf("prime: %u\n", p);

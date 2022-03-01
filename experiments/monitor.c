@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "monitor.h"
-#include "shm.h"
+#include "shmbuf/monitor.h"
+#include "shmbuf/shm.h"
 #include "drfun/events.h"
 
 int isprime(int);
