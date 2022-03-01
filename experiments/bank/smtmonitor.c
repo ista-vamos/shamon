@@ -7,7 +7,8 @@
 #include <stdatomic.h>
 #include "../../fastbuf/shm_monitor.h"
 #include "smt.h"
-#define EVBUFSIZE 4096
+#define EVBUFSIZE 512
+//#define EVENTDEBUG
 
 int do_print=0;
 int do_print_smt=0;
@@ -33,6 +34,10 @@ typedef enum _event_kind { EV_NOTHING, EV_HOLE, EV_DEPOSIT, EV_WITHDRAW, EV_WITH
 typedef struct _event_head
 {
 	event_kind kind;
+	#ifdef EVENTDEBUG
+	uint64_t id;
+	int index;
+	#endif
 } event_head;
 
 typedef struct _hole_event
@@ -85,6 +90,45 @@ event * const evbuf2=evbuf+EVBUFSIZE;
 int evwritepos=0;
 int localevcount=0;
 int writereset=-1;
+#ifdef EVENTDEBUG
+uint64_t eventid=0;
+#endif
+FILE* evparselog=NULL;
+
+
+void printevent(FILE* file, event *ev)
+{
+	#ifdef EVENTDEBUG
+	fprintf(file, "%lu/%i: ", ev->head.id, ev->head.index);
+	#endif
+	switch(ev->head.kind)
+	{
+		case EV_NOTHING:
+		break;
+		case EV_HOLE:
+		fprintf(file, "HOLE()\n");
+		break;
+		case EV_CHECKBALANCE:
+		fprintf(file, "CHECKBALANCE(%lu, %lu)\n", ev->data.checkbalance.account, ev->data.checkbalance.amount);
+		break;
+		case EV_DEPOSIT:
+		fprintf(file, "DEPOSIT(%lu, %lu)\n", ev->data.deposit.account, ev->data.deposit.amount);
+		break;
+		case EV_WITHDRAW:
+		fprintf(file, "WITHDRAW(%lu, %lu)\n", ev->data.withdraw.account, ev->data.withdraw.amount);
+		break;
+		case EV_WITHDRAW_FAIL:
+		fprintf(file, "WITHDRAWFAIL(%lu, %lu)\n", ev->data.withdraw.account, ev->data.withdraw.amount);
+		break;
+		case EV_TRANSFER:
+		fprintf(file, "TRANSFER(%lu, %lu, %lu)\n", ev->data.transfer.account,  ev->data.transfer.target, ev->data.transfer.amount);
+		break;
+		case EV_TRANSFER_FAIL:
+		fprintf(file, "TRANSFERFAIL(%lu, %lu, %lu)\n", ev->data.transfer.account,  ev->data.transfer.target, ev->data.transfer.amount);
+		break;
+	}
+}
+
 event* get_next_event_place()
 {
 	if(evwritepos%EVBUFSIZE==0)
@@ -114,6 +158,13 @@ event* get_next_event_place()
 					}
 					writereset=evwritepos;
 					evbuf[evwritepos].head.kind=EV_HOLE;
+					#ifdef EVENTDEBUG
+					evbuf[evwritepos].head.id=eventid++;
+					#endif
+					if(evparselog!=NULL)
+					{
+						printevent(evparselog, &evbuf[evwritepos]);
+					}
 					evwritepos++;
 				}
 			}
@@ -123,6 +174,10 @@ event* get_next_event_place()
 }
 void commit_event()
 {
+	if(evparselog!=NULL)
+	{
+		printevent(evparselog, &evbuf[evwritepos]);
+	}
 	int countadd=1;
 	if(writereset>=0)
 	{
@@ -150,6 +205,9 @@ void record_deposit_event(uint64_t account, uint64_t amount)
 	nextev->head.kind=EV_DEPOSIT;
 	nextev->data.deposit.account=account;
 	nextev->data.deposit.amount=amount;
+	#ifdef EVENTDEBUG
+	nextev->head.id=eventid++;
+	#endif
 	commit_event();
 }
 void record_withdrawal_event(uint64_t account, uint64_t amount)
@@ -162,6 +220,9 @@ void record_withdrawal_event(uint64_t account, uint64_t amount)
 	nextev->head.kind=EV_WITHDRAW;
 	nextev->data.withdraw.account=account;
 	nextev->data.withdraw.amount=amount;
+	#ifdef EVENTDEBUG
+	nextev->head.id=eventid++;
+	#endif
 	commit_event();
 }
 void record_failed_withdrawal_event(uint64_t account, uint64_t amount)
@@ -174,6 +235,9 @@ void record_failed_withdrawal_event(uint64_t account, uint64_t amount)
 	nextev->head.kind=EV_WITHDRAW_FAIL;
 	nextev->data.withdraw.account=account;
 	nextev->data.withdraw.amount=amount;
+	#ifdef EVENTDEBUG
+	nextev->head.id=eventid++;
+	#endif
 	commit_event();
 }
 void record_transfer_event(uint64_t account, uint64_t target, uint64_t amount)
@@ -187,6 +251,9 @@ void record_transfer_event(uint64_t account, uint64_t target, uint64_t amount)
 	nextev->data.transfer.account=account;
 	nextev->data.transfer.amount=amount;
 	nextev->data.transfer.target=target;
+	#ifdef EVENTDEBUG
+	nextev->head.id=eventid++;
+	#endif
 	commit_event();
 }
 void record_failed_transfer_event(uint64_t account, uint64_t target, uint64_t amount)
@@ -200,6 +267,9 @@ void record_failed_transfer_event(uint64_t account, uint64_t target, uint64_t am
 	nextev->data.transfer.account=account;
 	nextev->data.transfer.amount=amount;
 	nextev->data.transfer.target=target;
+	#ifdef EVENTDEBUG
+	nextev->head.id=eventid++;
+	#endif
 	commit_event();
 }
 void record_checkbalance_event(uint64_t account, uint64_t amount)
@@ -212,10 +282,15 @@ void record_checkbalance_event(uint64_t account, uint64_t amount)
 	nextev->head.kind=EV_CHECKBALANCE;
 	nextev->data.checkbalance.account=account;
 	nextev->data.checkbalance.amount=amount;
+	#ifdef EVENTDEBUG
+	nextev->head.id=eventid++;
+	#endif
 	commit_event();
 }
 
+
 uint64_t errors_found=0;
+FILE* evprocesslog=NULL;
 
 int process_events_thread(void *arg)
 {
@@ -314,7 +389,7 @@ int process_events_thread(void *arg)
 			}
 			mtx_unlock(&evwait_mutex);
 		}
-		int nextbarrier = ((current_evpos%EVBUFSIZE)+1)*EVBUFSIZE;
+		int nextbarrier = ((current_evpos/EVBUFSIZE)+1)*EVBUFSIZE;
 		if(current_evpos+remaining>nextbarrier)
 		{
 			remaining=nextbarrier-current_evpos;
@@ -323,6 +398,10 @@ int process_events_thread(void *arg)
 		while(remaining>0)
 		{
 			event current=evbuf[current_evpos];
+			if(evprocesslog!=NULL)
+			{
+				printevent(evprocesslog, &current);
+			}
 			switch(current.head.kind)
 			{
 				case EV_HOLE:
@@ -670,6 +749,10 @@ int process_events_thread(void *arg)
 					newpos=0;					
 				}
 				processed+=current_evpos-newpos;
+				if(evprocesslog!=NULL)
+				{
+					fprintf(evprocesslog, "Skipping ahead in process log to %i\n", current_evpos);
+				}
 				break;
 			}
 		}
@@ -1196,7 +1279,18 @@ int main(int argc, char **argv)
 		{
 			do_print_unsat_smt = 1;
 		}
+		else if (strncmp(argv[i], "debugevents", 12) == 0)
+		{
+			evparselog=fopen("evparselog.txt", "w+");
+			evprocesslog=fopen("evprocesslog.txt", "w+");
+		}
 	}
+	#ifdef EVENTDEBUG
+	for(int i=0;i<ACTUALEVBUFSIZE;i++)
+	{
+		evbuf[i].head.index=i;
+	}
+	#endif
 	pid_t process_id = atoi(argv[argc-1]);
 	mtx_init(&evwait_mutex, mtx_plain);
 	cnd_init(&evwait_cond);
@@ -1214,5 +1308,15 @@ int main(int argc, char **argv)
 	mtx_unlock(&evwait_mutex);
 	thrd_join(smt_thread, NULL);
 	printf("Errors found: %lu\n", errors_found);
+	if(evparselog!=NULL)
+	{
+		fflush(evparselog);
+		fclose(evparselog);
+	}
+	if(evprocesslog!=NULL)
+	{
+		fflush(evprocesslog);
+		fclose(evprocesslog);
+	}
 	return 0;
 }
