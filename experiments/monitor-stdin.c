@@ -14,7 +14,8 @@ int main(void) {
 
     while ((ev = shm_streams_get_next_ev(streams))) {
 		printf("Event id %lu\n", shm_event_id(ev));
-		printf("Event kind %lu\n", shm_event_kind(ev));
+        shm_kind kind = shm_event_kind(ev);
+        printf("Event kind %lu ('%s')\n", kind, shm_kind_get_name(kind));
 		printf("Event size %lu\n", shm_event_size(ev));
 		printf("Event time [%lu,%lu]\n",
 		       shm_event_timestamp_lb(ev), shm_event_timestamp_ub(ev));
