@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
         while ((ev = shm_streams_get_next_ev(streams))) {
             puts("--------------------");
             shm_stream *stream = shm_event_get_stream(ev);
-            printf("Event id %lu on stream '%s'\n",
+            printf("\033[0;34mEvent id %lu on stream '%s'\033[0m\n",
                    shm_event_id(ev), shm_stream_get_name(stream));
             shm_kind kind = shm_event_kind(ev);
             printf("Event kind %lu ('%s')\n", kind, shm_kind_get_name(kind));
