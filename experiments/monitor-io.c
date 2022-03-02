@@ -4,7 +4,6 @@
 #include <assert.h>
 
 #include "eventinterface.h"
-#include "stream-stdin.h"
 #include "stream-fds.h"
 
 int main(int argc, char *argv[]) {
@@ -41,14 +40,15 @@ int main(int argc, char *argv[]) {
             shm_stream *stream = shm_event_get_stream(ev);
             printf("Event id %lu on stream '%s'\n",
                    shm_event_id(ev), shm_stream_get_name(stream));
-           //shm_kind kind = shm_event_kind(ev);
-           //printf("Event kind %lu ('%s')\n", kind, shm_kind_get_name(kind));
-           //printf("Event size %lu\n", shm_event_size(ev));
-           //printf("Event time [%lu,%lu]\n",
-           //       shm_event_timestamp_lb(ev), shm_event_timestamp_ub(ev));
-           //shm_event_stdin *stdin_ev = (shm_event_stdin *) ev;
-           //printf("Data: fd: %d, size: %lu:'%s'\n",
-           //       stdin_ev->fd, stdin_ev->str_ref.size, stdin_ev->str_ref.data);
+            shm_kind kind = shm_event_kind(ev);
+            printf("Event kind %lu ('%s')\n", kind, shm_kind_get_name(kind));
+            printf("Event size %lu\n", shm_event_size(ev));
+            printf("Event time [%lu,%lu]\n",
+                   shm_event_timestamp_lb(ev), shm_event_timestamp_ub(ev));
+            shm_event_fd_in *fd_ev = (shm_event_fd_in *) ev;
+            printf("Data: fd: %d, size: %lu:\n'%.*s'\n",
+                   fd_ev->fd, fd_ev->str_ref.size,
+                   fd_ev->str_ref.size, fd_ev->str_ref.data);
         }
         usleep(1000);
     }

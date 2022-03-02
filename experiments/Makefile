@@ -12,7 +12,7 @@ monitor: monitor.o ../shmbuf/libshamon.a isprime.o
 monitor-stdin: monitor-stdin.c ../streams/stream-stdin.o ../events.o
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -I../streams  -o $@
 
-monitor-io: monitor-io.c ../streams/stream-stdin.o ../streams/stream-fds.o ../events.o
+monitor-io: monitor-io.c ../streams/stream-stdin.o ../streams/stream-fds.o ../events.o ../queue.c
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -I../streams  -o $@
 
 isprime.o: isprime.c
