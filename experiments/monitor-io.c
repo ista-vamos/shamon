@@ -37,6 +37,7 @@ int main(int argc, char *argv[]) {
 
     while (1) {
         while ((ev = shm_streams_get_next_ev(streams))) {
+            puts("--------------------");
             shm_stream *stream = shm_event_get_stream(ev);
             printf("Event id %lu on stream '%s'\n",
                    shm_event_id(ev), shm_stream_get_name(stream));
@@ -49,8 +50,9 @@ int main(int argc, char *argv[]) {
             printf("Data: fd: %d, size: %lu:\n'%.*s'\n",
                    fd_ev->fd, fd_ev->str_ref.size,
                    fd_ev->str_ref.size, fd_ev->str_ref.data);
+            puts("--------------------");
         }
-        usleep(1000);
+        usleep(100);
     }
     //shm_streams_destroy();
     // TODO: make this a callback called by the prev. function
