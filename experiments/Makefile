@@ -1,7 +1,7 @@
 CPPFLAGS=-I..
 CFLAGS=-O2 -g -fsanitize=address,undefined
 
-all: monitor gennums_hardcoded interact monitor-stdin #gennums_hardcoded-instr
+all: monitor gennums_hardcoded interact monitor-stdin monitor-io #gennums_hardcoded-instr
 
 interact: interact.c
 	$(CC) $^ -o $@
@@ -10,6 +10,9 @@ monitor: monitor.o ../shmbuf/libshamon.a isprime.o
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -lrt -lm
 
 monitor-stdin: monitor-stdin.c ../streams/stream-stdin.o ../events.o
+	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -I../streams  -o $@
+
+monitor-io: monitor-io.c ../streams/stream-stdin.o ../streams/stream-fds.o ../events.o
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -I../streams  -o $@
 
 isprime.o: isprime.c
