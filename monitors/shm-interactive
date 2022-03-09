@@ -1,0 +1,48 @@
+#!/usr/bin/python3
+
+from sys import argv, stdin, stdout, stderr
+from subprocess import Popen, PIPE
+from select import poll, select, POLLIN, POLLOUT, POLLHUP
+
+def make_pipes():
+    return None, None
+
+def run_program(cmd, pipe_in, pipe_out):
+    print("Running '{0}'".format(" ".join(cmd)))
+    return Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+
+def main():
+    pipe_in, pipe_out = make_pipes()
+    p = run_program(argv[1:], pipe_in, pipe_out)
+
+    # wait for readable in/out of the program
+    # and copy them to the pipes
+    po = poll()
+    po.register(stdin, POLLOUT | POLLOUT)
+    po.register(p.stdout, POLLIN | POLLOUT)
+
+    stdinfd = stdin.fileno()
+    stdoutfd = p.stdout.fileno()
+    monitor = True
+    while monitor:
+        fds = po.poll()
+        for fd, ev in fds:
+            if ev & POLLHUP:
+                monitor = False
+                break
+
+            #print("fd: ", fd, "ev: ", ev)
+            if fd == stdoutfd and ev & POLLIN:
+                print("[stdout] ", p.stdout.readline())
+            elif fd == stdinfd and ev & POLLOUT:
+                if select([stdin, ], [], [], 0.01)[0]:
+                    line = stdin.readline()
+                    print('[stdin]', line.encode('utf-8'))
+                    p.stdin.write(line.encode('utf-8'))
+                    p.stdin.flush()
+            else:
+                assert False, f"Unhandled event {fd}, {ev}"
+    
+
+if __name__ == "__main__":
+    main()
