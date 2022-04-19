@@ -3,13 +3,20 @@
 from sys import argv, stdin, stdout, stderr
 from subprocess import Popen, PIPE
 from select import poll, select, POLLIN, POLLOUT, POLLHUP
+from fcntl import fcntl, F_SETFL, F_GETFL
+from os import O_NONBLOCK
 
 def make_pipes():
     return None, None
 
+def set_non_blocking(fd):
+    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK)
+
 def run_program(cmd, pipe_in, pipe_out):
     print("Running '{0}'".format(" ".join(cmd)))
-    return Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    set_non_blocking(p.stdout)
+    return p
 
 def main():
     pipe_in, pipe_out = make_pipes()
@@ -18,7 +25,7 @@ def main():
     # wait for readable in/out of the program
     # and copy them to the pipes
     po = poll()
-    po.register(stdin, POLLOUT | POLLOUT)
+    po.register(stdin, POLLOUT)
     po.register(p.stdout, POLLIN | POLLOUT)
 
     stdinfd = stdin.fileno()
@@ -27,22 +34,26 @@ def main():
     while monitor:
         fds = po.poll()
         for fd, ev in fds:
-            if ev & POLLHUP:
-                monitor = False
-                break
-
             #print("fd: ", fd, "ev: ", ev)
             if fd == stdoutfd and ev & POLLIN:
-                print("[stdout] ", p.stdout.readline())
+                line = p.stdout.readline()
+                while line:
+                    print("[stdout]", line.decode('utf-8'), end="")
+                    line = p.stdout.readline()
             elif fd == stdinfd and ev & POLLOUT:
                 if select([stdin, ], [], [], 0.01)[0]:
                     line = stdin.readline()
-                    print('[stdin]', line.encode('utf-8'))
+                    print('[stdin ]', line, end="")
                     p.stdin.write(line.encode('utf-8'))
                     p.stdin.flush()
-            else:
-                assert False, f"Unhandled event {fd}, {ev}"
-    
+
+            if ev == POLLHUP:  # if the only ev is HUP, we're finished
+                monitor = False
+                break
+
 
 if __name__ == "__main__":
+    if len(argv) < 2:
+        print(f"Usage: {argv[0]} program arg1 arg2 ...", file=stderr)
+        exit(1)
     main()
