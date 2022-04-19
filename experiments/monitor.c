@@ -45,7 +45,7 @@ int main(void) {
 				printf("fun: %lu\n", ev.addr);
 				printf("arg0: %u\n", ev.argument);
 				if (!isprime(ev.argument)) {
-					printf("Not a prime: %u\n");
+					printf("Not a prime: %u\n", ev.argument);
 				}
 			}
 		}

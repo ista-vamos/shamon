@@ -16,7 +16,7 @@ monitor-io: monitor-io.c ../streams/stream-fds.o ../events.o ../queue.c
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -I../streams  -o $@
 
 monitor-fastbuf-io: monitor-fastbuf-io.c ../streams/stream-fastbuf-io.o ../events.o ../fastbuf/shm_monitor.o ../fastbuf/shm_common.c
-	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -I../streams  -o $@
+	$(CC) $^ $(CFLAGS) -lpthread $(CPPFLAGS) -I../streams  -o $@
 
 
 isprime.o: isprime.c

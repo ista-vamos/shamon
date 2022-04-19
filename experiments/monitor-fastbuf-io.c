@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <limits.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <assert.h>
@@ -46,9 +47,10 @@ int main(int argc, char *argv[]) {
             printf("Event time [%lu,%lu]\n",
                    shm_event_timestamp_lb(ev), shm_event_timestamp_ub(ev));
             shm_event_io *ev = (shm_event_io *) ev;
+	    assert(ev->str_ref.size < INT_MAX);
             printf("Data: fd: %d, size: %lu:\n'%.*s'\n",
                    ev->fd, ev->str_ref.size,
-                   ev->str_ref.size, ev->str_ref.data);
+                   (int)ev->str_ref.size, ev->str_ref.data);
             puts("--------------------");
         }
         usleep(100);
