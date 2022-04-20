@@ -1,14 +1,15 @@
 #include <stdio.h>
+#include <limits.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <assert.h>
 
-#include "eventinterface.h"
+#include "shamon.h"
 #include "stream-fds.h"
 
 int main(int argc, char *argv[]) {
     shm_event *ev = NULL;
-    shm_streams *streams = shm_streams_mgr();
+    shamon *shamon = shamon_create();
 
     // attach to monitors of IO of given processes
     shm_stream_fds *fdsstream = NULL;
@@ -33,10 +34,10 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    shm_streams_add_stream(streams, (shm_stream *)fdsstream);
+    shamon_add_stream(shamon, (shm_stream *)fdsstream);
 
     while (1) {
-        while ((ev = shm_streams_get_next_ev(streams))) {
+        while ((ev = shamon_get_next_ev(shamon))) {
             puts("--------------------");
             shm_stream *stream = shm_event_get_stream(ev);
             printf("\033[0;34mEvent id %lu on stream '%s'\033[0m\n",
@@ -44,12 +45,12 @@ int main(int argc, char *argv[]) {
             shm_kind kind = shm_event_kind(ev);
             printf("Event kind %lu ('%s')\n", kind, shm_kind_get_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
-            printf("Event time [%lu,%lu]\n",
-                   shm_event_timestamp_lb(ev), shm_event_timestamp_ub(ev));
             shm_event_fd_in *fd_ev = (shm_event_fd_in *) ev;
+            printf("Event time %lu\n", fd_ev->time);
+            assert(fd_ev->str_ref.size < INT_MAX);
             printf("Data: fd: %d, size: %lu:\n'%.*s'\n",
                    fd_ev->fd, fd_ev->str_ref.size,
-                   fd_ev->str_ref.size, fd_ev->str_ref.data);
+                   (int)fd_ev->str_ref.size, fd_ev->str_ref.data);
             puts("--------------------");
         }
         usleep(100);

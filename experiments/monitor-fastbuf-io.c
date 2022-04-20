@@ -4,7 +4,8 @@
 #include <fcntl.h>
 #include <assert.h>
 
-#include "eventinterface.h"
+#include "event.h"
+#include "shamon.h"
 #include "stream-fastbuf-io.h"
 
 
@@ -19,7 +20,7 @@ bool is_file(const char *path)
 
 int main(int argc, char *argv[]) {
     shm_event *ev = NULL;
-    shm_streams *streams = shm_streams_mgr();
+    shamon *shmn = shamon_create();
 
     if (argc == 1) {
         fprintf(stderr, "USAGE: prog file1 file2 ...\n");
@@ -29,14 +30,15 @@ int main(int argc, char *argv[]) {
     // attach to monitors of IO of given processes
     for (int i = 1; i < argc; ++i) {
         pid_t pid = atoi(argv[i]);
+	printf("Attaching stream of fastbuf of %d\n", pid);
         shm_stream *stream = shm_create_io_stream(pid);
-        shm_streams_add_stream(streams, stream);
+        shamon_add_stream(shmn, stream);
         assert(stream);
         puts(" OK");
     }
 
     while (1) {
-        while ((ev = shm_streams_get_next_ev(streams))) {
+        while ((ev = shamon_get_next_ev(shmn))) {
             puts("--------------------");
             shm_stream *stream = shm_event_get_stream(ev);
             printf("\033[0;34mEvent id %lu on stream '%s'\033[0m\n",
@@ -44,17 +46,15 @@ int main(int argc, char *argv[]) {
             shm_kind kind = shm_event_kind(ev);
             printf("Event kind %lu ('%s')\n", kind, shm_kind_get_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
-            printf("Event time [%lu,%lu]\n",
-                   shm_event_timestamp_lb(ev), shm_event_timestamp_ub(ev));
-            shm_event_io *ev = (shm_event_io *) ev;
-	    assert(ev->str_ref.size < INT_MAX);
+            shm_event_io *shm_ev = (shm_event_io *) ev;
+	    assert(shm_ev->str_ref.size < INT_MAX);
+            printf("Event time %lu\n", shm_ev->time);
             printf("Data: fd: %d, size: %lu:\n'%.*s'\n",
-                   ev->fd, ev->str_ref.size,
-                   (int)ev->str_ref.size, ev->str_ref.data);
+                   shm_ev->fd, shm_ev->str_ref.size,
+                   (int)shm_ev->str_ref.size, shm_ev->str_ref.data);
             puts("--------------------");
         }
         usleep(100);
     }
-    //shm_streams_destroy();
-    // TODO:  we leak all the streams
+    shamon_destroy(shmn);
 }
