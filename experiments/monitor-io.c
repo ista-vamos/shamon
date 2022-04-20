@@ -31,6 +31,7 @@ int main(int argc, char *argv[]) {
 
     if (fdsstream == NULL) {
         fprintf(stderr, "USAGE: prog file1 file2 ...\n");
+        shamon_destroy(shamon);
         return -1;
     }
 
@@ -55,7 +56,7 @@ int main(int argc, char *argv[]) {
         }
         usleep(100);
     }
-    //shm_streams_destroy();
-    // TODO: make this a callback called by the prev. function
+    // TODO: make this a callback of shamon_destroy
     shm_destroy_fds_stream((shm_stream_fds *)fdsstream);
+    shamon_destroy(shamon);
 }
