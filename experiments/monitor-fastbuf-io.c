@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <limits.h>
+#include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <assert.h>
@@ -17,6 +18,15 @@ bool is_file(const char *path)
     return S_ISREG(path_stat.st_mode);
 }
 */
+
+static void sleep_ns(uint64_t ns) {
+    struct timespec ts = { .tv_nsec = ns };
+    nanosleep(&ts, NULL);
+}
+
+static void sleep_ms(uint64_t ms) {
+    sleep_ns(ms * 1000000);
+}
 
 int main(int argc, char *argv[]) {
     shm_event *ev = NULL;
@@ -54,7 +64,7 @@ int main(int argc, char *argv[]) {
                    (int)shm_ev->str_ref.size, shm_ev->str_ref.data);
             puts("--------------------");
         }
-        usleep(100);
+        sleep_ms(100);
     }
     shamon_destroy(shmn);
 }

@@ -1,5 +1,5 @@
 CPPFLAGS=-I..
-CFLAGS=-O2 -g -fsanitize=address,undefined
+CFLAGS=-O2 -g -fsanitize=address,undefined -std=c11 -lpthread
 
 all: primes interact monitor-stdin monitor-io monitor-fastbuf-io
 
