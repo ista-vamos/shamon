@@ -15,7 +15,7 @@ int main(void) {
     while ((ev = shamon_get_next_ev(shmn))) {
         printf("Event id %lu\n", shm_event_id(ev));
         shm_kind kind = shm_event_kind(ev);
-        printf("Event kind %lu ('%s')\n", kind, shm_kind_get_name(kind));
+        printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
         printf("Event size %lu\n", shm_event_size(ev));
         shm_event_stdin *stdin_ev = (shm_event_stdin *) ev;
         printf("Event time %lu\n", stdin_ev->time);

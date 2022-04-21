@@ -8,6 +8,7 @@
 #include "stream-fds.h"
 
 int main(int argc, char *argv[]) {
+    puts("Started monitor-io");
     shm_event *ev = NULL;
     shamon *shamon = shamon_create();
 
@@ -15,6 +16,7 @@ int main(int argc, char *argv[]) {
     shm_stream_fds *fdsstream = NULL;
     for (int i = 1; i < argc; ++i) {
         printf("Opening file '%s' ...", argv[i]);
+        fflush(stdout);
         int fd = open(argv[i], O_RDONLY);
         if (fd == -1) {
             perror("open failed");
@@ -44,7 +46,7 @@ int main(int argc, char *argv[]) {
             printf("\033[0;34mEvent id %lu on stream '%s'\033[0m\n",
                    shm_event_id(ev), shm_stream_get_name(stream));
             shm_kind kind = shm_event_kind(ev);
-            printf("Event kind %lu ('%s')\n", kind, shm_kind_get_name(kind));
+            printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
             shm_event_fd_in *fd_ev = (shm_event_fd_in *) ev;
             printf("Event time %lu\n", fd_ev->time);

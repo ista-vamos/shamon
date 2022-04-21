@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
             printf("\033[0;34mEvent id %lu on stream '%s'\033[0m\n",
                    shm_event_id(ev), shm_stream_get_name(stream));
             shm_kind kind = shm_event_kind(ev);
-            printf("Event kind %lu ('%s')\n", kind, shm_kind_get_name(kind));
+            printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
             shm_event_io *shm_ev = (shm_event_io *) ev;
 	    assert(shm_ev->str_ref.size < INT_MAX);
