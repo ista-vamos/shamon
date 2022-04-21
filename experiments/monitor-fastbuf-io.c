@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     // attach to monitors of IO of given processes
     for (int i = 1; i < argc; ++i) {
         pid_t pid = atoi(argv[i]);
-	printf("Attaching stream of fastbuf of %d\n", pid);
+        printf("Attaching stream of fastbuf of %d\n", pid);
         shm_stream *stream = shm_create_io_stream(pid);
         shamon_add_stream(shmn, stream);
         assert(stream);
