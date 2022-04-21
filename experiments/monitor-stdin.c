@@ -7,7 +7,7 @@
 
 int main(void) {
     shm_event *ev = NULL;
-    shamon *shmn = shamon_create();
+    shamon *shmn = shamon_create(NULL, NULL);
     // custom stream
     shm_stream *stdin_stream = shm_create_stdin_stream();
     shamon_add_stream(shmn, stdin_stream);

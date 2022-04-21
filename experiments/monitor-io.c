@@ -11,7 +11,7 @@
 int main(int argc, char *argv[]) {
     puts("Started monitor-io");
     shm_event *ev = NULL;
-    shamon *shamon = shamon_create();
+    shamon *shamon = shamon_create(NULL, NULL);
 
     // attach to monitors of IO of given processes
     shm_stream_fds *fdsstream = NULL;
