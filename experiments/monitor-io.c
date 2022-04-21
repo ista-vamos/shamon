@@ -6,6 +6,7 @@
 
 #include "shamon.h"
 #include "stream-fds.h"
+#include "utils.h"
 
 int main(int argc, char *argv[]) {
     puts("Started monitor-io");
@@ -56,7 +57,7 @@ int main(int argc, char *argv[]) {
                    (int)fd_ev->str_ref.size, fd_ev->str_ref.data);
             puts("--------------------");
         }
-        usleep(100);
+        sleep_ms(100);
     }
     // TODO: make this a callback of shamon_destroy
     shm_destroy_fds_stream((shm_stream_fds *)fdsstream);

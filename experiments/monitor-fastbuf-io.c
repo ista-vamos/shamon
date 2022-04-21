@@ -8,6 +8,7 @@
 #include "event.h"
 #include "shamon.h"
 #include "stream-fastbuf-io.h"
+#include "utils.h"
 
 
 /*
@@ -18,15 +19,6 @@ bool is_file(const char *path)
     return S_ISREG(path_stat.st_mode);
 }
 */
-
-static void sleep_ns(uint64_t ns) {
-    struct timespec ts = { .tv_nsec = ns };
-    nanosleep(&ts, NULL);
-}
-
-static void sleep_ms(uint64_t ms) {
-    sleep_ns(ms * 1000000);
-}
 
 int main(int argc, char *argv[]) {
     shm_event *ev = NULL;
