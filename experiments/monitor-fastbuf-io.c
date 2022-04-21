@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     while (1) {
         while ((ev = shamon_get_next_ev(shmn))) {
             puts("--------------------");
-            shm_stream *stream = shm_event_get_stream(ev);
+            shm_stream *stream = shm_event_stream(ev);
             printf("\033[0;34mEvent id %lu on stream '%s'\033[0m\n",
                    shm_event_id(ev), shm_stream_get_name(stream));
             shm_kind kind = shm_event_kind(ev);
