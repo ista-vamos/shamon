@@ -4,7 +4,7 @@ CFLAGS=-O2 -g -fsanitize=address,undefined -std=c11 -lpthread
 all: primes interact monitor-stdin monitor-io monitor-fastbuf-io
 
 primes:
-	make -C primes
+	+make -C primes
 
 monitor-stdin: monitor-stdin.c ../streams/stream-stdin.o ../shamon.a
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -I../streams  -o $@
