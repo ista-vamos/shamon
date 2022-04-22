@@ -24,11 +24,13 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        if (fdsstream == NULL) {
-            fdsstream = (shm_stream_fds *) shm_create_fds_stream();
-            assert(fdsstream);
-        }
+       //if (fdsstream == NULL) {
+       //    fdsstream = (shm_stream_fds *) shm_create_fds_stream();
+       //    assert(fdsstream);
+       //}
+        fdsstream = (shm_stream_fds *) shm_create_fds_stream();
         shm_stream_fds_add_fd(fdsstream, fd);
+        shamon_add_stream(shamon, (shm_stream *)fdsstream);
         puts(" OK");
     }
 
@@ -38,7 +40,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    shamon_add_stream(shamon, (shm_stream *)fdsstream);
+    // shamon_add_stream(shamon, (shm_stream *)fdsstream);
 
     while (1) {
         while ((ev = shamon_get_next_ev(shamon))) {
