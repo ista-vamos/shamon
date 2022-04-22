@@ -51,12 +51,17 @@ int main(int argc, char *argv[]) {
             shm_kind kind = shm_event_kind(ev);
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
-            shm_event_fd_in *fd_ev = (shm_event_fd_in *) ev;
-            printf("Event time %lu\n", fd_ev->time);
-            assert(fd_ev->str_ref.size < INT_MAX);
-            printf("Data: fd: %d, size: %lu:\n'%.*s'\n",
-                   fd_ev->fd, fd_ev->str_ref.size,
-                   (int)fd_ev->str_ref.size, fd_ev->str_ref.data);
+
+            if (shm_event_is_dropped(ev)) {
+                printf("Dropped %lu events\n", ((shm_event_dropped*)ev)->n);
+            } else {
+               shm_event_fd_in *fd_ev = (shm_event_fd_in *) ev;
+                printf("Event time %lu\n", fd_ev->time);
+                assert(fd_ev->str_ref.size < INT_MAX);
+                printf("Data: fd: %d, size: %lu:\n'%.*s'\n",
+                       fd_ev->fd, fd_ev->str_ref.size,
+                       (int)fd_ev->str_ref.size, fd_ev->str_ref.data);
+            }
             puts("--------------------");
         }
         sleep_ms(100);
