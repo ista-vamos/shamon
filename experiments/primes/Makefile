@@ -1,7 +1,8 @@
 CPPFLAGS=-I../..
 CFLAGS=-O2 -g -fsanitize=address,undefined
 
-all: monitor-primes gennums_hardcoded 
+# DISABLE FOR NOW
+all: # monitor-primes gennums_hardcoded 
 
 monitor-primes: monitor-primes.o ../../shmbuf/libshamon.a isprime.o
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -lrt -lm
