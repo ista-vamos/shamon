@@ -6,10 +6,28 @@
 #include <assert.h>
 
 #include "event.h"
+#include "drfun/events.h"
 #include "shamon.h"
 #include "stream-funs.h"
 #include "utils.h"
 
+static inline void dump_args(shm_event_funcall *ev) {
+    void *p = ev->args;
+    for (const char *o = ev->signature; *o; ++o) {
+        if (*o == '_') {
+            printf(" _");
+            continue;
+        }
+        size_t size = call_event_op_get_size(*o);
+        switch(size) {
+        case 1: printf(" %c", *((char*)p)); break;
+        case 4: printf(" %d", *((int*)p)); break;
+        case 8: printf(" %ld", *((long int*)p)); break;
+        default: abort();
+        }
+        p += size;
+    }
+}
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -19,29 +37,52 @@ int main(int argc, char *argv[]) {
 
     shm_event *ev = NULL;
     shamon *shmn = shamon_create(NULL, NULL);
+    assert(shmn);
     shm_stream *stream = shm_create_funs_stream(argv[1]);
+    assert(stream);
     shamon_add_stream(shmn, stream);
 
+    shm_kind kind;
+    int cur_arg, last_arg = 0;
     while (1) {
         while ((ev = shamon_get_next_ev(shmn))) {
+            kind = shm_event_kind(ev);
+            if (shm_event_is_dropped(ev)) {
+                printf("Event 'dropped(%lu)')\n", ((shm_event_dropped*)ev)->n);
+                last_arg = 0;
+                continue;
+            }
+            shm_event_funcall *callev = (shm_event_funcall *) ev;
+            cur_arg = *((int*)callev->args);
+
+            if (last_arg > 0) {
+                if (cur_arg - last_arg != 1) {
+                    printf("Inconsistent arguments: %d - %d\n", last_arg, cur_arg);
+                }
+            }
+
+            last_arg = cur_arg;
+
+            /*
             puts("--------------------");
             shm_stream *stream = shm_event_stream(ev);
             printf("\033[0;34mEvent id %lu on stream '%s'\033[0m\n",
                    shm_event_id(ev), shm_stream_get_name(stream));
             shm_kind kind = shm_event_kind(ev);
+            if (shm_event_is_dropped(ev)) {
+                printf("Event 'dropped(%lu)')\n", ((shm_event_dropped*)ev)->n);
+                continue;
+            }
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
-            /*
-            shm_event_io *shm_ev = (shm_event_io *) ev;
-	    assert(shm_ev->str_ref.size < INT_MAX);
-            printf("Event time %lu\n", shm_ev->time);
-            printf("Data: fd: %d, size: %lu:\n'%.*s'\n",
-                   shm_ev->fd, shm_ev->str_ref.size,
-                   (int)shm_ev->str_ref.size, shm_ev->str_ref.data);
-            */
+            shm_event_funcall *callev = (shm_event_funcall *) ev;
+            //printf("Call '%s' [%lu], args", callev->name, callev->addr);
+            printf("Args: ");
+            dump_args(callev);
+            putchar('\n');
             puts("--------------------");
+            */
         }
-        sleep_ms(100);
     }
     shamon_destroy(shmn);
 }

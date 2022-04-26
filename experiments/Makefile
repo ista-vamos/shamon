@@ -1,5 +1,5 @@
 CPPFLAGS=-I.. -I../shmbuf -I../streams -D_POSIX_C_SOURCE200809L
-CFLAGS=-O2 -g -fsanitize=address,undefined -std=c11 -lpthread
+CFLAGS=-O2 -g -std=c11 -lpthread #-fsanitize=address,undefined 
 
 all: primes interact monitor-stdin monitor-io monitor-shmbuf-funs
 
