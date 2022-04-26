@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
         while ((ev = shamon_get_next_ev(shmn))) {
             kind = shm_event_kind(ev);
             if (shm_event_is_dropped(ev)) {
-                printf("Event 'dropped(%lu)')\n", ((shm_event_dropped*)ev)->n);
+                printf("Event 'dropped(%lu)'\n", ((shm_event_dropped*)ev)->n);
                 last_arg = 0;
                 continue;
             }
@@ -75,7 +75,6 @@ int main(int argc, char *argv[]) {
             }
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
-            shm_event_funcall *callev = (shm_event_funcall *) ev;
             //printf("Call '%s' [%lu], args", callev->name, callev->addr);
             printf("Args: ");
             dump_args(callev);
