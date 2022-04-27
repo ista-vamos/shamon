@@ -16,8 +16,7 @@ monitor-io: monitor-io.c ../streams/stream-fds.o ../shamon.a
 #	$(CC) $^ $(CFLAGS) -lpthread $(CPPFLAGS) -o $@
 
 monitor-shmbuf-funs: monitor-shmbuf-funs.c ../streams/stream-funs.o ../shamon.a\
-			../shmbuf/buffer.o ../shmbuf/client.o ../shmbuf/shm.o\
-			../drfun/events.c
+			../shmbuf/libshmbuf.a ../drfun/events.c
 	$(CC) $^ $(CFLAGS) -lpthread $(CPPFLAGS) -o $@
 
 clean:
