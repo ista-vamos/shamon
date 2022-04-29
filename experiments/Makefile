@@ -1,7 +1,7 @@
 CPPFLAGS=-I.. -I../shmbuf -I../streams -D_POSIX_C_SOURCE200809L
 CFLAGS=-O2 -g -std=c11 -lpthread #-fsanitize=address,undefined 
 
-all: primes interact monitor-stdin monitor-io monitor-shmbuf-funs
+all: primes monitor-stdin monitor-io monitor-entropy monitor-shmbuf-funs
 
 primes:
 	+make -C primes
@@ -10,6 +10,9 @@ monitor-stdin: monitor-stdin.c ../streams/stream-stdin.o ../shamon.a
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@
 
 monitor-io: monitor-io.c ../streams/stream-fds.o ../shamon.a
+	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@
+
+monitor-entropy: monitor-entropy.c ../streams/stream-fds.o ../shamon.a
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@
 
 #monitor-fastbuf-io: monitor-fastbuf-io.c ../streams/stream-fastbuf-io.o ../shamon.a ../fastbuf/shm_monitor.o ../fastbuf/shm_common.c
