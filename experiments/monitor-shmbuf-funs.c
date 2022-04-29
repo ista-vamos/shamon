@@ -44,8 +44,11 @@ int main(int argc, char *argv[]) {
 
     shm_kind kind;
     int cur_arg, last_arg = 0;
+    size_t n = 0;
     while (shamon_is_ready(shmn)) {
         while ((ev = shamon_get_next_ev(shmn))) {
+            ++n;
+
             kind = shm_event_kind(ev);
             if (shm_event_is_dropped(ev)) {
                 printf("Event 'dropped(%lu)'\n", ((shm_event_dropped*)ev)->n);
@@ -57,7 +60,8 @@ int main(int argc, char *argv[]) {
 
             if (last_arg > 0) {
                 if (cur_arg - last_arg != 1) {
-                    printf("Inconsistent arguments: %d - %d\n", last_arg, cur_arg);
+                    printf("Inconsistent arguments: %d should be %d\n",
+                            cur_arg, last_arg + 1);
                 }
             }
 
@@ -83,5 +87,6 @@ int main(int argc, char *argv[]) {
             */
         }
     }
+    printf("Processed %lu events\n", n);
     shamon_destroy(shmn);
 }
