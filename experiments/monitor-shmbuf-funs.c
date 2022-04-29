@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
 
     shm_kind kind;
     int cur_arg, last_arg = 0;
-    while (1) {
+    while (shamon_is_ready(shmn)) {
         while ((ev = shamon_get_next_ev(shmn))) {
             kind = shm_event_kind(ev);
             if (shm_event_is_dropped(ev)) {
