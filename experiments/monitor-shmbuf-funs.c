@@ -11,13 +11,22 @@
 #include "stream-funs.h"
 #include "utils.h"
 
-static inline void dump_args(shm_event_funcall *ev) {
+static inline void dump_args(shm_stream_funs *ss, shm_event_funcall *ev) {
     void *p = ev->args;
     for (const char *o = ev->signature; *o; ++o) {
         if (*o == '_') {
             printf(" _");
             continue;
         }
+        if (*o == 'S') {
+            printf(" S[%lu, %lu](%s)",
+                   (*(uint64_t*)p) >> 32,
+                   (*(uint64_t*)p) & 0xffffffff,
+                   shm_stream_funs_get_str(ss, (*(uint64_t*)p)));
+            p += sizeof(uint64_t);
+            continue;
+        }
+
         size_t size = call_event_op_get_size(*o);
         switch(size) {
         case 1: printf(" %c", *((char*)p)); break;
@@ -28,6 +37,23 @@ static inline void dump_args(shm_event_funcall *ev) {
         p += size;
     }
 }
+
+static inline void get_strings(shm_stream_funs *ss, shm_event_funcall *ev) {
+    void *p = ev->args;
+    for (const char *o = ev->signature; *o; ++o) {
+        if (*o == '_') {
+            continue;
+        }
+        if (*o == 'S') {
+            shm_stream_funs_get_str(ss, (*(uint64_t*)p));
+            p += sizeof(uint64_t);
+            continue;
+        }
+
+        p += call_event_op_get_size(*o);
+    }
+}
+
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -56,6 +82,7 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             shm_event_funcall *callev = (shm_event_funcall *) ev;
+            /*
             cur_arg = *((int*)callev->args);
 
             if (last_arg > 0) {
@@ -71,18 +98,22 @@ int main(int argc, char *argv[]) {
             shm_stream *stream = shm_event_stream(ev);
             printf("\033[0;34mEvent id %lu on stream '%s'\033[0m\n",
                    shm_event_id(ev), shm_stream_get_name(stream));
-            shm_kind kind = shm_event_kind(ev);
+            */
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
-            printf("Event size %lu\n", shm_event_size(ev));
+            /*
+            //printf("Event size %lu\n", shm_event_size(ev));
             if (shm_event_is_dropped(ev)) {
                 printf("Event 'dropped(%lu)')\n", ((shm_event_dropped*)ev)->n);
                 continue;
             }
-            //printf("Call '%s' [%lu], args", callev->name, callev->addr);
-            printf("Args: ");
-            dump_args(callev);
+            */
+            dump_args((shm_stream_funs*)stream, callev);
             putchar('\n');
+            /*
             puts("--------------------");
+            get_strings((shm_stream_funs*)stream, callev);
+            */
+            shm_event_funcall_release(callev);
         }
     }
     printf("Processed %lu events\n", n);
