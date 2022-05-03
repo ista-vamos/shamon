@@ -64,9 +64,9 @@ int main(int argc, char *argv[]) {
     shm_event *ev = NULL;
     shamon *shmn = shamon_create(NULL, NULL);
     assert(shmn);
-    shm_stream *stream = shm_create_funs_stream(argv[1]);
-    assert(stream);
-    shamon_add_stream(shmn, stream);
+    shm_stream *fstream = shm_create_funs_stream(argv[1]);
+    assert(fstream);
+    shamon_add_stream(shmn, fstream);
 
     shm_kind kind;
     int cur_arg, last_arg = 0;
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             */
-            dump_args((shm_stream_funs*)stream, callev);
+            dump_args((shm_stream_funs*)shm_event_stream(ev), callev);
             putchar('\n');
             /*
             puts("--------------------");
@@ -118,4 +118,7 @@ int main(int argc, char *argv[]) {
     }
     printf("Processed %lu events\n", n);
     shamon_destroy(shmn);
+    /* FIXME: do this a callback of shamon_destroy, so that
+     * we do not have to think about the order */
+    shm_destroy_funs_stream((shm_stream_funs*)fstream);
 }
