@@ -98,17 +98,17 @@ int main(int argc, char *argv[]) {
             shm_stream *stream = shm_event_stream(ev);
             printf("\033[0;34mEvent id %lu on stream '%s'\033[0m\n",
                    shm_event_id(ev), shm_stream_get_name(stream));
-            */
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
+            */
             /*
             //printf("Event size %lu\n", shm_event_size(ev));
             if (shm_event_is_dropped(ev)) {
                 printf("Event 'dropped(%lu)')\n", ((shm_event_dropped*)ev)->n);
                 continue;
             }
-            */
             dump_args((shm_stream_funs*)shm_event_stream(ev), callev);
             putchar('\n');
+            */
             /*
             puts("--------------------");
             get_strings((shm_stream_funs*)stream, callev);
