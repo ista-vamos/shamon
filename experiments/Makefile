@@ -1,7 +1,7 @@
 CPPFLAGS=-I.. -I../shmbuf -I../streams -D_POSIX_C_SOURCE200809L
-CFLAGS=-O3 -g -std=c11 -lpthread #-fsanitize=address,undefined 
+CFLAGS=-g -std=c11 -lpthread #-fsanitize=address,undefined 
 
-all: primes monitor-stdin monitor-io monitor-entropy monitor-shmbuf-funs
+all: primes monitor-shmbuf-funs #monitor-stdin monitor-io monitor-entropy
 
 primes:
 	+make -C primes
