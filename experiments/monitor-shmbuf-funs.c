@@ -83,7 +83,6 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             shm_event_funcall *callev = (shm_event_funcall *) ev;
-            /*
             cur_arg = *((int*)callev->args);
 
             if (last_arg > 0) {
@@ -94,9 +93,8 @@ int main(int argc, char *argv[]) {
             }
 
             last_arg = cur_arg;
-
+            /*
             puts("--------------------");
-            */
             shm_stream *stream = shm_event_stream(ev);
             assert(stream);
             printf("\033[0;34mEvent id %lu on stream '%s'\033[0m\n",
@@ -107,13 +105,15 @@ int main(int argc, char *argv[]) {
                 printf("Event 'dropped(%lu)')\n", ((shm_event_dropped*)ev)->n);
                 continue;
             }
+            */
+            printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             dump_args((shm_stream_funs*)shm_event_stream(ev), callev);
             putchar('\n');
             /*
             puts("--------------------");
             get_strings((shm_stream_funs*)stream, callev);
-            */
             shm_event_funcall_release(callev);
+            */
         }
     }
     printf("Processed %lu events\n", n);
