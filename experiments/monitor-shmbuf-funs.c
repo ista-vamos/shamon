@@ -66,7 +66,8 @@ int main(int argc, char *argv[]) {
     assert(shmn);
     shm_stream *fstream = shm_create_funs_stream(argv[1]);
     assert(fstream);
-    shamon_add_stream(shmn, fstream);
+    shamon_add_stream(shmn, fstream,
+                      /* buffer capacity = */4*4096);
 
     shm_kind kind;
     int cur_arg, last_arg = 0;
