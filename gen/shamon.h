@@ -6,6 +6,80 @@
 #include <stdbool.h>
 #include <unistd.h>
 
+/*
+ * The high-level workflow is as follows:
+ *
+ *  // create a stream -- stream specific
+ *  shm_stream *stream = shm_stream_XXX_create(...);
+ *
+ *  // create the arbiter's buffer
+ *  shm_arbiter_buffer buffer.
+ *  shm_arbiter_buffer_init(&buffer, stream,
+ *                          ... output event size...,
+ *                          ... buffer's capacity...);
+ *
+ *  // create thread that buffers events (code for it is below)
+ *  thrd_t thread_id;
+ *  thrd_create(&thread_id, buffer_manager_thrd, &buffer);
+ *
+ *  // let the thread know that the buffer is ready (optional,
+ *  // depends on the thread's code)
+ *  shm_arbiter_buffer_set_active(buffer, true);
+ *
+ *  // the main loop
+ *  shm_event_dropped dropped;
+ *  while (true) {
+ *    avail_events_num = shm_arbiter_buffer_size(buffer);
+ *    if (avail_events_num > 0) {
+ *        if (avail_events_num > ... some threshold ...) {
+ *            // drop half of the buffer
+ *            shm_eventid id = shm_event_id(shm_arbiter_buffer_top(buffer));
+ *            shm_arbiter_buffer_drop(buffer, c/4);
+ *            shm_stream_get_dropped_event(stream, &dropped, id, c/4);
+ *
+ *            __monitor_send(&dropped, ...);
+ *
+ *            // the dropping can be replaced by summarizing and sending
+ *            // some more informative event
+ *        }
+
+ *        shm_arbiter_buffer_pop(buffer, ...memory for event...);
+ *        __monitor_send(...memory for event ..., ...);
+ *    }
+ *  }
+ *
+ *
+ * ///////////////////////////////////////////////////////////////////
+ * // The code for the thread that buffers events can look like this:
+ * int buffer_manager_thrd(void *data) {
+ *  shm_arbiter_buffer *buffer = (shm_arbiter_buffer*) data;
+ *  shm_stream *stream = shm_arbiter_buffer_stream(buffer);
+ *
+ *  // wait until the buffer is active
+ *  while (!shm_arbiter_buffer_active(buffer))
+ *      _mm_pause();
+ *
+ *  void *ev, *out;
+ *  while (true) {
+ *      ev = stream_fetch(stream, buffer);
+ *      if (!ev) {
+ *          continue;
+ *      }
+ *      if (filter && !filter(stream, ev)) {
+ *          shm_stream_consume(stream, 1);
+ *          continue;
+ *      }
+ *
+ *      out = shm_arbiter_buffer_write_ptr(buffer);
+ *      copy_and_maybe_alter(stream, ev, out);
+ *      shm_arbiter_buffer_write_finish(buffer);
+ *      shm_stream_consume(stream, 1);
+ *  }
+ *
+ *  thrd_exit(EXIT_SUCCESS);
+ * }
+ */
+
 typedef uint64_t shm_kind;
 typedef uint64_t shm_eventid;
 typedef struct _shm_event shm_event;
