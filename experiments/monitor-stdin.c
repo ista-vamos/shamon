@@ -10,7 +10,7 @@ int main(void) {
     shamon *shmn = shamon_create(NULL, NULL);
     // custom stream
     shm_stream *stdin_stream = shm_create_stdin_stream();
-    shamon_add_stream(shmn, stdin_stream);
+    shamon_add_stream(shmn, stdin_stream, 3);
 
     puts("Created STDIN stream");
 

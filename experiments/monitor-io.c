@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
        //}
         fdsstream = (shm_stream_fds *) shm_create_fds_stream();
         shm_stream_fds_add_fd(fdsstream, fd);
-        shamon_add_stream(shamon, (shm_stream *)fdsstream);
+        shamon_add_stream(shamon, (shm_stream *)fdsstream, 4096);
         puts(" OK");
     }
 
