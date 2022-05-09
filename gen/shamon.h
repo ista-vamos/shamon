@@ -68,6 +68,7 @@
  *
  * ///////////////////////////////////////////////////////////////////
  * // The code for the thread that buffers events can look like this:
+ *
  * int buffer_manager_thrd(void *data) {
  *  shm_arbiter_buffer *buffer = (shm_arbiter_buffer*) data;
  *  shm_stream *stream = shm_arbiter_buffer_stream(buffer);
