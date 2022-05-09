@@ -41,8 +41,19 @@
  *                                        &data1, &size1,
  *                                        &data2, &size2);
  *            summary_event_type summary;
- *
- *            ... summarize events in event 'summary' ...
+ *            size_t element_size = shm_arbiter_buffer_elem_size(buffer);
+ *            for (size_t i = 0; i < size1; ++i) {
+ *               if (shm_event_is_dropped((shm_event*)data1) {
+ *                   ... update summary ...
+ *               } else {
+ *                   right_event_type *ev = (right_event_type*)data1;
+ *                   ... update summary ...
+ *               }
+ *               data1 += element_size;
+ *            }
+ *            if (n > size1) {
+ *                ... process data2 too ...
+ *            }
  *
  *            shm_arbiter_buffer_drop(buffer, n);
  *            __monitor_send(&summary, ...);
