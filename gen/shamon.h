@@ -21,10 +21,7 @@ void initialize_events(void);
 void deinitialize_events(void);
 
 shm_kind shm_mk_event_kind(const char* name,
-                           shm_stream *stream,
-                           size_t event_size,
-                           ev_copy_fn copy_fn,
-                           ev_destroy_fn destroy_fn);
+                           size_t event_size);
 const char *shm_event_kind_name(shm_kind kind);
 
 /** EVENTS **/
