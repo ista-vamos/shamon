@@ -12,7 +12,7 @@ typedef struct _shm_event shm_event;
 typedef struct _shm_stream shm_stream;
 typedef struct _shm_arbiter_buffer shm_arbiter_buffer;
 
-/** EVENT **/
+/** EVENTS **/
 
 /* Must be called before using event API.
  * It is called from shamon_create */
@@ -24,11 +24,10 @@ shm_kind shm_mk_event_kind(const char* name,
                            size_t event_size);
 const char *shm_event_kind_name(shm_kind kind);
 
-/** EVENTS **/
 shm_eventid shm_event_id(shm_event *event);
 size_t shm_event_size(shm_event *event);
 shm_kind shm_event_kind(shm_event *event);
-size_t shm_event_kind_size(shm_kind kind);
+size_t shm_event_size_for_kind(shm_kind kind);
 
 bool shm_event_is_dropped(shm_event *);
 shm_kind shm_get_dropped_kind(void);
