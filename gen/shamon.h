@@ -9,6 +9,8 @@
 /*
  * The high-level workflow is as follows:
  *
+ *  initialize_events();
+ *
  *  // create a stream -- stream specific
  *  shm_stream *stream = shm_stream_XXX_create(...);
  *
