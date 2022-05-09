@@ -44,10 +44,11 @@
  *            // the dropping can be replaced by summarizing and sending
  *            // some more informative event
  *        }
-
+ *
  *        shm_arbiter_buffer_pop(buffer, ...memory for event...);
  *        __monitor_send(...memory for event ..., ...);
- *    }
+ *    } else {
+ *      ... sleep for a while? ...
  *  }
  *
  *
@@ -136,8 +137,8 @@ void shm_stream_get_dropped_event(shm_stream *stream,
  * (or NULL if the event was dropped or there is none). \param buffer
  * is taken only to handle dropping events, the next event on the stream
  * is not queued there by this function */
-void *shm_stream_fetch(shm_stream *stream,
-                       shm_arbiter_buffer *buffer);
+void *stream_fetch(shm_stream *stream,
+                   shm_arbiter_buffer *buffer);
 
 void shm_arbiter_buffer_init(shm_arbiter_buffer *buffer, shm_stream *stream,
                              size_t out_event_size, size_t capacity);
