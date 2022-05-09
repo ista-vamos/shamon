@@ -29,24 +29,27 @@
  *  shm_arbiter_buffer_set_active(buffer, true);
  *
  *  // the main loop
- *  shm_event_dropped dropped;
  *  while (true) {
  *    avail_events_num = shm_arbiter_buffer_size(buffer);
  *    if (avail_events_num > 0) {
  *        if (avail_events_num > ... some threshold ...) {
- *            // drop half of the buffer
+ *            // summarize half of the buffer
  *            shm_eventid id = shm_event_id(shm_arbiter_buffer_top(buffer));
- *            shm_arbiter_buffer_drop(buffer, c/4);
- *            shm_stream_get_dropped_event(stream, &dropped, id, c/4);
+ *            void *data1, *data2;
+ *            size_t size1, size2, n;
+ *            n = shm_arbiter_buffer_peek(&buffer, c/2,
+ *                                        &data1, &size1,
+ *                                        &data2, &size2);
+ *            summary_event_type summary;
  *
- *            __monitor_send(&dropped, ...);
+ *            ... summarize events in event 'summary' ...
  *
- *            // the dropping can be replaced by summarizing and sending
- *            // some more informative event
+ *            shm_arbiter_buffer_drop(buffer, n);
+ *            __monitor_send(&summary, ...);
  *        }
  *
- *        shm_arbiter_buffer_pop(buffer, ...memory for event...);
- *        __monitor_send(...memory for event ..., ...);
+ *        __monitor_send(shm_arbiter_buffer_top(buffer), ...);
+ *        shm_arbiter_buffer_drop(buffer, 1);
  *    } else {
  *      ... sleep for a while? ...
  *  }
@@ -66,7 +69,7 @@
  *  while (true) {
  *      ev = stream_fetch(stream, buffer);
  *      if (!ev) {
- *          continue;
+ *          break;  // stream ended
  *      }
  *      if (filter && !filter(stream, ev)) {
  *          shm_stream_consume(stream, 1);
