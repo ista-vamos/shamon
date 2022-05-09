@@ -12,7 +12,9 @@ typedef struct _shm_event shm_event;
 typedef struct _shm_stream shm_stream;
 typedef struct _shm_arbiter_buffer shm_arbiter_buffer;
 
-/** EVENTS **/
+/************************************************************************
+ * EVENTS
+ ************************************************************************/
 
 /* Must be called before using event API.
  * It is called from shamon_create */
@@ -32,14 +34,15 @@ size_t shm_event_size_for_kind(shm_kind kind);
 bool shm_event_is_dropped(shm_event *);
 shm_kind shm_get_dropped_kind(void);
 
-/** STREAM **/
+/************************************************************************
+ * STREAMS
+ ************************************************************************/
+
 typedef bool (*shm_stream_filter_fn)(shm_stream *, shm_event *);
 typedef void (*shm_stream_alter_fn)(shm_stream *, shm_event *, shm_event *);
 
 const char *shm_stream_get_name(shm_stream *);
-void *shm_stream_read_events(shm_stream *, size_t *);
 bool shm_stream_consume(shm_stream *stream, size_t num);
-void shm_buffer_release_str(shm_stream *stream, uint64_t elem);
 const char *shm_stream_get_str(shm_stream *stream, uint64_t elem);
 
 /* * Fill the 'dropped' event for the given stream */
@@ -48,9 +51,10 @@ void shm_stream_get_dropped_event(shm_stream *stream,
                                   size_t id,
                                   uint64_t n);
 
-bool shm_stream_is_ready(shm_stream *);
 
-/** ARBITER BUFFER **/
+/************************************************************************
+ * ARBITER BUFFER
+ ************************************************************************/
 
 /* the important function -- get the pointer to the next event in the stream
  * (or NULL if the event was dropped or there is none). \param buffer
@@ -59,7 +63,8 @@ bool shm_stream_is_ready(shm_stream *);
 void *shm_stream_fetch(shm_stream *stream,
                        shm_arbiter_buffer *buffer);
 
-void shm_arbiter_buffer_init(shm_arbiter_buffer *buffer, shm_stream *stream, size_t capacity);
+void shm_arbiter_buffer_init(shm_arbiter_buffer *buffer, shm_stream *stream,
+                             size_t out_event_size, size_t capacity);
 void shm_arbiter_buffer_destroy(shm_arbiter_buffer *buffer);
 void shm_arbiter_buffer_set_active(shm_arbiter_buffer *buffer, bool val);
 size_t shm_arbiter_buffer_elem_size(shm_arbiter_buffer *q);
