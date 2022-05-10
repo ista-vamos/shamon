@@ -59,7 +59,7 @@ shm_stream *shm_stream_create(const char *name,
                               int argc,
                               const char *argv[]);
 
-int main(int argc, const char *argv[]) {
+int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "USAGE: prog shm1\n");
         return -1;

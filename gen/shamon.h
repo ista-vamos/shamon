@@ -146,7 +146,7 @@ void shm_stream_get_dropped_event(shm_stream *stream,
 shm_stream *shm_stream_create(const char *name,
                               const char *signature,
                               int argc,
-                              const char *argv[]);
+                              char *argv[]);
 
 /************************************************************************
  * ARBITER BUFFER
