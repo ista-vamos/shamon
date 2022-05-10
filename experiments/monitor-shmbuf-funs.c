@@ -54,8 +54,12 @@ static inline void get_strings(shm_stream_funs *ss, shm_event_funcall *ev) {
     }
 }
 
+shm_stream *shm_stream_create(const char *name,
+                              const char *signature,
+                              int argc,
+                              const char *argv[]);
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "USAGE: prog shm1\n");
         return -1;
@@ -64,7 +68,9 @@ int main(int argc, char *argv[]) {
     shm_event *ev = NULL;
     shamon *shmn = shamon_create(NULL, NULL);
     assert(shmn);
-    shm_stream *fstream = shm_create_funs_stream(argv[1]);
+    shm_stream *fstream
+            = shm_stream_create("calls", NULL,
+                                argc, argv);
     assert(fstream);
     shamon_add_stream(shmn, fstream,
                       /* buffer capacity = */4*4096);

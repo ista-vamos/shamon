@@ -19,7 +19,7 @@ monitor-entropy: monitor-entropy.c ../streams/stream-fds.o ../shamon.a
 #	$(CC) $^ $(CFLAGS) -lpthread $(CPPFLAGS) -o $@
 
 monitor-shmbuf-funs: monitor-shmbuf-funs.c ../streams/stream-funs.o ../shamon.a\
-			../shmbuf/libshmbuf.a ../drfun/events.c
+			../shmbuf/libshmbuf.a ../drfun/events.c ../streams/streams.o
 	$(CC) $^ $(CFLAGS) -static -lpthread $(CPPFLAGS) -o $@
 
 clean:
