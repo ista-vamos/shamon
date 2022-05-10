@@ -116,7 +116,6 @@ int main(int argc, const char *argv[]) {
             /*
             puts("--------------------");
             get_strings((shm_stream_funs*)stream, callev);
-            shm_event_funcall_release(callev);
             */
         }
     }
