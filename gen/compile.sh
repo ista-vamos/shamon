@@ -2,13 +2,17 @@
 
 set -x
 
-MONITOR="$1"
+CURDIR="$(pwd)"
+MONITORSRC="$1"
+shift  # consume the first argument in case there are some additional ones
+       # for the compilation
+
 GENDIR=$(dirname $0)
 SHAMONDIR="$GENDIR/.."
 
 #CFLAGS="-g3 -O3 -flto"
 CFLAGS="-g -O0"
-CPPFLAGS=-I$SHAMONDIR
+CPPFLAGS="-I$SHAMONDIR -I$SHAMONDIR/streams -I$SHAMONDIR/shmbuf"
 LDFLAGS=-lpthread
 LIBRARIES="$SHAMONDIR/libshamon-arbiter.a\
            $SHAMONDIR/libshamon-utils.a\
@@ -18,4 +22,5 @@ LIBRARIES="$SHAMONDIR/libshamon-arbiter.a\
            $SHAMONDIR/drfun/events.c\
            $SHAMONDIR/streams/libshamon-streams.a"
 
-cc $CFLAGS $CPPFLAGS -o monitor $MONITOR -static $LIBRARIES $LDFLAGS
+test -z $CC && CC=cc
+${CC} $CFLAGS $CPPFLAGS -o ${CURDIR}/monitor $MONITORSRC $@ $LIBRARIES $LDFLAGS
