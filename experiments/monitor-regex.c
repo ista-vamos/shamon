@@ -1,0 +1,100 @@
+#include <stdio.h>
+#include <limits.h>
+#include <time.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <assert.h>
+
+#include "event.h"
+#include "shamon.h"
+#include "stream-regex.h"
+#include "utils.h"
+#include "signatures.h"
+#include "source.h"
+
+
+static inline void dump_args(shm_stream *stream, shm_event_regex *ev) {
+    void *p = ev->args;
+    const char *signature = shm_event_signature((shm_event*)ev);
+    for (const char *o = signature + 1; *o; ++o) {
+        if (*o == 'S' || *o == 'L' || *o == 'M') {
+            printf(" S[%lu, %lu](%s)",
+                   (*(uint64_t*)p) >> 32,
+                   (*(uint64_t*)p) & 0xffffffff,
+                   shm_stream_get_str(stream, (*(uint64_t*)p)));
+            p += sizeof(uint64_t);
+            continue;
+        }
+
+        size_t size = signature_op_get_size(*o);
+        if (*o == 'f') {
+            printf(" %f", *((float*)p));
+        } else if (*o == 'd') {
+            printf(" %lf", *((double*)p));
+        } else {
+            switch(size) {
+            case 1: printf(" %c", *((char*)p)); break;
+            case 4: printf(" %d", *((int*)p)); break;
+            case 8: printf(" %ld", *((long int*)p)); break;
+            default: printf("?");
+            }
+        }
+        p += size;
+    }
+}
+
+shm_stream *shm_stream_create(const char *name,
+                              struct source_control **control,
+                              int argc,
+                              char *argv[]);
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "USAGE: prog shm1\n");
+        return -1;
+    }
+
+    shm_event *ev = NULL;
+    shamon *shmn = shamon_create(NULL, NULL);
+    assert(shmn);
+    struct source_control *control;
+    shm_stream *fstream
+            = shm_stream_create("regex", &control,
+                                argc, argv);
+    assert(fstream);
+    shamon_add_stream(shmn, fstream,
+                      /* buffer capacity = */4*4096);
+
+    shm_kind kind;
+    int cur_arg, last_arg = 0;
+    size_t n = 0;
+    while (shamon_is_ready(shmn)) {
+        while ((ev = shamon_get_next_ev(shmn))) {
+            ++n;
+
+            kind = shm_event_kind(ev);
+            if (shm_event_is_dropped(ev)) {
+                printf("Event 'dropped(%lu)'\n", ((shm_event_dropped*)ev)->n);
+                last_arg = 0;
+                continue;
+            }
+            puts("--------------------");
+            printf("\033[0;34mEvent id %lu\033[0m\n", shm_event_id(ev));
+            printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
+            printf("Event size %lu\n", shm_event_size(ev));
+            if (shm_event_is_dropped(ev)) {
+                printf("Event 'dropped(%lu)')\n", ((shm_event_dropped*)ev)->n);
+                continue;
+            }
+            shm_event_regex *reev = (shm_event_regex*)ev;
+            printf("Line: %lu: ", reev->line);
+            dump_args(fstream, reev);
+            putchar('\n');
+        }
+    }
+    printf("Processed %lu events\n", n);
+    shamon_destroy(shmn);
+    /* FIXME: do this a callback of shamon_destroy, so that
+     * we do not have to think about the order */
+    shm_destroy_sregex_stream((shm_stream_sregex*)fstream);
+}

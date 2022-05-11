@@ -116,7 +116,8 @@ void initialize_events(void);
 void deinitialize_events(void);
 
 shm_kind shm_mk_event_kind(const char* name,
-                           size_t event_size);
+                           size_t event_size,
+                           const char *signature);
 const char *shm_event_kind_name(shm_kind kind);
 
 shm_eventid shm_event_id(shm_event *event);
