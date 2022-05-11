@@ -6,10 +6,11 @@
 #include <assert.h>
 
 #include "event.h"
-#include "drfun/events.h"
+#include "sources/drfun/eventspec.h"
 #include "shamon.h"
 #include "stream-funs.h"
 #include "utils.h"
+#include "signatures.h"
 
 static inline void dump_args(shm_stream_funs *ss, shm_event_funcall *ev) {
     void *p = ev->args;
@@ -27,7 +28,7 @@ static inline void dump_args(shm_stream_funs *ss, shm_event_funcall *ev) {
             continue;
         }
 
-        size_t size = call_event_op_get_size(*o);
+        size_t size = signature_op_get_size(*o);
         switch(size) {
         case 1: printf(" %c", *((char*)p)); break;
         case 4: printf(" %d", *((int*)p)); break;
@@ -38,26 +39,10 @@ static inline void dump_args(shm_stream_funs *ss, shm_event_funcall *ev) {
     }
 }
 
-static inline void get_strings(shm_stream_funs *ss, shm_event_funcall *ev) {
-    void *p = ev->args;
-    for (const char *o = ev->signature; *o; ++o) {
-        if (*o == '_') {
-            continue;
-        }
-        if (*o == 'S') {
-            shm_stream_funs_get_str(ss, (*(uint64_t*)p));
-            p += sizeof(uint64_t);
-            continue;
-        }
-
-        p += call_event_op_get_size(*o);
-    }
-}
-
 shm_stream *shm_stream_create(const char *name,
-                              const char *signature,
+                              struct source_control **control,
                               int argc,
-                              const char *argv[]);
+                              char *argv[]);
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -68,8 +53,9 @@ int main(int argc, char *argv[]) {
     shm_event *ev = NULL;
     shamon *shmn = shamon_create(NULL, NULL);
     assert(shmn);
+    struct source_control *control;
     shm_stream *fstream
-            = shm_stream_create("calls", NULL,
+            = shm_stream_create("calls", &control,
                                 argc, argv);
     assert(fstream);
     shamon_add_stream(shmn, fstream,
