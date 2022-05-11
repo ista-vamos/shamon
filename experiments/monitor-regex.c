@@ -17,8 +17,10 @@ static inline void dump_args(shm_stream *stream, shm_event_regex *ev) {
     void *p = ev->args;
     const char *signature = shm_event_signature((shm_event*)ev);
     for (const char *o = signature; *o; ++o) {
+        if (o != signature)
+            printf(", ");
         if (*o == 'S' || *o == 'L' || *o == 'M') {
-            printf(" S[%lu, %lu](%s)",
+            printf("S[%lu, %lu](%s)",
                    (*(uint64_t*)p) >> 32,
                    (*(uint64_t*)p) & 0xffffffff,
                    shm_stream_get_str(stream, (*(uint64_t*)p)));
@@ -28,14 +30,14 @@ static inline void dump_args(shm_stream *stream, shm_event_regex *ev) {
 
         size_t size = signature_op_get_size(*o);
         if (*o == 'f') {
-            printf(" %f", *((float*)p));
+            printf("%f", *((float*)p));
         } else if (*o == 'd') {
-            printf(" %lf", *((double*)p));
+            printf("%lf", *((double*)p));
         } else {
             switch(size) {
-            case 1: printf(" %c", *((char*)p)); break;
-            case 4: printf(" %d", *((int*)p)); break;
-            case 8: printf(" %ld", *((long int*)p)); break;
+            case 1: printf("%c", *((char*)p)); break;
+            case 4: printf("%d", *((int*)p)); break;
+            case 8: printf("%ld", *((long int*)p)); break;
             default: printf("?");
             }
         }

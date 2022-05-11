@@ -169,21 +169,17 @@ int main (int argc, char *argv[]) {
                     addr = buffer_partial_push_str(shm, addr, line);
                     continue;
                 }
-                if (*o == 'M') { /* user wants the whole match */
-                    assert(matches[0].rm_so >= 0);
+                if (*o != 'M') {
+                    if ((int)matches[m].rm_so < 0) {
+                        fprintf(stderr, "warning: have no match for '%c' in signature %s\n", *o, signatures[i]);
+                        continue;
+                    }
+                    len = matches[m].rm_eo - matches[m].rm_so;
+                } else {
                     len = matches[0].rm_eo - matches[0].rm_so;
-                    addr = buffer_partial_push_str_n(shm, addr, line+matches[0].rm_so, len);
-                    printf("'%.*s'",  (int)len, line+matches[0].rm_so);
-                    continue;
-                }
-
-                if ((int)matches[m].rm_so < 0) {
-                    fprintf(stderr, "warning: have no match for '%c' in signature %s\n", *o, signatures[i]);
-                    continue;
                 }
 
                 /* make sure we have big enough temporary buffer */
-                len = matches[m].rm_eo - matches[m].rm_so;
                 if (tmpline_len < (size_t)len) {
                     free(tmpline);
                     tmpline = malloc(sizeof(char)*len+1);
@@ -191,8 +187,18 @@ int main (int argc, char *argv[]) {
                     tmpline_len = len;
                 }
 
-                strncpy(tmpline, line+matches[m].rm_so, len);
-                tmpline[len] = '\0';
+                if (*o == 'M') { /* user wants the whole match */
+                    assert(matches[0].rm_so >= 0);
+                    strncpy(tmpline, line+matches[0].rm_so, len);
+                    tmpline[len] = '\0';
+                    addr = buffer_partial_push_str(shm, addr, tmpline);
+                    printf("'%s'",  tmpline);
+                    continue;
+                } else {
+                    strncpy(tmpline, line+matches[m].rm_so, len);
+                    tmpline[len] = '\0';
+                }
+
                 switch(*o) {
                     case 'c':
                         assert(len == 1);
