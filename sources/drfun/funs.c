@@ -65,7 +65,8 @@
 
 #include "event.h" /* shm_event_dropped */
 #include "stream-funs.h"
-#include "events.h"
+#include "eventspec.h"
+#include "signatures.h"
 
 static void
 event_exit(void);
@@ -166,7 +167,7 @@ find_functions(void *drcontext, const module_data_t *mod, char loaded)
                            /* flags = */ DRSYM_DEMANGLE);
         if (ok == DRSYM_ERROR_LINE_NOT_AVAILABLE || ok == DRSYM_SUCCESS) {
             events[i].addr = (size_t)mod->start + off;
-            events[i].size = call_event_spec_get_size(&events[i]) + sizeof(shm_event_funcall);
+            events[i].size = signature_get_size((unsigned char *)events[i].signature) + sizeof(shm_event_funcall);
             if (events[i].size > max_event_size)
                 max_event_size = events[i].size;
             dr_printf("Found %s:%s in %s at 0x%x (size %lu)\n",
@@ -320,7 +321,7 @@ at_call_generic(size_t fun_idx, const char *sig)
             default:
               shmaddr = buffer_partial_push(shm, shmaddr,
                                             call_get_arg_ptr(&mc, i, *o),
-                                            call_event_op_get_size(*o));
+                                            signature_op_get_size(*o));
               /* printf(" arg %d=%ld", i, *(size_t*)call_get_arg_ptr(&mc, i, *o)); */
               break;
         }

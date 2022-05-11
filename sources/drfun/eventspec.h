@@ -1,21 +1,8 @@
-#ifndef DRFUN_EVENTS_H_
-#define DRFUN_EVENTS_H_
+#ifndef DRFUN_EVENT_SPEC_H_
+#define DRFUN_EVENT_SPEC_H_
 
 #include <stddef.h>
 #include <stdint.h>
-
-union shamon_operand {
-    unsigned char c;
-    unsigned short s;
-    unsigned int i;
-    unsigned long l;
-    float f;
-    double d;
-    void *p;
-    /* string is a 32bit id of shared memory block and 32bit offset */
-    uint64_t S;
-};
-
 
 struct call_event_spec {
     char name[256]; /* name */
@@ -40,9 +27,5 @@ struct call_event_spec {
     /* size in the buffer */
     size_t size;
 };
-
-size_t call_event_op_get_size(char c);
-size_t call_event_spec_get_size(struct call_event_spec *spec);
-
 
 #endif /* DRFUN_EVENTS_H_ */
