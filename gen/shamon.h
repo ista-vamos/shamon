@@ -1,6 +1,7 @@
 #ifndef SHAMON_SINGLE_H_
 #define SHAMON_SINGLE_H_
 
+#include "utils.h"  /* sleeping */
 #include "source.h"
 #include "stream.h"
 #include "arbiter.h"
