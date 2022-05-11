@@ -16,7 +16,7 @@
 static inline void dump_args(shm_stream *stream, shm_event_regex *ev) {
     void *p = ev->args;
     const char *signature = shm_event_signature((shm_event*)ev);
-    for (const char *o = signature + 1; *o; ++o) {
+    for (const char *o = signature; *o; ++o) {
         if (*o == 'S' || *o == 'L' || *o == 'M') {
             printf(" S[%lu, %lu](%s)",
                    (*(uint64_t*)p) >> 32,
@@ -87,9 +87,9 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             shm_event_regex *reev = (shm_event_regex*)ev;
-            printf("Line: %lu: ", reev->line);
+            printf("{");
             dump_args(fstream, reev);
-            putchar('\n');
+            printf("}\n");
         }
     }
     printf("Processed %lu events\n", n);
