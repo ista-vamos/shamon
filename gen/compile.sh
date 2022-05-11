@@ -16,10 +16,10 @@ CPPFLAGS="-I$SHAMONDIR -I$SHAMONDIR/streams -I$SHAMONDIR/shmbuf"
 LDFLAGS=-lpthread
 LIBRARIES="$SHAMONDIR/libshamon-arbiter.a\
            $SHAMONDIR/libshamon-utils.a\
+           $SHAMONDIR/libshamon-signature.a\
            $SHAMONDIR/libshamon-parallel-queue.a\
            $SHAMONDIR/list.c\
            $SHAMONDIR/shmbuf/libshamon-shmbuf.a\
-           $SHAMONDIR/drfun/events.c\
            $SHAMONDIR/streams/libshamon-streams.a"
 
 test -z $CC && CC=cc

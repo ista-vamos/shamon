@@ -1,6 +1,7 @@
 #ifndef SHAMON_SINGLE_H_
 #define SHAMON_SINGLE_H_
 
+#include "source.h"
 #include "stream.h"
 
 #include <stdbool.h>
@@ -144,7 +145,7 @@ void shm_stream_get_dropped_event(shm_stream *stream,
                                   uint64_t n);
 
 shm_stream *shm_stream_create(const char *name,
-                              const char *signature,
+                              struct source_control **control,
                               int argc,
                               char *argv[]);
 

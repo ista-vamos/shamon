@@ -67,6 +67,7 @@
 #include "stream-funs.h"
 #include "eventspec.h"
 #include "signatures.h"
+#include "source.h"
 
 static void
 event_exit(void);
@@ -76,8 +77,10 @@ event_app_instruction(void *drcontext, void *tag, instrlist_t *bb, instr_t *inst
                       bool for_trace, bool translating, void *user_data);
 
 static struct buffer *shm;
+static const char *shmkey;
 
-static struct call_event_spec *events;
+static struct source_control *control;
+unsigned long *addresses;
 static size_t events_num;
 size_t max_event_size = sizeof(shm_event_dropped);
 
@@ -160,13 +163,14 @@ find_functions(void *drcontext, const module_data_t *mod, char loaded)
     */
 
     size_t off;
+    struct event_record *events = control->events;
     for (size_t i = 0; i < events_num; ++i) {
         drsym_error_t ok = drsym_lookup_symbol(mod->full_path,
                            events[i].name,
                            &off,
                            /* flags = */ DRSYM_DEMANGLE);
         if (ok == DRSYM_ERROR_LINE_NOT_AVAILABLE || ok == DRSYM_SUCCESS) {
-            events[i].addr = (size_t)mod->start + off;
+            addresses[i] = (size_t)mod->start + off;
             events[i].size = signature_get_size((unsigned char *)events[i].signature) + sizeof(shm_event_funcall);
             if (events[i].size > max_event_size)
                 max_event_size = events[i].size;
@@ -174,7 +178,7 @@ find_functions(void *drcontext, const module_data_t *mod, char loaded)
                       events[i].name,
                       events[i].signature,
                       mod->full_path,
-                      events[i].addr,
+                      addresses[i],
                       events[i].size);
         }
     }
@@ -185,13 +189,17 @@ DR_EXPORT void
 dr_client_main(client_id_t id, int argc, const char *argv[])
 {
     (void)id;
-    if (argc < 2) {
-        dr_fprintf(STDERR, "Need arguments 'fun1:[sig]' 'fun2:[sig]' ...\n");
+    if (argc < 3) {
+        dr_fprintf(STDERR, "Need arguments shmkey 'fun1:[sig]' 'fun2:[sig]' ...\n");
         DR_ASSERT(0);
     }
 
-    events_num = argc - 1;
-    events = initialize_shared_control_buffer(sizeof(struct call_event_spec)*events_num);
+    shmkey = argv[1];
+    events_num = argc - 2;
+    addresses = dr_global_alloc(events_num*sizeof(unsigned long));
+    DR_ASSERT(addresses);
+    control = initialize_shared_control_buffer(shmkey, sizeof(struct source_control)+sizeof(struct event_record)*events_num);
+    struct event_record *events = control->events;
     for (int i = 1; i < argc; ++i) {
         const char *sig = strrchr(argv[i], ':');
         if (sig) {
@@ -246,7 +254,8 @@ event_exit(void)
     dr_printf("Releasing shared buffer\n");
     destroy_shared_buffer(shm);
     dr_printf("Releasing shared control buffer\n");
-    release_shared_control_buffer(events);
+    dr_global_free(addresses, events_num*sizeof(unsigned long));
+    release_shared_control_buffer(shmkey, control);
 }
 
 /* adapted from instrcalls.c */
@@ -302,6 +311,7 @@ at_call_generic(size_t fun_idx, const char *sig)
         /* _mm_pause(); */
         /* DR_ASSERT(0 && "Buffer full"); */
     }
+    struct event_record *events = control->events;
     DR_ASSERT(fun_idx < events_num);
     shm_event_funcall *ev = (shm_event_funcall*)shmaddr;
     ev->base.kind = events[fun_idx].kind;
@@ -342,7 +352,7 @@ event_app_instruction(void *drcontext, void *tag, instrlist_t *bb, instr_t *inst
     (void)user_data;
     /* FIXME: isn't there a better place to put this callback? */
     if (!shm) {
-        shm = initialize_shared_buffer(max_event_size);
+        shm = initialize_shared_buffer(shmkey, max_event_size, control);
         DR_ASSERT(shm);
         dr_printf("Waiting for the monitor to attach\n");
         buffer_wait_for_monitor(shm);
@@ -364,15 +374,19 @@ event_app_instruction(void *drcontext, void *tag, instrlist_t *bb, instr_t *inst
          */
          for (size_t i = 0; i < events_num; ++i) {
              // dr_printf("   target 0x%x == 0x%x events[%lu].addr\n", target, events[i].addr, i);
-             if (target == (app_pc)events[i].addr) {
-                 dr_printf("Found a call of %s\n", events[i].name);
+             if (target == (app_pc)addresses[i]) {
+                 if (control->events[i].kind == 0) {
+                    dr_printf("Found a call of %s, but skipping\n", control->events[i].name);
+                    continue; // monitor has no interest in this event
+                 }
+                 dr_printf("Found a call of %s\n", control->events[i].name);
                  dr_insert_clean_call_ex(
                      drcontext, bb, instr, (app_pc)at_call_generic,
                      DR_CLEANCALL_READS_APP_CONTEXT, 2,
                      /* call target is 1st parameter */
                      OPND_CREATE_INT64(i),
                      /* signature is 2nd parameter */
-                     OPND_CREATE_INTPTR(events[i].signature));
+                     OPND_CREATE_INTPTR(control->events[i].signature));
              }
          }
     }
