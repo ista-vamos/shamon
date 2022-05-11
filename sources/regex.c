@@ -5,6 +5,7 @@
 #include <assert.h>
 
 #include "shmbuf/buffer.h"
+#include "signatures.h"
 
 #define MAXMATCH 20
 
@@ -12,6 +13,8 @@ static void usage_and_exit(int ret) {
     fprintf(stderr, "Usage: regex expr sig expr sig ...\n");
     exit(ret);
 }
+
+static size_t waiting_for_buffer = 0;
 
 int main (int argc, char *argv[]) {
     if (argc < 2 && (argc - 1) % 2 != 0) {
@@ -73,12 +76,17 @@ int main (int argc, char *argv[]) {
             }
             printf("{");
             int m = 1;
+            void *addr;
+            while (!(addr = buffer_start_push(shm))) {
+                ++waiting_for_buffer;
+            }
             for (const char *o = signatures[i]; *o && m <= MAXMATCH; ++o, ++m) {
                 if (m > 1)
                     printf(", ");
 
                 if (*o == 'L') { /* user wants the whole line */
                     printf("'%s'", line);
+                    buffer_partial_push_str(shm, addr)
                     continue;
                 }
                 if (*o == 'M') { /* user wants the whole match */
