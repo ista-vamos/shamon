@@ -17,9 +17,13 @@ static void usage_and_exit(int ret) {
     exit(ret);
 }
 
+// #define WITH_LINES
+
 struct event {
     shm_event base;
+#ifdef WITH_LINES
     size_t line;
+#endif
     unsigned char args[];
 };
 
@@ -85,11 +89,19 @@ int main (int argc, char *argv[]) {
     for (int i = 0; i < (int)exprs_num; ++i) {
         strncpy(control->events[i].name, names[i],
                 sizeof(control->events[i].name));
+#ifdef WITH_LINES
         assert(strlen(signatures[i]) + 1 <= sizeof(control->events[i].signature));
         control->events[i].signature[0] = 'l'; /* first param is line */
+
         strncpy((char*)control->events[i].signature + 1,
                 signatures[i],
                 sizeof(control->events[i].signature));
+#else
+        assert(strlen(signatures[i])  <= sizeof(control->events[i].signature));
+        strncpy((char*)control->events[i].signature,
+                signatures[i],
+                sizeof(control->events[i].signature));
+#endif
         control->events[i].kind = 0;
     }
 
@@ -121,7 +133,9 @@ int main (int argc, char *argv[]) {
         if (len == 0)
             continue;
 
+#ifdef WITH_LINES
         ++ev.line;
+#endif
 
         /* remove newline from the line */
         line[len-1] = '\0';
