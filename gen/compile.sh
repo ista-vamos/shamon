@@ -19,6 +19,7 @@ LIBRARIES="$SHAMONDIR/libshamon-arbiter.a\
            $SHAMONDIR/libshamon-signature.a\
            $SHAMONDIR/libshamon-parallel-queue.a\
            $SHAMONDIR/list.c\
+           $SHAMONDIR/signatures.c\
            $SHAMONDIR/shmbuf/libshamon-shmbuf.a\
            $SHAMONDIR/streams/libshamon-streams.a"
 
