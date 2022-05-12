@@ -172,7 +172,7 @@ int main (int argc, char *argv[]) {
 
                 if (*o == 'L') { /* user wants the whole line */
                     printf("'%s'", line);
-                    addr = buffer_partial_push_str(shm, addr, line);
+                    addr = buffer_partial_push_str(shm, addr, ev.base.id, line);
                     continue;
                 }
                 if (*o != 'M') {
@@ -197,7 +197,7 @@ int main (int argc, char *argv[]) {
                     assert(matches[0].rm_so >= 0);
                     strncpy(tmpline, line+matches[0].rm_so, len);
                     tmpline[len] = '\0';
-                    addr = buffer_partial_push_str(shm, addr, tmpline);
+                    addr = buffer_partial_push_str(shm, addr, ev.base.id, tmpline);
                     printf("'%s'",  tmpline);
                     continue;
                 } else {
@@ -230,7 +230,7 @@ int main (int argc, char *argv[]) {
                               addr = buffer_partial_push(shm, addr, &op.d, sizeof(op.d));
                               break;
                     case 'S': printf("'%s'", tmpline);
-                              addr = buffer_partial_push_str(shm, addr, tmpline);
+                              addr = buffer_partial_push_str(shm, addr, ev.base.id, tmpline);
                               break;
                     default: assert(0 && "Invalid signature");
                 }

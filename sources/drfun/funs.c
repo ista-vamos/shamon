@@ -325,7 +325,7 @@ at_call_generic(size_t fun_idx, const char *sig)
         switch (*o) {
             case '_': break;
             case 'S':
-              shmaddr = buffer_partial_push_str(shm, shmaddr,
+              shmaddr = buffer_partial_push_str(shm, shmaddr, last_event_id,
                                                 *(const char **)call_get_arg_ptr(&mc, i, *o));
               break;
             default:
