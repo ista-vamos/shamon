@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 
     shm_kind kind;
     int cur_arg, last_arg = 0;
-    size_t n = 0;
+    size_t n = 0, drp = 0, drpn = 0;
     while (shamon_is_ready(shmn)) {
         while ((ev = shamon_get_next_ev(shmn))) {
             ++n;
@@ -77,24 +77,22 @@ int main(int argc, char *argv[]) {
             kind = shm_event_kind(ev);
             if (shm_event_is_dropped(ev)) {
                 printf("Event 'dropped(%lu)'\n", ((shm_event_dropped*)ev)->n);
-                last_arg = 0;
+                drpn += ((shm_event_dropped*)ev)->n;
+                ++drp;
                 continue;
             }
             puts("--------------------");
             printf("\033[0;34mEvent id %lu\033[0m\n", shm_event_id(ev));
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
-            if (shm_event_is_dropped(ev)) {
-                printf("Event 'dropped(%lu)')\n", ((shm_event_dropped*)ev)->n);
-                continue;
-            }
             shm_event_regex *reev = (shm_event_regex*)ev;
             printf("{");
             dump_args(fstream, reev);
             printf("}\n");
         }
     }
-    printf("Processed %lu events\n", n);
+    printf("Processed %lu events, %lu dropped events (sum of args: %lu)\n",
+           n, drp, drpn);
     shamon_destroy(shmn);
     /* FIXME: do this a callback of shamon_destroy, so that
      * we do not have to think about the order */

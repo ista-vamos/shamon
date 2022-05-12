@@ -135,7 +135,7 @@ int main (int argc, char *argv[]) {
     while (1) {
         len = getline(&line, &line_len, stdin);
         if (len == -1)
-            return 0;
+            break;
         if (len == 0)
             continue;
 
@@ -241,12 +241,15 @@ int main (int argc, char *argv[]) {
     }
 
     /* Free up memory held within the regex memory */
-
+    fprintf(stderr, "info: sent %lu events, busy waited on buffer %lu cycles\n",
+            ev.base.id, waiting_for_buffer);
     free(tmpline);
     free(line);
     for (int i = 0; i < (int)exprs_num; ++i) {
         regfree(&re[i]);
     }
+
+    destroy_shared_buffer(shm);
 
     return 0;
 
