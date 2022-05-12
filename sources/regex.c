@@ -18,6 +18,11 @@ static void usage_and_exit(int ret) {
 }
 
 // #define WITH_LINES
+// #define WITH_STDOUT
+
+#ifndef WITH_STDOUT
+#define printf(...) do{}while(0)
+#endif
 
 struct event {
     shm_event base;
@@ -26,6 +31,7 @@ struct event {
 #endif
     unsigned char args[];
 };
+
 
 static size_t compute_elem_size(char *signatures[],
                                 size_t num) {
