@@ -13,8 +13,9 @@
 #include "source.h"
 
 
+/*
 static inline void dump_args(shm_stream *stream, shm_event_regex *ev) {
-    void *p = ev->args;
+    unsigned char *p = ev->args;
     const char *signature = shm_event_signature((shm_event*)ev);
     for (const char *o = signature; *o; ++o) {
         if (o != signature)
@@ -44,6 +45,7 @@ static inline void dump_args(shm_stream *stream, shm_event_regex *ev) {
         p += size;
     }
 }
+*/
 
 shm_stream *shm_stream_create(const char *name,
                               struct source_control **control,
@@ -68,9 +70,8 @@ int main(int argc, char *argv[]) {
                       /* buffer capacity = */4*4096);
 
     shm_kind kind;
-    int cur_arg, last_arg = 0;
     size_t n = 0, drp = 0, drpn = 0;
-    size_t id, last_id = 0, next_id = 1;
+    size_t id, next_id = 1;
     while (shamon_is_ready(shmn)) {
         while ((ev = shamon_get_next_ev(shmn))) {
             ++n;
@@ -78,18 +79,15 @@ int main(int argc, char *argv[]) {
             id = shm_event_id(ev);
             if (id != next_id) {
                 printf("Wrong ID: %lu, should be %lu\n", id, next_id);
-                continue;
+                next_id = id; /* reset */
             }
 
             kind = shm_event_kind(ev);
             if (shm_event_is_dropped(ev)) {
-                printf("Event 'dropped(%lu)'\n", ((shm_event_dropped*)ev)->n);
+                //printf("Event 'dropped(%lu)'\n", ((shm_event_dropped*)ev)->n);
                 drpn += ((shm_event_dropped*)ev)->n;
                 next_id += ((shm_event_dropped*)ev)->n;
                 ++drp;
-                /*
-                last_id = 0;
-                */
                 continue;
             }
 

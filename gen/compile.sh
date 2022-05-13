@@ -10,8 +10,8 @@ shift  # consume the first argument in case there are some additional ones
 GENDIR=$(dirname $0)
 SHAMONDIR="$GENDIR/.."
 
-#CFLAGS="-g3 -O3 -flto"
-CFLAGS="-g -O0"
+CFLAGS="-g3 -O3 -flto -fPIC"
+#CFLAGS="-g -O0"
 CPPFLAGS="-I$SHAMONDIR -I$SHAMONDIR/streams -I$SHAMONDIR/shmbuf"
 LDFLAGS=-lpthread
 LIBRARIES="$SHAMONDIR/libshamon-arbiter.a\
