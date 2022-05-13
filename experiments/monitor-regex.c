@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     shamon_add_stream(shmn, fstream,
                       /* buffer capacity = */4*4096);
 
-    shm_kind kind;
+    //shm_kind kind;
     size_t n = 0, drp = 0, drpn = 0;
     size_t id, next_id = 1;
     while (shamon_is_ready(shmn)) {
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
                 next_id = id; /* reset */
             }
 
-            kind = shm_event_kind(ev);
+            //kind = shm_event_kind(ev);
             if (shm_event_is_dropped(ev)) {
                 //printf("Event 'dropped(%lu)'\n", ((shm_event_dropped*)ev)->n);
                 drpn += ((shm_event_dropped*)ev)->n;

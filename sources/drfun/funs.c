@@ -209,8 +209,8 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
                    sizeof(events[0].signature));
            strncpy(events[i-1].name, argv[i], sig - argv[i] - 1);
         } else {
-            DR_ASSERT(strlen(argv[i]) < 256 && "Too big function name");
-            strncpy(events[i-1].name, argv[i], 255);
+            DR_ASSERT(strlen(argv[i]) < 64 && "Too big function name");
+            strncpy(events[i-1].name, argv[i], 63);
             events[i-1].signature[0] = '\0';
         }
     }
