@@ -98,10 +98,12 @@ int main(int argc, char *argv[]) {
             printf("\033[0;34mEvent id %lu\033[0m\n", shm_event_id(ev));
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
+            */
             shm_event_regex *reev = (shm_event_regex*)ev;
             printf("{");
             dump_args(fstream, reev);
             printf("}\n");
+            /*
             */
         }
     }
