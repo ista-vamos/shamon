@@ -9,3 +9,6 @@ target_link_libraries(monitor-regex PRIVATE shamon-parallel-queue)
 target_link_libraries(monitor-regex PRIVATE shamon-streams)
 target_link_libraries(monitor-regex PRIVATE shamon-shmbuf)
 target_link_libraries(monitor-regex PRIVATE -lpthread)
+
+add_executable(gennums gennums.c)
+target_compile_options(gennums PRIVATE -O3)
