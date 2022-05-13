@@ -80,6 +80,7 @@ int main(int argc, char *argv[]) {
                 printf("Event 'dropped(%lu)'\n", ((shm_event_dropped*)ev)->n);
                 drpn += ((shm_event_dropped*)ev)->n;
                 ++drp;
+                last_id = 0;
                 continue;
             }
             id = shm_event_id(ev);
@@ -87,10 +88,12 @@ int main(int argc, char *argv[]) {
                 if (last_id + 1 != id) {
                     fprintf(stderr, "Inconsistent IDs, %lu + 1 != %lu\n",
                             last_id, id);
+                    abort();
                 }
             }
             last_id = id;
             /*
+            printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             puts("--------------------");
             printf("\033[0;34mEvent id %lu\033[0m\n", shm_event_id(ev));
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
