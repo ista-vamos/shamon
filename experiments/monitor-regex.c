@@ -70,20 +70,31 @@ int main(int argc, char *argv[]) {
     shm_kind kind;
     int cur_arg, last_arg = 0;
     size_t n = 0, drp = 0, drpn = 0;
-    size_t id, last_id = 0;
+    size_t id, last_id = 0, next_id = 1;
     while (shamon_is_ready(shmn)) {
         while ((ev = shamon_get_next_ev(shmn))) {
             ++n;
+
+            id = shm_event_id(ev);
+            if (id != next_id) {
+                printf("Wrong ID: %lu, should be %lu\n", id, next_id);
+                continue;
+            }
 
             kind = shm_event_kind(ev);
             if (shm_event_is_dropped(ev)) {
                 printf("Event 'dropped(%lu)'\n", ((shm_event_dropped*)ev)->n);
                 drpn += ((shm_event_dropped*)ev)->n;
+                next_id += ((shm_event_dropped*)ev)->n;
                 ++drp;
+                /*
                 last_id = 0;
+                */
                 continue;
             }
-            id = shm_event_id(ev);
+
+            ++next_id;
+            /*
             if (last_id > 0) {
                 if (last_id + 1 != id) {
                     fprintf(stderr, "Inconsistent IDs, %lu + 1 != %lu\n",
@@ -92,17 +103,16 @@ int main(int argc, char *argv[]) {
                 }
             }
             last_id = id;
-            /*
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             puts("--------------------");
             printf("\033[0;34mEvent id %lu\033[0m\n", shm_event_id(ev));
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
-            */
             shm_event_regex *reev = (shm_event_regex*)ev;
             printf("{");
             dump_args(fstream, reev);
             printf("}\n");
+            */
             /*
             */
         }
