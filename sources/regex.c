@@ -109,6 +109,7 @@ int main (int argc, char *argv[]) {
                 sizeof(control->events[i].signature));
 #endif
         control->events[i].kind = 0;
+        control->events[i].size = signature_get_size((unsigned char*)signatures[i]) + sizeof(struct event);
     }
 
     (void)signatures;
