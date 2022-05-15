@@ -389,7 +389,7 @@ int main(int argc, char **argv)
     pd->exprs_num=exprs_num;
     
 
-    int arg_i = 3;
+    int arg_i = 2;
     for (int i = 0; i < (int)exprs_num; ++i) {
         names[i] = argv[arg_i++];
         exprs[i] = argv[arg_i++];
