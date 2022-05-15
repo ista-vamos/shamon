@@ -13,5 +13,22 @@ if (IPO)
         set_property(TARGET monitor-regex PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 
+add_executable(monitor-drregex monitor-drregex.c)
+target_include_directories(monitor-drregex PRIVATE ${CMAKE_SOURCE_DIR})
+target_include_directories(monitor-drregex PRIVATE ${CMAKE_SOURCE_DIR}/streams)
+target_include_directories(monitor-drregex PRIVATE ${CMAKE_SOURCE_DIR}/shmbuf)
+target_link_libraries(monitor-drregex PRIVATE shamon)
+target_link_libraries(monitor-drregex PRIVATE shamon-arbiter)
+target_link_libraries(monitor-drregex PRIVATE shamon-vector)
+target_link_libraries(monitor-drregex PRIVATE shamon-parallel-queue)
+target_link_libraries(monitor-drregex PRIVATE shamon-shmbuf)
+target_link_libraries(monitor-drregex PRIVATE shamon-streams)
+target_link_libraries(monitor-drregex PRIVATE -lpthread)
+if (IPO)
+        set_property(TARGET monitor-drregex PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
+
+
+
 add_executable(gennums gennums.c)
 target_compile_options(gennums PRIVATE -O3)

@@ -14,6 +14,7 @@
 #include "client.h"
 #include "signatures.h"
 #include "source.h"
+#include "streams/stream-drregex.h" /* event type */
 
 #include "../fastbuf/shm_monitored.h"
 
@@ -33,32 +34,22 @@
 #endif
 
 #ifndef WITH_STDOUT
-#define printf(...) do{}while(0)
+//#define dr_printf(...) do{}while(0)
 #endif
+
+#define MAXMATCH 20
 
 struct event {
     shm_event base;
 #ifdef WITH_LINES
     size_t line;
 #endif
+    bool write; /* true = write, false = read */
+    int fd;
+    size_t thread;
     unsigned char args[];
 };
 
-static size_t compute_elem_size(char *signatures[],
-                                size_t num) {
-    size_t size, max_size = 0;
-    for (size_t i = 0; i < num; ++i) {
-        size = signature_get_size((const unsigned char*)signatures[i]) +
-                                  sizeof(struct event);
-        if (size > max_size)
-            max_size = size;
-    }
-
-    if (max_size < sizeof(shm_event_dropped))
-        max_size = sizeof(shm_event_dropped);
-
-    return max_size;
-}
 
 typedef struct {
 	int fd;
@@ -69,13 +60,29 @@ typedef struct {
 
 /* Thread-context-local storage index from drmgr */
 static int tcls_idx;
+/* we'll number threads from 0 up */
 static size_t thread_num = 0;
 
+struct source_control *control;
+static struct buffer *shm;
 /* shmbuf assumes one writer and one reader, but here we may have multiple writers
  * (multiple threads), so we must make sure they are seuqntialized somehow
    (until we have the implementation for multiple-writers) */
-//static _Atomic(bool) write_lock = false;
-static struct buffer *shm;
+static size_t waiting_for_buffer = 0;
+static _Atomic(bool) _write_lock = false;
+
+static inline void write_lock() {
+    _Atomic bool *l = &_write_lock;
+    bool unlocked;
+    do {
+        unlocked = false;
+    } while (atomic_compare_exchange_weak(l, &unlocked, true));
+}
+
+static inline void write_unlock() {
+    /* FIXME: use explicit memory ordering, seq_cnt is not needed here */
+    _write_lock = false;
+}
 
 /* The system call number of SYS_write/NtWriteFile */
 static int write_sysnum, read_sysnum;
@@ -102,8 +109,123 @@ static void
 event_thread_context_exit(void *drcontext, bool process_exit);
 
 static void usage_and_exit(int ret) {
-    fprintf(stderr, "Usage: regex shmkey name expr sig [name expr sig] ...\n");
+    dr_fprintf(STDERR, "Usage: regex shmkey name expr sig [name expr sig] ...\n");
     exit(ret);
+}
+
+static char **signatures;
+static regex_t *re;
+static size_t exprs_num;
+struct event ev;
+
+static char *tmpline = NULL;
+static size_t tmpline_len = 0;
+
+static void push_event(bool iswrite, per_thread_t *data, ssize_t retlen) {
+    int status;
+    ssize_t len;
+    signature_operand op;
+    regmatch_t matches[MAXMATCH+1];
+
+    char *line = data->buf;
+    /*
+    dr_printf("%s fd %d: buf: \"%.*s\" (size: %lu, retlen: %lu)\n",
+              iswrite ? "WRITE" : "READ", data->fd, data->size, data->buf,
+              data->size, retlen);
+    */
+    if (line[retlen - 1] != '\n') {
+        /* FIXME: if this is only a partial read or write, wait for the rest... */
+        DR_ASSERT(0 && "Partial operation not implemented yet");
+    }
+
+    for (int i = 0; i < (int)exprs_num; ++i) {
+        if (control->events[i].kind == 0)
+            continue; /* monitor is not interested in this */
+
+        status = regexec(&re[i], line, MAXMATCH, matches, 0);
+        if (status != 0) {
+            continue;
+        }
+        int m = 1;
+        void *addr;
+
+        /** LOCKED --
+         * FIXME: we hold the lock long, first create the event locally and only then push it **/
+        write_lock();
+
+        while (!(addr = buffer_start_push(shm))) {
+            ++waiting_for_buffer;
+        }
+        /* push the base info about event */
+        ++ev.base.id;
+        ev.base.kind = control->events[i].kind;
+        ev.write = iswrite;
+        ev.fd = data->fd;
+        ev.thread = data->thread;
+        addr = buffer_partial_push(shm, addr, &ev, sizeof(ev));
+
+        /* push the arguments of the event */
+        for (const char *o = signatures[i]; *o && m <= MAXMATCH; ++o, ++m) {
+            if (*o == 'L') { /* user wants the whole line */
+                addr = buffer_partial_push_str(shm, addr, ev.base.id, line);
+                continue;
+            }
+            if (*o != 'M') {
+                if ((int)matches[m].rm_so < 0) {
+                    dr_fprintf(STDERR, "warning: have no match for '%c' in signature %s\n", *o, signatures[i]);
+                    continue;
+                }
+                len = matches[m].rm_eo - matches[m].rm_so;
+            } else {
+                len = matches[0].rm_eo - matches[0].rm_so;
+            }
+
+            /* make sure we have big enough temporary buffer */
+            if (tmpline_len < (size_t)len) {
+                free(tmpline);
+                tmpline = malloc(sizeof(char)*len+1);
+                assert(tmpline && "Memory allocation failed");
+                tmpline_len = len;
+            }
+
+            if (*o == 'M') { /* user wants the whole match */
+                assert(matches[0].rm_so >= 0);
+                strncpy(tmpline, line+matches[0].rm_so, len);
+                tmpline[len] = '\0';
+                addr = buffer_partial_push_str(shm, addr, ev.base.id, tmpline);
+                continue;
+            } else {
+                strncpy(tmpline, line+matches[m].rm_so, len);
+                tmpline[len] = '\0';
+            }
+
+            switch(*o) {
+                case 'c':
+                    assert(len == 1);
+                    addr = buffer_partial_push(shm, addr,
+                                               (char*)(line + matches[m].rm_eo),
+                                               sizeof(op.c));
+                    break;
+                case 'i': op.i = atoi(tmpline);
+                          addr = buffer_partial_push(shm, addr, &op.i, sizeof(op.i));
+                          break;
+                case 'l': op.l = atol(tmpline);
+                          addr = buffer_partial_push(shm, addr, &op.l, sizeof(op.l));
+                          break;
+                case 'f': op.f = atof(tmpline);
+                          addr = buffer_partial_push(shm, addr, &op.f, sizeof(op.f));
+                          break;
+                case 'd': op.d = strtod(tmpline, NULL);
+                          addr = buffer_partial_push(shm, addr, &op.d, sizeof(op.d));
+                          break;
+                case 'S': addr = buffer_partial_push_str(shm, addr, ev.base.id, tmpline);
+                          break;
+                default: assert(0 && "Invalid signature");
+            }
+        }
+        buffer_finish_push(shm);
+        write_unlock();
+    }
 }
 
 DR_EXPORT void
@@ -132,16 +254,16 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
         usage_and_exit(1);
     }
 
-    size_t exprs_num = (argc-1)/3;
+    exprs_num = (argc-1)/3;
     if (exprs_num == 0) {
         usage_and_exit(1);
     }
 
     const char *shmkey = argv[1];
     char *exprs[exprs_num];
-    char *signatures[exprs_num];
     char *names[exprs_num];
-    regex_t re[exprs_num];
+    signatures = dr_global_alloc(exprs_num*sizeof(char *));
+    re = dr_global_alloc(exprs_num*sizeof(regex_t));
 
     int arg_i = 2;
     for (int i = 0; i < (int)exprs_num; ++i) {
@@ -165,9 +287,10 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
     /* Initialize the info about this source */
     /* FIXME: do this more user-friendly */
     size_t control_size = sizeof(size_t) + sizeof(struct event_record)*exprs_num;
-    struct source_control *control = initialize_shared_control_buffer(shmkey, control_size);
+    control = initialize_shared_control_buffer(shmkey, control_size);
     assert(control);
     control->size = control_size;
+    size_t size, max_size = 0;
     for (int i = 0; i < (int)exprs_num; ++i) {
         strncpy(control->events[i].name, names[i],
                 sizeof(control->events[i].name));
@@ -185,15 +308,17 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
                 sizeof(control->events[i].signature));
 #endif
         control->events[i].kind = 0;
-        control->events[i].size = signature_get_size((unsigned char*)signatures[i]) + sizeof(struct event);
+        size = signature_get_size((unsigned char*)signatures[i]) + sizeof(struct event);
+        control->events[i].size = size;
+        if (max_size < size)
+            max_size = size;
     }
 
-    (void)signatures;
-    shm = initialize_shared_buffer(shmkey,
-                                   compute_elem_size(signatures, exprs_num),
-                                   control);
+    if (max_size < sizeof(shm_event_dropped))
+        max_size = sizeof(shm_event_dropped);
+    shm = initialize_shared_buffer(shmkey, max_size, control);
     assert(shm);
-    fprintf(stderr, "info: waiting for the monitor to attach\n");
+    dr_fprintf(STDERR, "info: waiting for the monitor to attach\n");
     buffer_wait_for_monitor(shm);
 }
 
@@ -208,6 +333,12 @@ event_exit(void)
         !drmgr_unregister_post_syscall_event(event_post_syscall))
         DR_ASSERT(false && "failed to unregister");
     drmgr_exit();
+    dr_fprintf(STDERR, "info: sent %lu events, busy waited on buffer %lu cycles\n",
+               ev.base.id, waiting_for_buffer);
+    for (int i = 0; i < (int)exprs_num; ++i) {
+        regfree(&re[i]);
+    }
+
     destroy_shared_buffer(shm);
 }
 
@@ -279,15 +410,8 @@ event_post_syscall(void *drcontext, int sysnum)
         return;
     }
     ssize_t len = *((ssize_t*)&retval);
-    dr_printf("Syscall: %i; len: %li; result: %lu\n",sysnum, len, len);
-    if(sysnum==read_sysnum)
-    {
-        //push_read(data->fd, data->buf, data->size, len);
-    }
-    else if(sysnum==write_sysnum)
-    {
-        //push_write(data->fd, data->buf, data->size, len);
-    }
+    // dr_printf("Syscall: %i; len: %li; result: %lu\n",sysnum, len, len);
+    push_event(sysnum == write_sysnum, data, len);
 }
 
 static int
