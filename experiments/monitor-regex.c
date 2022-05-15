@@ -120,5 +120,5 @@ int main(int argc, char *argv[]) {
     shamon_destroy(shmn);
     /* FIXME: do this a callback of shamon_destroy, so that
      * we do not have to think about the order */
-    shm_destroy_sregex_stream((shm_stream_sregex*)fstream);
+    shm_stream_destroy((shm_stream*)fstream);
 }

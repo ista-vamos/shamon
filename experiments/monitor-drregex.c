@@ -109,5 +109,5 @@ int main(int argc, char *argv[]) {
     shamon_destroy(shmn);
     /* FIXME: do this a callback of shamon_destroy, so that
      * we do not have to think about the order */
-    shm_destroy_drregex_stream((shm_stream_drregex*)fstream);
+    shm_stream_destroy((shm_stream*)fstream);
 }
