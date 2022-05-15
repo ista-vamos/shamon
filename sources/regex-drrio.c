@@ -86,8 +86,6 @@ char *buf_get_upto(msgbuf *buf, char* delim)
 			size_t curlen = strlen(current->textbuf);
 			if (curlen == len)
 			{
-				current->next->prev = current->prev;
-				current->prev->next = current->next;
 				free(current->textbuf - current->offset);
 				current->textbuf = NULL;
 				if (current == buf)
@@ -103,6 +101,11 @@ char *buf_get_upto(msgbuf *buf, char* delim)
 					}
 					return ret;
 				}
+                else
+                {
+				    current->next->prev = current->prev;
+				    current->prev->next = current->next;
+                }
 				msgbuf *prev = current->prev;
 				free(current);
 				current = prev;
@@ -124,8 +127,6 @@ char *buf_get_upto(msgbuf *buf, char* delim)
 				memcpy(ret + size, current->textbuf, curlen);
 				free(current->textbuf - current->offset);
 				current->textbuf = NULL;
-				current->next->prev = current->prev;
-				current->prev->next = current->next;
 				if (current == buf)
 				{
 					if (current->next != current)
@@ -139,6 +140,11 @@ char *buf_get_upto(msgbuf *buf, char* delim)
 					}
 					return ret;
 				}
+                else
+                {
+				    current->next->prev = current->prev;
+				    current->prev->next = current->next;
+                }
 				msgbuf *prev = current->prev;
 				free(current);
 				current = prev;
@@ -228,6 +234,13 @@ int monitoring_thread(void *arg)
 			{
 				insert_message(&write_msg, ((char *)(buffer_buffer[i].payload64_1)) + sizeof(size_t) + sizeof(int64_t));
 			}
+            else
+            {
+                if(buffer_buffer[i].payload64_1!=0)
+                {
+                    free((char*)(buffer_buffer[i].payload64_1));
+                }
+            }
 			// else
 			// {
 			// 	insert_message(&read_msg, ((char *)(buffer_buffer[i].payload64_1)) + sizeof(size_t) + sizeof(int64_t));
@@ -237,7 +250,7 @@ int monitoring_thread(void *arg)
 		}
 
         char* line=buf_get_upto(&write_msg, "\n");
-		for(;line!=NULL;free(line),line=buf_get_upto(&write_msg, "\n"))
+		for(;line!=NULL;line=(free(line),buf_get_upto(&write_msg, "\n")))
         {
             len=strlen(line);
             
