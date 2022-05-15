@@ -1,18 +1,13 @@
-CPPFLAGS=-I../..
-CFLAGS=-O2 -g -fsanitize=address,undefined
+CPPFLAGS=
+CFLAGS=-O3
 
-# DISABLE FOR NOW
-all: # monitor-primes gennums_hardcoded 
+all: primes primes-2
 
-monitor-primes: monitor-primes.o ../../shmbuf/libshamon.a isprime.o
-	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -lrt -lm
+primes: primes.c
 
-isprime.o: isprime.c
-
-gennums_hardcoded: gennums_hardcoded.o ../../shmbuf/libshamon.a
-	$(CC) $^  $(CFLAGS) $(CPPFLAGS)  -I../../shmbuf  -o $@ -lrt
+primes-2: primes-2.c
 
 clean:
-	-rm *.o monitor-primes gennums_hardcoded gennums_hardcoded-instr
+	-rm *.o primes primes-2
 
 .PHONY: clean all
