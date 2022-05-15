@@ -109,7 +109,7 @@ static void
 event_thread_context_exit(void *drcontext, bool process_exit);
 
 static void usage_and_exit(int ret) {
-    dr_fprintf(STDERR, "Usage: regex shmkey name expr sig [name expr sig] ...\n");
+    dr_fprintf(STDERR, "Usage: drrun shmkey name expr sig [name expr sig] ...\n");
     exit(ret);
 }
 
