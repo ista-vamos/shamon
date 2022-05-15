@@ -1,7 +1,7 @@
 if (DYNAMORIO_SOURCES)
        add_subdirectory(drfun)
        add_subdirectory(drregex)
-       #add_subdirectory(drsyscalls)
+       add_subdirectory(drsyscalls)
 endif()
 
 add_executable(regex regex.c)

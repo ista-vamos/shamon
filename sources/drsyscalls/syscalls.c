@@ -6,7 +6,7 @@
 #include "dr_api.h"
 #include "drmgr.h"
 
-#include "../fastbuf/shm_monitored.h"
+#include "fastbuf/shm_monitored.h"
 
 #ifdef UNIX
 #    if defined(MACOS) || defined(ANDROID)
@@ -82,6 +82,9 @@ event_thread_context_exit(void *drcontext, bool process_exit);
 DR_EXPORT void
 dr_client_main(client_id_t id, int argc, const char *argv[])
 {
+    (void)id;
+    (void)argc;
+    (void)argv;
     dr_set_client_name("Shamon intercept write and read syscalls", "http://...");
     drmgr_init();
     write_sysnum = get_write_sysnum();
@@ -148,12 +151,15 @@ event_thread_context_exit(void *drcontext, bool thread_exit)
 static bool
 event_filter_syscall(void *drcontext, int sysnum)
 {
+    (void)drcontext;
     return sysnum == write_sysnum || sysnum == read_sysnum ;
 }
 
 static bool
 event_pre_syscall(void *drcontext, int sysnum)
 {
+    (void)sysnum;
+
     reg_t fd = dr_syscall_get_param(drcontext, 0);
     reg_t buf = dr_syscall_get_param(drcontext, 1);
     reg_t size = dr_syscall_get_param(drcontext, 2);
