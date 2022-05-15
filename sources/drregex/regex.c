@@ -109,7 +109,7 @@ static void
 event_thread_context_exit(void *drcontext, bool process_exit);
 
 static void usage_and_exit(int ret) {
-    dr_fprintf(STDERR, "Usage: drrun shmkey name expr sig [name expr sig] ...\n");
+    dr_fprintf(STDERR, "Usage: drrun shmkey name expr sig [name expr sig] ... -- program\n");
     exit(ret);
 }
 
@@ -120,112 +120,172 @@ struct event ev;
 
 static char *tmpline = NULL;
 static size_t tmpline_len = 0;
+static char *partial_line = 0;
+static size_t partial_line_len = 0;
+static size_t partial_line_alloc_len = 0;
 
-static void push_event(bool iswrite, per_thread_t *data, ssize_t retlen) {
+static void parse_line(bool iswrite, per_thread_t *data, char *line) {
     int status;
-    ssize_t len;
     signature_operand op;
+    ssize_t len;
     regmatch_t matches[MAXMATCH+1];
 
-    char *line = data->buf;
-    /*
-    dr_printf("%s fd %d: buf: \"%.*s\" (size: %lu, retlen: %lu)\n",
-              iswrite ? "WRITE" : "READ", data->fd, data->size, data->buf,
-              data->size, retlen);
-    */
-    if (line[retlen - 1] != '\n') {
-        /* FIXME: if this is only a partial read or write, wait for the rest... */
-        DR_ASSERT(0 && "Partial operation not implemented yet");
-    }
+    /* fprintf(stderr, "LINE: %s\n", line); */
 
     for (int i = 0; i < (int)exprs_num; ++i) {
-        if (control->events[i].kind == 0)
-            continue; /* monitor is not interested in this */
+       if (control->events[i].kind == 0)
+           continue; /* monitor is not interested in this */
 
-        status = regexec(&re[i], line, MAXMATCH, matches, 0);
-        if (status != 0) {
-            continue;
-        }
-        int m = 1;
-        void *addr;
+       status = regexec(&re[i], line, MAXMATCH, matches, 0);
+       if (status != 0) {
+           continue;
+       }
+       int m = 1;
+       void *addr;
 
-        /** LOCKED --
-         * FIXME: we hold the lock long, first create the event locally and only then push it **/
-        write_lock();
+       /** LOCKED --
+        * FIXME: we hold the lock long, first create the event locally and only then push it **/
+       write_lock();
 
-        while (!(addr = buffer_start_push(shm))) {
-            ++waiting_for_buffer;
-        }
-        /* push the base info about event */
-        ++ev.base.id;
-        ev.base.kind = control->events[i].kind;
-        ev.write = iswrite;
-        ev.fd = data->fd;
-        ev.thread = data->thread;
-        addr = buffer_partial_push(shm, addr, &ev, sizeof(ev));
+       while (!(addr = buffer_start_push(shm))) {
+           ++waiting_for_buffer;
+       }
+       /* push the base info about event */
+       ++ev.base.id;
+       ev.base.kind = control->events[i].kind;
+       ev.write = iswrite;
+       ev.fd = data->fd;
+       ev.thread = data->thread;
+       addr = buffer_partial_push(shm, addr, &ev, sizeof(ev));
 
-        /* push the arguments of the event */
-        for (const char *o = signatures[i]; *o && m <= MAXMATCH; ++o, ++m) {
-            if (*o == 'L') { /* user wants the whole line */
-                addr = buffer_partial_push_str(shm, addr, ev.base.id, line);
-                continue;
-            }
-            if (*o != 'M') {
-                if ((int)matches[m].rm_so < 0) {
-                    dr_fprintf(STDERR, "warning: have no match for '%c' in signature %s\n", *o, signatures[i]);
-                    continue;
-                }
-                len = matches[m].rm_eo - matches[m].rm_so;
-            } else {
-                len = matches[0].rm_eo - matches[0].rm_so;
-            }
+       /* push the arguments of the event */
+       for (const char *o = signatures[i]; *o && m <= MAXMATCH; ++o, ++m) {
+           if (*o == 'L') { /* user wants the whole line */
+               addr = buffer_partial_push_str(shm, addr, ev.base.id, line);
+               continue;
+           }
+           if (*o != 'M') {
+               if ((int)matches[m].rm_so < 0) {
+                   dr_fprintf(STDERR, "warning: have no match for '%c' in signature %s\n", *o, signatures[i]);
+                   continue;
+               }
+               len = matches[m].rm_eo - matches[m].rm_so;
+           } else {
+               len = matches[0].rm_eo - matches[0].rm_so;
+           }
 
-            /* make sure we have big enough temporary buffer */
-            if (tmpline_len < (size_t)len) {
-                free(tmpline);
-                tmpline = malloc(sizeof(char)*len+1);
-                assert(tmpline && "Memory allocation failed");
-                tmpline_len = len;
-            }
+           /* make sure we have big enough temporary buffer */
+           if (tmpline_len < (size_t)len) {
+               free(tmpline);
+               tmpline = malloc(sizeof(char)*len+1);
+               assert(tmpline && "Memory allocation failed");
+               tmpline_len = len;
+           }
 
-            if (*o == 'M') { /* user wants the whole match */
-                assert(matches[0].rm_so >= 0);
-                strncpy(tmpline, line+matches[0].rm_so, len);
-                tmpline[len] = '\0';
-                addr = buffer_partial_push_str(shm, addr, ev.base.id, tmpline);
-                continue;
-            } else {
-                strncpy(tmpline, line+matches[m].rm_so, len);
-                tmpline[len] = '\0';
-            }
+           if (*o == 'M') { /* user wants the whole match */
+               assert(matches[0].rm_so >= 0);
+               strncpy(tmpline, line+matches[0].rm_so, len);
+               tmpline[len] = '\0';
+               addr = buffer_partial_push_str(shm, addr, ev.base.id, tmpline);
+               continue;
+           } else {
+               strncpy(tmpline, line+matches[m].rm_so, len);
+               tmpline[len] = '\0';
+           }
 
-            switch(*o) {
-                case 'c':
-                    assert(len == 1);
-                    addr = buffer_partial_push(shm, addr,
-                                               (char*)(line + matches[m].rm_eo),
-                                               sizeof(op.c));
-                    break;
-                case 'i': op.i = atoi(tmpline);
-                          addr = buffer_partial_push(shm, addr, &op.i, sizeof(op.i));
-                          break;
-                case 'l': op.l = atol(tmpline);
-                          addr = buffer_partial_push(shm, addr, &op.l, sizeof(op.l));
-                          break;
-                case 'f': op.f = atof(tmpline);
-                          addr = buffer_partial_push(shm, addr, &op.f, sizeof(op.f));
-                          break;
-                case 'd': op.d = strtod(tmpline, NULL);
-                          addr = buffer_partial_push(shm, addr, &op.d, sizeof(op.d));
-                          break;
-                case 'S': addr = buffer_partial_push_str(shm, addr, ev.base.id, tmpline);
-                          break;
-                default: assert(0 && "Invalid signature");
-            }
-        }
-        buffer_finish_push(shm);
-        write_unlock();
+           switch(*o) {
+               case 'c':
+                   assert(len == 1);
+                   addr = buffer_partial_push(shm, addr,
+                                              (char*)(line + matches[m].rm_eo),
+                                              sizeof(op.c));
+                   break;
+               case 'i': op.i = atoi(tmpline);
+                         addr = buffer_partial_push(shm, addr, &op.i, sizeof(op.i));
+                         break;
+               case 'l': op.l = atol(tmpline);
+                         addr = buffer_partial_push(shm, addr, &op.l, sizeof(op.l));
+                         break;
+               case 'f': op.f = atof(tmpline);
+                         addr = buffer_partial_push(shm, addr, &op.f, sizeof(op.f));
+                         break;
+               case 'd': op.d = strtod(tmpline, NULL);
+                         addr = buffer_partial_push(shm, addr, &op.d, sizeof(op.d));
+                         break;
+               case 'S': addr = buffer_partial_push_str(shm, addr, ev.base.id, tmpline);
+                         break;
+               default: assert(0 && "Invalid signature");
+           }
+       }
+       buffer_finish_push(shm);
+       write_unlock();
     }
+}
+
+static void push_event(bool iswrite, per_thread_t *data, ssize_t retlen) {
+    /*
+    dr_fprintf(STDERR,
+               "%s fd %d: buf-size: %lu, retlen: %lu, buf: \"%.*s\"\n",
+               iswrite ? "WRITE" : "READ", data->fd, data->size, retlen, retlen, data->buf);
+               */
+
+    char *line = data->buf;
+    const char *endptr = line + retlen;
+    char *line_end = line;
+    do {
+        while (line_end != endptr && *line_end != '\n') {
+            ++line_end;
+        }
+
+        if (line_end == endptr) {
+            const size_t linelen = endptr - line;
+            if (partial_line_len > 0) {
+                if (partial_line_alloc_len <= partial_line_len + linelen) {
+                    partial_line_alloc_len = partial_line_len + linelen + 1;
+                    partial_line = realloc(partial_line, partial_line_alloc_len);
+                    DR_ASSERT(partial_line && "Allocation failed");
+                }
+                strncpy(partial_line + partial_line_len, line, linelen);
+                partial_line_len += linelen;
+            } else {
+                if (partial_line_alloc_len <= linelen) {
+                    free(partial_line);
+                    partial_line_alloc_len = linelen + 1;
+                    partial_line = malloc(partial_line_alloc_len);
+                    DR_ASSERT(partial_line && "Allocation failed");
+                }
+                DR_ASSERT(partial_line_alloc_len > linelen);
+                strncpy(partial_line, line, linelen);
+                partial_line_len = linelen;
+            }
+            break;
+        }
+
+        if (partial_line_len > 0) {
+            const size_t linelen = line_end - line;
+            if (partial_line_alloc_len <= partial_line_len + linelen) {
+                 partial_line_alloc_len = partial_line_len + linelen + 1;
+                 partial_line = realloc(partial_line, partial_line_alloc_len);
+                 DR_ASSERT(partial_line && "Allocation failed");
+            }
+            strncpy(partial_line + partial_line_len, line, linelen);
+            partial_line_len += linelen;
+            partial_line[partial_line_len] = 0;
+
+            parse_line(iswrite, data, partial_line);
+            partial_line_len = 0;
+        } else {
+
+            DR_ASSERT(*line_end == '\n');
+            *line_end = 0; /* temporary end of line */
+            parse_line(iswrite, data, line);
+            *line_end = '\n';
+        }
+
+        line = ++line_end;
+        if (line == endptr)
+            break; /* all done */
+    } while(1);
 }
 
 DR_EXPORT void
@@ -338,6 +398,9 @@ event_exit(void)
     for (int i = 0; i < (int)exprs_num; ++i) {
         regfree(&re[i]);
     }
+
+    free(tmpline);
+    free(partial_line);
 
     destroy_shared_buffer(shm);
 }
