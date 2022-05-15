@@ -4,13 +4,14 @@
 #include <regex.h>
 #include <assert.h>
 #include <threads.h>
+#include <alloca.h>
 
 #include "shmbuf/buffer.h"
 #include "shmbuf/client.h"
 #include "event.h"
 #include "signatures.h"
 #include "source.h"
-#include "../fastbuf/shm_monitor.h"
+#include "fastbuf/shm_monitor.h"
 
 #define MAXMATCH 20
 
@@ -78,7 +79,7 @@ char *buf_get_upto(msgbuf *buf, char* delim)
 		char *nlpos = strstr(current->textbuf, delim);
 		if (nlpos != NULL)
 		{
-			intptr_t len = (((intptr_t)nlpos) - ((intptr_t)current->textbuf)) + strlen(delim);
+			size_t len = (((intptr_t)nlpos) - ((intptr_t)current->textbuf)) + strlen(delim);
 			char *ret = (char *)malloc(size + len + 1);
 			memcpy(ret + size, current->textbuf, len);
 			ret[size + len] = 0;
@@ -173,7 +174,6 @@ static size_t compute_elem_size(char *signatures[],
 static size_t waiting_for_buffer = 0;
 
 
-size_t processed_bytes=0;
 
 typedef struct _parsedata
 {
@@ -183,7 +183,7 @@ typedef struct _parsedata
     char **names;
     struct buffer *shm;
     struct source_control *control;
-    regex_t re[0];
+    regex_t re[];
 } parsedata;
 parsedata* pd;
 
@@ -198,7 +198,6 @@ int monitoring_thread(void *arg)
     int status;
     ssize_t len;
     //size_t line_len;
-    char *line = NULL;
     char *tmpline = NULL;
     size_t tmpline_len = 0;
     signature_operand op;
@@ -233,7 +232,7 @@ int monitoring_thread(void *arg)
 			// {
 			// 	insert_message(&read_msg, ((char *)(buffer_buffer[i].payload64_1)) + sizeof(size_t) + sizeof(int64_t));
 			// }
-			process_messages(&write_msg);
+			//process_messages(&write_msg);
 			processed_bytes += buffer_buffer[i].payload64_2;
 		}
 
@@ -355,6 +354,7 @@ int register_monitored_thread(monitor_buffer buffer)
 {
 	thrd_t thrd;
 	thrd_create(&thrd, &monitoring_thread, buffer);
+    return 0;
 }
 
 int main(int argc, char **argv)
@@ -456,6 +456,5 @@ int main(int argc, char **argv)
     }
 
     destroy_shared_buffer(shm);
-
     return 0;
 }
