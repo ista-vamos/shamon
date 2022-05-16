@@ -27,15 +27,32 @@ def parse_time(err):
     print(err, file=log)
     raise RuntimeError("Did not find time value")
 
+def run_piped(cmd):
+    print("[DBG] PRG: ", " | ".join((map(lambda s: " ".join(s), cmd))), file=log)
+    procs = []
+    max_n = len(cmd) - 1
+    for n, c in enumerate(cmd):
+        p = Popen(c,
+                  stdout=PIPE if n < max_n else DEVNULL,
+                  stdin=procs[-1].stdout if n > 0 else PIPE,
+                  stderr=PIPE)
+        procs.append(p)
+    return procs[0], procs
 
-def _measure(cmds, moncmds = ()):
-    ts = [0]*len(cmds)
+def _measure(cmds, moncmds = (), pipe=False):
+    ts = [0] if pipe else [0]*len(cmds)
     for i in range(REPEAT_NUM):
         procs = []
+        wait_procs = []
         monprocs = []
         for cmd in cmds:
-            print("[DBG] PRG: ", " ".join(cmd), file=log)
-            procs.append(Popen(cmd, stdout=DEVNULL, stderr=PIPE))
+            if isinstance(cmd, tuple):
+                p, tmp = run_piped(cmd)
+                wait_procs.extend(tmp)
+            else:
+                print("[DBG] PRG: ", " ".join(cmd), file=log)
+                p = Popen(cmd, stdout=DEVNULL, stderr=PIPE)
+            procs.append(p)
         if len(moncmds) > 0:
             sleep(0.15)
         for c in moncmds:
@@ -46,6 +63,11 @@ def _measure(cmds, moncmds = ()):
             _, err = proc.communicate()
             ts[idx] += parse_time(err)
             print(f"times: {ts}", file=log)
+        for proc in wait_procs:
+            ret = proc.wait()
+            if ret != 0:
+                log.write(f"!! proc had errors\n")
+                print(f"\033[0;31m!! PROG had errors (see log.txt)\033[0m")
 
         for n, mon in enumerate(monprocs):
             _, err = mon.communicate()
@@ -78,10 +100,29 @@ print(f"Taking average of {REPEAT_NUM} runs...\n")
 
 measure("'C primes' alone", [[f"{PRIMESPATH}/primes", NUM]])
 measure("'Python primes' alone", [[f"{PRIMESPATH}/primes.py", NUM]])
+
 measure("'C primes' DynamoRIO (no monitor)",
         [DRIO + ["--", f"{PRIMESPATH}/primes", NUM]])
 measure("'Python primes' DynamoRIO (no monitor)",
         [DRIO + ["--", "python3", f"{PRIMESPATH}/primes.py", NUM]])
+
+
+measure("'C primes' piping (only instrumentation)",
+        [([f"{PRIMESPATH}/primes", NUM],
+          [f"{SHAMONPATH}/sources/regex",
+            "/primes", "prime", "#([0-9]+): ([0-9]+)", "ii"])
+        ],
+        [[f"{SHAMONPATH}/experiments/monitor-consume",
+         "primes:regex:/primes"]])
+measure("'Python primes' piping (only instrumentation)",
+        [(["python3", f"{PRIMESPATH}/primes.py", NUM],
+          [f"{SHAMONPATH}/sources/regex",
+           "/primes", "prime", "#([0-9]+): ([0-9]+)", "ii"])
+        ],
+        [[f"{SHAMONPATH}/experiments/monitor-consume",
+         "primes:regex:/primes"]])
+
+
 measure("'C primes' DynamoRIO (only instrumentation)",
         [DRIO +
         ["-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
@@ -106,6 +147,18 @@ measure("'Differential primes' DynamoRIO (with monitor)",
         ["-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
          "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii"] +
         ["--", "python3", f"{PRIMESPATH}/primes.py", NUM]],
+        [[f"{SHAMONPATH}/mmtest/monitor",
+         "Left:drregex:/primes1", "Right:drregex:/primes2"]],
+         msg="First C, second Python")
+
+measure("'Differential primes' piping (with monitor)",
+        [([f"{PRIMESPATH}/primes", NUM],
+          [f"{SHAMONPATH}/sources/regex",
+           "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii"]),
+         (["python3", f"{PRIMESPATH}/primes.py", NUM],
+          [f"{SHAMONPATH}/sources/regex",
+           "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii"])
+        ],
         [[f"{SHAMONPATH}/mmtest/monitor",
          "Left:drregex:/primes1", "Right:drregex:/primes2"]],
          msg="First C, second Python")

@@ -10,7 +10,7 @@ shift  # consume the first argument in case there are some additional ones
 GENDIR=$(dirname $0)
 SHAMONDIR="$GENDIR/.."
 
-CFLAGS="-O3 -flto  -fno-fat-lto-objects -fPIC -std=c11"
+CFLAGS="-g3 -O3 -flto  -fno-fat-lto-objects -fPIC -std=c11"
 #CFLAGS="-g -O0 -fsanitize=address,undefined"
 CPPFLAGS="-D_POSIX_C_SOURCE=200809L -DNDEBUG -I$SHAMONDIR -I$SHAMONDIR/streams -I$SHAMONDIR/shmbuf"
 LDFLAGS=-lpthread
