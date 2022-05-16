@@ -8,9 +8,12 @@ REPEAT_NUM=10
 
 DRIOPATH="/opt/dynamorio/"
 DRRUN=f"{DRIOPATH}/build/bin64/drrun"
-DRIO=[DRRUN, "-root",  f"{DRIOPATH}/build/"]
+DRIO=[DRRUN, "-root",  f"{DRIOPATH}/build/",
+             "-opt_cleancall", "2", "-opt_speed"]
 SHAMONPATH="/opt/shamon"
 PRIMESPATH=f"{SHAMONPATH}/experiments/primes"
+
+log = open('log.txt', 'w')
 
 def parse_time(err):
     for line in err.splitlines():
@@ -19,11 +22,11 @@ def parse_time(err):
             assert len(parts) == 3, parts
             return float(parts[1])
 
-    print("-- ERROR --")
-    print(err)
+    print("-- ERROR while parsing time (see log.txt)--")
+    print("-- ERROR while parsing stderr for time info:", file=log)
+    print(err, file=log)
     raise RuntimeError("Did not find time value")
 
-log = open('log.txt', 'w')
 
 def _measure(cmds, moncmds = ()):
     ts = [0]*len(cmds)
@@ -48,15 +51,16 @@ def _measure(cmds, moncmds = ()):
             _, err = mon.communicate()
             if err:
                 log.write(f"!! MON idx {n} has errors\n")
-                log.write(err)
+                print(f"\033[0;31m!! MON idx {n} has errors (see log.txt)\033[0m")
+                log.write(err.decode('utf-8'))
             mon.kill()
     return list(map(lambda t: str(t/REPEAT_NUM), ts))
 
 def measure(name, cmds, moncmds=(), msg=None):
-    print(f"------- {name} ------", end='')
+    print(f"------- {name} ------")
     print(f"------- {name} ------", file=log)
     ts = _measure(cmds, moncmds)
-    print("... {0} sec.".format(", ".join(ts)), end='' if msg else '\n')
+    print("... {0} sec.".format(", ".join(ts)), end=' ' if msg else '\n')
     print("... {0} sec.".format(", ".join(ts)), end='' if msg else '\n',
           file=log)
     if msg:
