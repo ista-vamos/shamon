@@ -22,7 +22,7 @@ while count < target:
     if not found:
         primes.append(current)
         count=count+1
-        print("#"+str(count)+": "+str(current+1))
+        print("#"+str(count)+": "+str(current))
     current=current+1
 end = process_time()
 print(f"time: {end - start} seconds.", file=sys.stderr)
