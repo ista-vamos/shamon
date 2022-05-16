@@ -57,7 +57,7 @@ def _measure(cmds, moncmds = ()):
     return list(map(lambda t: str(t/REPEAT_NUM), ts))
 
 def measure(name, cmds, moncmds=(), msg=None):
-    print(f"------- {name} ------")
+    print(f"\033[0;34m------- {name} ------\033[0m")
     print(f"------- {name} ------", file=log)
     ts = _measure(cmds, moncmds)
     print("... {0} sec.".format(", ".join(ts)), end=' ' if msg else '\n')
