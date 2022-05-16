@@ -13,7 +13,6 @@
 #include "source.h"
 
 
-/*
 static inline void dump_args(shm_stream *stream, shm_event_regex *ev) {
     unsigned char *p = ev->args;
     const char *signature = shm_event_signature((shm_event*)ev);
@@ -45,7 +44,6 @@ static inline void dump_args(shm_stream *stream, shm_event_regex *ev) {
         p += size;
     }
 }
-*/
 
 shm_stream *shm_stream_create(const char *name,
                               struct source_control **control,
@@ -101,6 +99,8 @@ int main(int argc, char *argv[]) {
                 }
             }
             last_id = id;
+            */
+            shm_kind kind = shm_event_kind(ev);
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             puts("--------------------");
             printf("\033[0;34mEvent id %lu\033[0m\n", shm_event_id(ev));
@@ -110,9 +110,6 @@ int main(int argc, char *argv[]) {
             printf("{");
             dump_args(fstream, reev);
             printf("}\n");
-            */
-            /*
-            */
         }
     }
     printf("Processed %lu events, %lu dropped events (sum of args: %lu)... totally came: %lu\n",

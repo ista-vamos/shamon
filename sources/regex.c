@@ -117,8 +117,9 @@ int main (int argc, char *argv[]) {
                                                   compute_elem_size(signatures, exprs_num),
                                                   control);
     assert(shm);
-    fprintf(stderr, "info: waiting for the monitor to attach\n");
+    fprintf(stderr, "info: waiting for the monitor to attach... ");
     buffer_wait_for_monitor(shm);
+    fprintf(stderr, "done\n");
 
     regmatch_t matches[MAXMATCH+1];
 
