@@ -62,7 +62,7 @@ def _measure(cmds, moncmds = (), pipe=False):
         for idx, proc in enumerate(procs):
             _, err = proc.communicate()
             ts[idx] += parse_time(err)
-            print(f"times: {ts}", file=log)
+        print(f"times: {ts}", file=log)
         for proc in wait_procs:
             ret = proc.wait()
             if ret != 0:
@@ -76,14 +76,14 @@ def _measure(cmds, moncmds = (), pipe=False):
                 print(f"\033[0;31m!! MON idx {n} has errors (see log.txt)\033[0m")
                 log.write(err.decode('utf-8'))
             mon.kill()
-    return list(map(lambda t: str(t/REPEAT_NUM), ts))
+    return [t/REPEAT_NUM for t in ts]
 
 def measure(name, cmds, moncmds=(), msg=None):
     print(f"\033[0;34m------- {name} ------\033[0m")
     print(f"------- {name} ------", file=log)
     ts = _measure(cmds, moncmds)
-    print("... {0} sec.".format(", ".join(ts)), end=' ' if msg else '\n')
-    print("... {0} sec.".format(", ".join(ts)), end='' if msg else '\n',
+    print("... {0} sec.".format(", ".join(map(str, ts))), end=' ' if msg else '\n')
+    print("... {0} sec.".format(", ".join(map(str, ts))), end='' if msg else '\n',
           file=log)
     if msg:
         print(msg)
@@ -98,7 +98,9 @@ else:
 print(f"Enumerating primes up to {NUM}th prime...")
 print(f"Taking average of {REPEAT_NUM} runs...\n")
 
+c_native =\
 measure("'C primes' alone", [[f"{PRIMESPATH}/primes", NUM]])
+c_drio =\
 measure("'C primes' DynamoRIO (no monitor)",
         [DRIO + ["--", f"{PRIMESPATH}/primes", NUM]])
 measure("'C primes' piping ((monitor reads and drops))",
@@ -116,7 +118,9 @@ measure("'C primes' DynamoRIO ((monitor reads and drops))",
         [[f"{SHAMONPATH}/experiments/monitor-consume",
          "primes:drregex:/primes1"]])
 print('------------------')
+python_native =\
 measure("'Python primes' alone", [[f"{PRIMESPATH}/primes.py", NUM]])
+python_drio =\
 measure("'Python primes' DynamoRIO (no monitor)",
         [DRIO + ["--", "python3", f"{PRIMESPATH}/primes.py", NUM]])
 measure("'Python primes' piping (monitor reads and drops)",
@@ -134,6 +138,7 @@ measure("'Python primes' DynamoRIO (monitor reads and drops)",
         [[f"{SHAMONPATH}/experiments/monitor-consume",
          "primes:drregex:/primes1"]])
 print('------------------')
+dm_pipes =\
 measure("'Differential monitor for primes' piping",
         [([f"{PRIMESPATH}/primes", NUM],
           [f"{SHAMONPATH}/sources/regex",
@@ -145,6 +150,7 @@ measure("'Differential monitor for primes' piping",
         [[f"{SHAMONPATH}/mmtest/monitor",
          "Left:drregex:/primes1", "Right:drregex:/primes2"]],
          msg="First C, second Python")
+dm_drio =\
 measure("'Differential monitor for primes' DynamoRIO sources",
         [DRIO +
         ["-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
@@ -158,3 +164,13 @@ measure("'Differential monitor for primes' DynamoRIO sources",
          "Left:drregex:/primes1", "Right:drregex:/primes2"]],
          msg="First C, second Python")
 
+
+print(
+f"""
+Total slowdown of C program (DynamoRIO): {dm_drio[0]/c_native[0]}.
+Total slowdown of Python program (DynamoRIO): {dm_drio[1]/python_native[0]}.
+Slowdown caused by instrumentation of C program (DynamoRIO): {dm_drio[0]/c_drio[0]}.
+Slowdown caused by instrumentation of Python program (DynamoRIO): {dm_drio[1]/python_drio[0]}.
+Total slowdown of C program (pipes): {dm_pipes[0]/c_native[0]}.
+Total slowdown of Python program (pipes): {dm_pipes[1]/python_native[0]}.
+""")
