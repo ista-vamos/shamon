@@ -20,7 +20,9 @@ def parse_time(err):
         if line.startswith(b'time:'):
             parts = line.split()
             assert len(parts) == 3, parts
-            return float(parts[1])
+            f = float(parts[1])
+            assert f > 0
+            return f
 
     print("-- ERROR while parsing time (see log.txt)--")
     print("-- ERROR while parsing stderr for time info:", file=log)
