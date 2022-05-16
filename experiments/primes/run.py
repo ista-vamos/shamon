@@ -99,46 +99,53 @@ print(f"Enumerating primes up to {NUM}th prime...")
 print(f"Taking average of {REPEAT_NUM} runs...\n")
 
 measure("'C primes' alone", [[f"{PRIMESPATH}/primes", NUM]])
-measure("'Python primes' alone", [[f"{PRIMESPATH}/primes.py", NUM]])
-
 measure("'C primes' DynamoRIO (no monitor)",
         [DRIO + ["--", f"{PRIMESPATH}/primes", NUM]])
-measure("'Python primes' DynamoRIO (no monitor)",
-        [DRIO + ["--", "python3", f"{PRIMESPATH}/primes.py", NUM]])
-
-
-measure("'C primes' piping (only instrumentation)",
+measure("'C primes' piping ((monitor reads and drops))",
         [([f"{PRIMESPATH}/primes", NUM],
           [f"{SHAMONPATH}/sources/regex",
             "/primes", "prime", "#([0-9]+): ([0-9]+)", "ii"])
         ],
         [[f"{SHAMONPATH}/experiments/monitor-consume",
          "primes:regex:/primes"]])
-measure("'Python primes' piping (only instrumentation)",
-        [(["python3", f"{PRIMESPATH}/primes.py", NUM],
-          [f"{SHAMONPATH}/sources/regex",
-           "/primes", "prime", "#([0-9]+): ([0-9]+)", "ii"])
-        ],
-        [[f"{SHAMONPATH}/experiments/monitor-consume",
-         "primes:regex:/primes"]])
-
-
-measure("'C primes' DynamoRIO (only instrumentation)",
+measure("'C primes' DynamoRIO ((monitor reads and drops))",
         [DRIO +
         ["-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
          "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii"] +
         ["--", f"{PRIMESPATH}/primes", NUM]],
         [[f"{SHAMONPATH}/experiments/monitor-consume",
          "primes:drregex:/primes1"]])
-measure("'Python primes' DynamoRIO (only instrumentation)",
+print('------------------')
+measure("'Python primes' alone", [[f"{PRIMESPATH}/primes.py", NUM]])
+measure("'Python primes' DynamoRIO (no monitor)",
+        [DRIO + ["--", "python3", f"{PRIMESPATH}/primes.py", NUM]])
+measure("'Python primes' piping (monitor reads and drops)",
+        [(["python3", f"{PRIMESPATH}/primes.py", NUM],
+          [f"{SHAMONPATH}/sources/regex",
+           "/primes", "prime", "#([0-9]+): ([0-9]+)", "ii"])
+        ],
+        [[f"{SHAMONPATH}/experiments/monitor-consume",
+         "primes:regex:/primes"]])
+measure("'Python primes' DynamoRIO (monitor reads and drops)",
         [DRIO +
         ["-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
          "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii"] +
         ["--", "python3", f"{PRIMESPATH}/primes.py", NUM]],
         [[f"{SHAMONPATH}/experiments/monitor-consume",
          "primes:drregex:/primes1"]])
-
-measure("'Differential primes' DynamoRIO (with monitor)",
+print('------------------')
+measure("'Differential monitor for primes' piping",
+        [([f"{PRIMESPATH}/primes", NUM],
+          [f"{SHAMONPATH}/sources/regex",
+           "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii"]),
+         (["python3", f"{PRIMESPATH}/primes.py", NUM],
+          [f"{SHAMONPATH}/sources/regex",
+           "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii"])
+        ],
+        [[f"{SHAMONPATH}/mmtest/monitor",
+         "Left:drregex:/primes1", "Right:drregex:/primes2"]],
+         msg="First C, second Python")
+measure("'Differential monitor for primes' DynamoRIO sources",
         [DRIO +
         ["-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
          "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii"] +
@@ -147,18 +154,6 @@ measure("'Differential primes' DynamoRIO (with monitor)",
         ["-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
          "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii"] +
         ["--", "python3", f"{PRIMESPATH}/primes.py", NUM]],
-        [[f"{SHAMONPATH}/mmtest/monitor",
-         "Left:drregex:/primes1", "Right:drregex:/primes2"]],
-         msg="First C, second Python")
-
-measure("'Differential primes' piping (with monitor)",
-        [([f"{PRIMESPATH}/primes", NUM],
-          [f"{SHAMONPATH}/sources/regex",
-           "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii"]),
-         (["python3", f"{PRIMESPATH}/primes.py", NUM],
-          [f"{SHAMONPATH}/sources/regex",
-           "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii"])
-        ],
         [[f"{SHAMONPATH}/mmtest/monitor",
          "Left:drregex:/primes1", "Right:drregex:/primes2"]],
          msg="First C, second Python")
