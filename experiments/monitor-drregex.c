@@ -97,7 +97,11 @@ int main(int argc, char *argv[]) {
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
             shm_event_drregex *reev = (shm_event_drregex*)ev;
+#ifndef DRREGEX_ONLY_ARGS
             printf("{%s, thrd: %lu, fd: %d", reev->write ? "write" : "read", reev->thread, reev->fd);
+#else
+            printf("{");
+#endif
             dump_args(fstream, reev);
             printf("}\n");
             /*

@@ -39,18 +39,6 @@
 
 #define MAXMATCH 20
 
-struct event {
-    shm_event base;
-#ifdef WITH_LINES
-    size_t line;
-#endif
-    bool write; /* true = write, false = read */
-    int fd;
-    size_t thread;
-    unsigned char args[];
-};
-
-
 typedef struct {
 	int fd;
     void *buf;
@@ -116,7 +104,7 @@ static void usage_and_exit(int ret) {
 static char **signatures;
 static regex_t *re;
 static size_t exprs_num;
-struct event ev;
+shm_event_drregex ev;
 
 static char *tmpline = NULL;
 static size_t tmpline_len = 0;
@@ -125,6 +113,10 @@ static size_t partial_line_len = 0;
 static size_t partial_line_alloc_len = 0;
 
 static void parse_line(bool iswrite, per_thread_t *data, char *line) {
+#ifdef DRREGEX_ONLY_ARGS
+    (void)data;
+    (void)iswrite;
+#endif
     int status;
     signature_operand op;
     ssize_t len;
@@ -153,9 +145,11 @@ static void parse_line(bool iswrite, per_thread_t *data, char *line) {
        /* push the base info about event */
        ++ev.base.id;
        ev.base.kind = control->events[i].kind;
+#ifndef DRREGEX_ONLY_ARGS
        ev.write = iswrite;
        ev.fd = data->fd;
        ev.thread = data->thread;
+#endif
        addr = buffer_partial_push(shm, addr, &ev, sizeof(ev));
 
        /* push the arguments of the event */
@@ -368,7 +362,7 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
                 sizeof(control->events[i].signature));
 #endif
         control->events[i].kind = 0;
-        size = signature_get_size((unsigned char*)signatures[i]) + sizeof(struct event);
+        size = signature_get_size((unsigned char*)signatures[i]) + sizeof(shm_event_drregex);
         control->events[i].size = size;
         if (max_size < size)
             max_size = size;
