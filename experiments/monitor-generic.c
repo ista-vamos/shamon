@@ -7,13 +7,13 @@
 
 #include "event.h"
 #include "shamon.h"
-#include "stream-regex.h"
+#include "stream-generic.h"
 #include "utils.h"
 #include "signatures.h"
 #include "source.h"
 
 
-static inline void dump_args(shm_stream *stream, shm_event_regex *ev) {
+static inline void dump_args(shm_stream *stream, shm_event_generic *ev) {
     unsigned char *p = ev->args;
     const char *signature = shm_event_signature((shm_event*)ev);
     for (const char *o = signature; *o; ++o) {
@@ -50,71 +50,65 @@ shm_stream *create_stream(int argc, char *argv[], int arg_i,
                           struct source_control **control);
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "USAGE: prog shm1\n");
+    if (argc < 2) {
+        fprintf(stderr, "USAGE: prog name:source:shmkey [name:source:shmkey ...]\n");
         return -1;
     }
 
     shm_event *ev = NULL;
     shamon *shmn = shamon_create(NULL, NULL);
     assert(shmn);
-    struct source_control *control;
 
-    shm_stream *fstream = create_stream(argc, argv, 1, "regex-stream", &control);
-    assert(fstream && "Creating stream failed");
-    shamon_add_stream(shmn, fstream,
-                      /* buffer capacity = */4*4096);
+    for (int i = 1; i < argc; ++i) {
+        fprintf(stderr, "Connecting stream '%s'", argv[i]);
+        struct source_control *control;
+        shm_stream *stream = create_stream(argc, argv, i, NULL, &control);
+        assert(stream && "Creating stream failed");
+        shamon_add_stream(shmn, stream,
+                          /* buffer capacity = */4*4096);
+    }
 
-    //shm_kind kind;
+    shm_kind kind;
     size_t n = 0, drp = 0, drpn = 0;
-    size_t id, next_id = 1;
+    size_t id/*, next_id = 1*/;
     shm_stream *stream;
     while (shamon_is_ready(shmn)) {
         while ((ev = shamon_get_next_ev(shmn, &stream))) {
             ++n;
 
             id = shm_event_id(ev);
-            if (id != next_id) {
-                printf("Wrong ID: %lu, should be %lu\n", id, next_id);
-                next_id = id; /* reset */
-            }
+            printf("\033[0;34mEvent id %lu\033[0m\n", id);
+            kind = shm_event_kind(ev);
+            printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
+            printf("Event size %lu\n", shm_event_size(ev));
+            printf("Stream %lu ('%s')\n", shm_stream_id(stream), shm_stream_get_name(stream));
 
-            //kind = shm_event_kind(ev);
+            /*
+            if (id != next_id) {
+                printf("\033[0;31mWrong ID: %lu, should be %lu\033[0m\n", id, next_id);
+                next_id = id;
+            }
+            */
+
             if (shm_event_is_dropped(ev)) {
-                //printf("Event 'dropped(%lu)'\n", ((shm_event_dropped*)ev)->n);
+                printf("'dropped(%lu)'\n", ((shm_event_dropped*)ev)->n);
                 drpn += ((shm_event_dropped*)ev)->n;
-                next_id += ((shm_event_dropped*)ev)->n;
+                //next_id += ((shm_event_dropped*)ev)->n;
                 ++drp;
                 continue;
             }
 
-            ++next_id;
-            /*
-            if (last_id > 0) {
-                if (last_id + 1 != id) {
-                    fprintf(stderr, "Inconsistent IDs, %lu + 1 != %lu\n",
-                            last_id, id);
-                    abort();
-                }
-            }
-            last_id = id;
-            */
-            shm_kind kind = shm_event_kind(ev);
-            printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
-            puts("--------------------");
-            printf("\033[0;34mEvent id %lu\033[0m\n", shm_event_id(ev));
-            printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
-            printf("Event size %lu\n", shm_event_size(ev));
-            shm_event_regex *reev = (shm_event_regex*)ev;
+            //++next_id;
             printf("{");
-            dump_args(stream, reev);
+            dump_args(stream, (shm_event_generic*)ev);
             printf("}\n");
+            puts("--------------------");
         }
     }
     printf("Processed %lu events, %lu dropped events (sum of args: %lu)... totally came: %lu\n",
            n, drp, drpn, n + drpn - drp);
-    shamon_destroy(shmn);
+    //shamon_destroy(shmn);
     /* FIXME: do this a callback of shamon_destroy, so that
      * we do not have to think about the order */
-    shm_stream_destroy((shm_stream*)fstream);
+    //shm_stream_destroy((shm_stream*)stream);
 }

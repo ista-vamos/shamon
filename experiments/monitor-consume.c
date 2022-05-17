@@ -21,6 +21,10 @@ shm_stream *shm_stream_create(const char *name,
 #define SLEEP_NS_INIT (50)
 #define SLEEP_THRESHOLD_NS (10000000)
 
+shm_stream *create_stream(int argc, char *argv[], int arg_i,
+                          const char *expected_stream_name,
+                          struct source_control **control);
+
 static int buffer_manager_thrd(void *data) {
     shm_arbiter_buffer *buffer = (shm_arbiter_buffer*) data;
     shm_stream *stream = shm_arbiter_buffer_stream(buffer);
@@ -60,21 +64,12 @@ int main(int argc, char *argv[]) {
 
     initialize_events();
 
-    char streamname[256];
-    const char *dc = strchr(argv[1], ':');
-    if (!dc) {
-        fprintf(stderr, "Failed to parse the name of stream.");
-        return 1;
-    }
-    strncpy(streamname, argv[1], dc - argv[1]);
-    streamname[dc - argv[1]] = 0;
-
     struct source_control *control;
-    shm_stream *stream
-            = shm_stream_create(streamname, &control,
-                                argc, argv);
-    assert(stream);
-    shm_arbiter_buffer *buffer = shm_arbiter_buffer_create(stream, shm_stream_event_size(stream),
+    shm_stream *stream = create_stream(argc, argv, 1, NULL, &control);
+    assert(stream && "Creating stream failed");
+
+    shm_arbiter_buffer *buffer = shm_arbiter_buffer_create(stream,
+                                                           shm_stream_event_size(stream),
                                                            /*capacity=*/4*4096);
     thrd_t tid;
     thrd_create(&tid, buffer_manager_thrd, (void*)buffer);
