@@ -45,10 +45,9 @@ static inline void dump_args(shm_stream *stream, shm_event_regex *ev) {
     }
 }
 
-shm_stream *shm_stream_create(const char *name,
-                              struct source_control **control,
-                              int argc,
-                              char *argv[]);
+shm_stream *create_stream(int argc, char *argv[],
+                          const char *expected_stream_name,
+                          struct source_control **control);
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -60,10 +59,9 @@ int main(int argc, char *argv[]) {
     shamon *shmn = shamon_create(NULL, NULL);
     assert(shmn);
     struct source_control *control;
-    shm_stream *fstream
-            = shm_stream_create("regex", &control,
-                                argc, argv);
-    assert(fstream);
+
+    shm_stream *fstream = create_stream(argc, argv, "regex-stream", &control);
+    assert(fstream && "Creating stream failed");
     shamon_add_stream(shmn, fstream,
                       /* buffer capacity = */4*4096);
 
