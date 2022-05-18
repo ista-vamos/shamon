@@ -103,8 +103,6 @@ int main(int argc, char *argv[]) {
         }
     }
     printf("Processed %lu events\n", n);
+
     shamon_destroy(shmn);
-    /* FIXME: do this a callback of shamon_destroy, so that
-     * we do not have to think about the order */
-    shm_destroy_funs_stream((shm_stream_funs*)fstream);
 }

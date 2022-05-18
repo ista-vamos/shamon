@@ -110,8 +110,6 @@ int main(int argc, char *argv[]) {
     }
     printf("Processed %lu events, %lu dropped events (sum of args: %lu)... totally came: %lu\n",
            n, drp, drpn, n + drpn - drp);
+
     shamon_destroy(shmn);
-    /* FIXME: do this a callback of shamon_destroy, so that
-     * we do not have to think about the order */
-    shm_stream_destroy((shm_stream*)fstream);
 }

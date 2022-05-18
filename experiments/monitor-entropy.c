@@ -71,7 +71,5 @@ int main(int argc, char *argv[]) {
 
     print_bytes_rat();
 
-    // TODO: make this a callback of shamon_destroy
-    shm_destroy_fds_stream((shm_stream_fds *)fdsstream);
     shamon_destroy(shamon);
 }

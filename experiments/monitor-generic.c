@@ -6,11 +6,13 @@
 #include <assert.h>
 
 #include "event.h"
+#include "arbiter.h"
 #include "shamon.h"
 #include "stream-generic.h"
 #include "utils.h"
 #include "signatures.h"
 #include "source.h"
+#include "vector.h"
 
 
 static inline void dump_args(shm_stream *stream, shm_event_generic *ev) {
@@ -107,8 +109,17 @@ int main(int argc, char *argv[]) {
     }
     printf("Processed %lu events, %lu dropped events (sum of args: %lu)... totally came: %lu\n",
            n, drp, drpn, n + drpn - drp);
-    //shamon_destroy(shmn);
-    /* FIXME: do this a callback of shamon_destroy, so that
-     * we do not have to think about the order */
-    //shm_stream_destroy((shm_stream*)stream);
+#ifndef NDEBUG
+    size_t streams_num;
+    shm_stream **streams = shamon_get_streams(shmn, &streams_num);
+    shm_vector *buffers = shamon_get_buffers(shmn);
+    for (size_t i = 0; i < streams_num; ++i) {
+        shm_stream *s = streams[i];
+        shm_arbiter_buffer *buff = *((shm_arbiter_buffer **)shm_vector_at(buffers, i));
+        printf("Stream %lu (%s) had %lu events\n", s->id, s->name, s->last_event_id);
+        printf("  its buffer (auto) dropped %lu\n", shm_arbiter_buffer_dropped_num(buff));
+    }
+#endif
+
+    shamon_destroy(shmn);
 }

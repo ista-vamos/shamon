@@ -27,7 +27,6 @@ int main(void) {
                stdin_ev->str_ref.data);
         }
     }
-    // TODO: make this a callback of shamon_destroy()
-    shm_destroy_stdin_stream((shm_stream_stdin *)stdin_stream);
+
     shamon_destroy(shmn);
 }
