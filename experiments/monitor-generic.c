@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
     shm_vector *buffers = shamon_get_buffers(shmn);
     for (size_t i = 0; i < streams_num; ++i) {
         shm_stream *s = streams[i];
-        shm_arbiter_buffer *buff = *((shm_arbiter_buffer **)shm_vector_at(buffers, i));
+        shm_arbiter_buffer *buff = (shm_arbiter_buffer *)shm_vector_at(buffers, i);
         printf("Stream %lu (%s) had %lu events\n", s->id, s->name, s->last_event_id);
         printf("  its buffer (auto) dropped %lu\n", shm_arbiter_buffer_dropped_num(buff));
     }
