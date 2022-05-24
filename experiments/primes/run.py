@@ -3,17 +3,47 @@
 from sys import argv
 from time import sleep
 from subprocess import Popen, PIPE, DEVNULL
+from tempfile import mkdtemp
+from shutil import rmtree
+from os import chdir
 
 REPEAT_NUM=10
 
-DRIOPATH="/opt/dynamorio/"
+WORKINGDIR = mkdtemp(prefix="midmon.", dir="/tmp")
+
+SHAMONPATH="/home/marek/monitoring/shamon"
+DRIOPATH="/home/marek/monitoring/dynamorio/"
+
 DRRUN=f"{DRIOPATH}/build/bin64/drrun"
 DRIO=[DRRUN, "-root",  f"{DRIOPATH}/build/",
              "-opt_cleancall", "2", "-opt_speed"]
-SHAMONPATH="/opt/shamon"
 PRIMESPATH=f"{SHAMONPATH}/experiments/primes"
+PRIMESSRC=f"{SHAMONPATH}/mmtest/mmprimes.c"
+COMPILESH=f"{SHAMONPATH}/gen/compile.sh"
 
+chdir(WORKINGDIR)
 log = open('log.txt', 'w')
+
+print(f"-- Working directory is {WORKINGDIR} --", file=log)
+print(f"-- Working directory is {WORKINGDIR} --")
+print(f"-- Log: {WORKINGDIR}/log.txt --")
+
+print("-- Compiling monitor --")
+print("-- Compiling monitor --", file=log)
+
+p = Popen([COMPILESH, PRIMESSRC], stdout=PIPE, stderr=PIPE)
+out, err = p.communicate()
+
+if out:
+    print(out, file=log)
+if err:
+    print(err, file=log)
+
+if p.wait() != 0:
+    print(f"-- \033[0;31m!! Compiling monitor failed (see log.txt) --\033[0m")
+else:
+    print("-- Monitor compiled --")
+
 
 def parse_time(err):
     for line in err.splitlines():
@@ -28,6 +58,27 @@ def parse_time(err):
     print("-- ERROR while parsing stderr for time info:", file=log)
     print(err, file=log)
     raise RuntimeError("Did not find time value")
+
+def parse_mon(out):
+    errs = 0
+    for line in out.splitlines():
+        if line.startswith(b'ERROR'):
+            errs += 1
+        if line.startswith(b'Done!'):
+            parts = line.split()
+            assert len(parts) == 25, parts
+            dl, dr = int(parts[2]), int(parts[5])
+            sl, sr = int(parts[8]), int(parts[11])
+            il, ir = int(parts[14]), int(parts[17])
+            pl, pr = int(parts[20]), int(parts[23])
+            if dl + il + pl == 0 or dl + il + pl != dr + ir + pr:
+                print(out, file=log)
+                raise RuntimeError("Did not find right values")
+            return ((dl, il, pl),(dr, ir, pr), errs)
+
+    print("-- ERROR while parsing monitor output (see log.txt)--")
+    print(out, file=log)
+    raise RuntimeError("Did not find right values")
 
 def run_piped(cmd):
     print("[DBG] PRG: ", " | ".join((map(lambda s: " ".join(s), cmd))), file=log)
@@ -105,14 +156,14 @@ measure("'C primes' alone", [[f"{PRIMESPATH}/primes", NUM]])
 c_drio =\
 measure("'C primes' DynamoRIO (no monitor)",
         [DRIO + ["--", f"{PRIMESPATH}/primes", NUM]])
-measure("'C primes' piping ((monitor reads and drops))",
+measure("'C primes' piping (monitor reads and drops)",
         [([f"{PRIMESPATH}/primes", NUM],
           [f"{SHAMONPATH}/sources/regex",
             "/primes", "prime", "#([0-9]+): ([0-9]+)", "ii"])
         ],
         [[f"{SHAMONPATH}/experiments/monitor-consume",
          "primes:regex:/primes"]])
-measure("'C primes' DynamoRIO ((monitor reads and drops))",
+measure("'C primes' DynamoRIO (monitor reads and drops)",
         [DRIO +
         ["-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
          "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii"] +
@@ -149,7 +200,7 @@ measure("'Differential monitor for primes' piping",
           [f"{SHAMONPATH}/sources/regex",
            "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii"])
         ],
-        [[f"{SHAMONPATH}/mmtest/monitor",
+        [["./monitor",
          "Left:drregex:/primes1", "Right:drregex:/primes2"]],
          msg="First C, second Python")
 dm_drio =\
@@ -162,7 +213,7 @@ measure("'Differential monitor for primes' DynamoRIO sources",
         ["-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
          "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii"] +
         ["--", "python3", f"{PRIMESPATH}/primes.py", NUM]],
-        [[f"{SHAMONPATH}/mmtest/monitor",
+        [["./monitor",
          "Left:drregex:/primes1", "Right:drregex:/primes2"]],
          msg="First C, second Python")
 
@@ -176,3 +227,9 @@ Slowdown caused by instrumentation of Python program (DynamoRIO): {dm_drio[1]/py
 Total slowdown of C program (pipes): {dm_pipes[0]/c_native[0]}.
 Total slowdown of Python program (pipes): {dm_pipes[1]/python_native[0]}.
 """)
+
+print(f"-- Removing working directory {WORKINGDIR} --")
+print(f"-- Removing working directory {WORKINGDIR} --", file=log)
+log.close()
+chdir("/")
+rmtree(WORKINGDIR)
