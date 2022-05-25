@@ -92,8 +92,10 @@ int main(int argc, char *argv[]) {
     }
     printf("Processed %lu events\n", n);
 
-    shm_arbiter_buffer_free(buffer);
+    thrd_join(tid, NULL);
+
     shm_stream_destroy(stream);
+    shm_arbiter_buffer_free(buffer);
 
     return 0;
 }
