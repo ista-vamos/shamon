@@ -94,4 +94,6 @@ int main(int argc, char *argv[]) {
 
     shm_arbiter_buffer_free(buffer);
     shm_stream_destroy(stream);
+
+    return 0;
 }

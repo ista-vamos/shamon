@@ -1,29 +1,40 @@
 #!/usr/bin/python3
 
-import sys
-import os
+from sys import argv, stderr
+from itertools import cycle, accumulate
 from time import process_time
 
-count=1
-primes = [2]
-current = 3
-target = 10
-if(len(sys.argv)>1):
-    target = int(sys.argv[1])
-start = process_time()
-if target>0:
-    print("#1: 2")
-while count < target:
-    found = False
-    for x in primes:
-        if current % x == 0:
-            found = True
-            break
-    if not found:
-        primes.append(current)
-        count=count+1
-        print("#"+str(count)+": "+str(current))
-    current=current+1
-end = process_time()
-print(f"time: {end - start} seconds.", file=sys.stderr)
+if __name__ == "__main__":
+    NUM = int(argv[1])
+    primes=[]
 
+    start = process_time()
+    for i in range(1,3):
+        print(f"#{i}: {i+1}")
+        if i >= NUM:
+            exit(0)
+
+    NUM -= 2
+    def iszero(x): return x == 0
+
+    for n in accumulate(cycle((2,4)), initial=5):
+        #print(primes, n, list(takewhile(iszero, filter(iszero, map(lambda p: n % p, primes)))))
+        if not any(map(lambda p: n % p == 0, primes)):
+            print(f"#{len(primes)+3}: {n}")
+            primes.append(n)
+            if len(primes) >= NUM:
+                break
+
+    end = process_time()
+    print(f"time: {end - start} seconds.", file=stderr)
+  # num = 1
+  # for step in cycle((4,2)):
+  #     if len(primes) >= NUM:
+  #         break
+  #     num += step
+
+  #     if isprime(num):
+  #         primes.append(num)
+  #         print(f"#{len(primes)}: {primes[-1]}")
+
+            
