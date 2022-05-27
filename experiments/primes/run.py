@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 
 from tempfile import mkdtemp
@@ -6,8 +6,8 @@ from shutil import rmtree
 from os import chdir
 from measure import *
 
-SHAMONPATH="/home/marek/monitoring/shamon"
-DRIOPATH="/home/marek/monitoring/dynamorio/"
+SHAMONPATH="/opt/shamon"
+DRIOPATH="/opt/dynamorio/"
 set_repeat_num(10)
 NUM="10000"
 
@@ -29,11 +29,17 @@ lprint("-- Compiling monitor --")
 compile_monitor(COMPILESH, PRIMESSRC)
 
 class ParseTime:
-    def __init__(self):
+    def __init__(self, dbg=False):
         self.times = []
         self.time = 0
+        self.dbg = dbg
 
     def parse(self, out, err):
+        if self.dbg:
+            for line in out.splitlines():
+                lprint(f"[stdout] {line}", color=GRAY, end='')
+            for line in err.splitlines():
+                lprint(f"[stdout] {line}", color=GRAY, end='')
         for line in err.splitlines():
             if line.startswith(b'time:'):
                 parts = line.split()
@@ -48,13 +54,14 @@ class ParseTime:
             "-- ERROR while parsing time (see log.txt)--")
         log(err)
         raise RuntimeError("Did not find time value")
-            
+
     def report(self, msg=None):
         assert self.time > 0, f"Invalid time: {self.time}"
         if msg:
             lprint(msg, end=' ', color="\033[0;32m")
         val = self.time / repeat_num()
-        lprint(f"Avg CPU time ({repeat_num()} measurements): {val} seconds.", color="\033[0;32m")
+        lprint(f"Avg CPU time ({repeat_num()} measurements): {val} seconds.",
+               color="\033[0;32m")
         return val
 
 class ParseStats:
@@ -149,18 +156,14 @@ measure("'C primes' DynamoRIO (no monitor)",
 c_drio.report()
 
 
-# In[13]:
-
-
 c_pipes = ParseTime()
 measure("'C primes' piping (monitor reads and drops)",
         [PipedCommands(Command(f"{PRIMESPATH}/primes", NUM).withparser(c_pipes),
-                       Command(f"{SHAMONPATH}/sources/regex", "/primes", "prime", "#([0-9]+): ([0-9]+)", "ii"))],
-        [Command(f"{SHAMONPATH}/experiments/monitor-consume", "primes:regex:/primes")])
+                       Command(f"{SHAMONPATH}/sources/regex", "/primes",
+                                "prime", "#([0-9]+): ([0-9]+)", "ii"))],
+        [Command(f"{SHAMONPATH}/experiments/monitor-consume",
+                  "primes:regex:/primes")])
 c_pipes.report()
-
-
-# In[14]:
 
 
 c_drio_consume = ParseTime()
@@ -168,24 +171,20 @@ measure("'C primes' DynamoRIO (monitor reads and drops)",
         [Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
                  "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii",
                  "--", f"{PRIMESPATH}/primes", NUM).withparser(c_drio_consume)],
-        [Command(f"{SHAMONPATH}/experiments/monitor-consume", "primes:drregex:/primes1")])
+        [Command(f"{SHAMONPATH}/experiments/monitor-consume",
+                  "primes:drregex:/primes1")])
 c_drio_consume.report()
 
-
-# In[ ]:
-
-
 python_native = ParseTime()
-measure("'Python primes' alone", [Command(f"{PRIMESPATH}/primes.py", NUM).withparser(python_native)])
+measure("'Python primes' alone",
+        [Command(f"{PRIMESPATH}/primes.py", NUM).withparser(python_native)])
 python_native.report()
-
-
-# In[ ]:
 
 
 python_drio = ParseTime()
 measure("'Python primes' DynamoRIO (no monitor)",
-        [Command(*DRIO, "--", "python3", f"{PRIMESPATH}/primes.py", NUM).withparser(python_drio)])
+        [Command(*DRIO, "--", "python3",
+                 f"{PRIMESPATH}/primes.py", NUM).withparser(python_drio)])
 python_drio.report()
 
 

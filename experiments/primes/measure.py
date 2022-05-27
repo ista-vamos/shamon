@@ -18,6 +18,7 @@ def repeat_num():
 # COLORS for printing
 RED="\033[0;31m"
 GREEN="\033[0;32m"
+GRAY="\033[0;37m"
 
 _logf = None
 _debug = False
@@ -51,9 +52,9 @@ def lprint(msg, end='\n', color=None):
 class PrintOutErr:
     def parse(self, out, err):
         for line in out.splitlines():
-            lprint(f"[stdout] {line}", color="\033[0;37m", end='')
+            lprint(f"[stdout] {line}", color=GRAY, end='')
         for line in err.splitlines():
-            lprint(f"[stderr] {line}", color="\033[0;33m", end='')
+            lprint(f"[stderr] {line}", color=GRAY, end='')
     
 class Command:
     def __init__(self, exe, *args):
@@ -123,6 +124,13 @@ def _measure(cmds, moncmds = (), pipe=False):
         for c in moncmds:
             c.run()
 
+        # -- PROCESS OUTPUTS OF CLIENTS --
+        for cmd in cmds:
+            ret = cmd.communicate()
+            if ret != 0:
+                log(f"Client {cmd} had errors",
+                    f"\033[0;31mClient {cmd} had errors\033[0m")
+
         # -- PROCESS OUTPUTS OF MONITORS --
         for mon in moncmds:
             ret = mon.communicate()
@@ -131,12 +139,6 @@ def _measure(cmds, moncmds = (), pipe=False):
                     f"\033[0;31mMonitor {mon} had errors\033[0m")
                 print(mon.proc)
 
-        # -- PROCESS OUTPUTS OF CLIENTS --
-        for cmd in cmds:
-            ret = cmd.communicate()
-            if ret != 0:
-                log(f"Client {cmd} had errors",
-                    f"\033[0;31mClient {cmd} had errors\033[0m")
 
 
 def measure(name, cmds, moncmds=()):

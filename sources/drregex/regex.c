@@ -396,6 +396,7 @@ event_exit(void)
     free(tmpline);
     free(partial_line);
 
+    dr_printf("Destroying shared buffer\n");
     destroy_shared_buffer(shm);
 }
 
