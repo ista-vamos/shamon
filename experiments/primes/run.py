@@ -101,7 +101,7 @@ class ParseStats:
         lprint("-- ERROR while parsing monitor output (see log.txt)--")
         log(out)
         raise RuntimeError("Did not find right values")
-        
+
     def report(self, msg=None):
         assert self.stats
         if msg:
@@ -133,38 +133,20 @@ Detected errors: {errs/ N}""",
                color=GREEN)
         return ((dl, sl, il, pl),(dr, sr, ir, pr), errs)
 
+#####################################################################
 
 lprint(f"Enumerating primes up to {NUM}th prime...")
 lprint(f"Taking average of {repeat_num()} runs...\n")
-
-
-# In[11]:
-
 
 c_native = ParseTime()
 measure("'C primes' alone",
         [Command(f"{PRIMESPATH}/primes", NUM).withparser(c_native)])
 c_native.report()
 
-
-# In[12]:
-
-
 c_drio = ParseTime()
 measure("'C primes' DynamoRIO (no monitor)",
         [Command(*DRIO, "--", f"{PRIMESPATH}/primes", NUM).withparser(c_drio)])
 c_drio.report()
-
-
-c_pipes = ParseTime()
-measure("'C primes' piping (monitor reads and drops)",
-        [PipedCommands(Command(f"{PRIMESPATH}/primes", NUM).withparser(c_pipes),
-                       Command(f"{SHAMONPATH}/sources/regex", "/primes",
-                                "prime", "#([0-9]+): ([0-9]+)", "ii"))],
-        [Command(f"{SHAMONPATH}/experiments/monitor-consume",
-                  "primes:regex:/primes")])
-c_pipes.report()
-
 
 c_drio_consume = ParseTime()
 measure("'C primes' DynamoRIO (monitor reads and drops)",
@@ -188,20 +170,6 @@ measure("'Python primes' DynamoRIO (no monitor)",
 python_drio.report()
 
 
-# In[ ]:
-
-
-python_pipe = ParseTime()
-measure("'Python primes' piping (monitor reads and drops)",
-        [PipedCommands(Command("python3", f"{PRIMESPATH}/primes.py", NUM).withparser(python_pipe),
-                       Command(f"{SHAMONPATH}/sources/regex", "/primes", "prime", "#([0-9]+): ([0-9]+)", "ii"))],
-        [Command(f"{SHAMONPATH}/experiments/monitor-consume", "primes:regex:/primes")])
-python_pipe.report()
-
-
-# In[ ]:
-
-
 python_drio_consume = ParseTime()
 measure("'Python primes' DynamoRIO (monitor reads and drops)",
         [Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so", 
@@ -209,26 +177,6 @@ measure("'Python primes' DynamoRIO (monitor reads and drops)",
                  "--", "python3", f"{PRIMESPATH}/primes.py", NUM).withparser(python_drio_consume)],
         [Command(f"{SHAMONPATH}/experiments/monitor-consume", "primes:drregex:/primes1")])
 python_drio_consume.report()
-
-
-# In[ ]:
-
-
-dm_pipes_time_c = ParseTime()
-dm_pipes_time_py = ParseTime()
-dm_pipes_stats = ParseStats()
-measure("'Differential monitor C/Py for primes' piping",
-        [PipedCommands(Command(f"{PRIMESPATH}/primes", NUM).withparser(dm_pipes_time_c),
-                       Command(f"{SHAMONPATH}/sources/regex", "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii")),
-         PipedCommands(Command("python3", f"{PRIMESPATH}/primes.py", NUM).withparser(dm_pipes_time_py),
-                       Command(f"{SHAMONPATH}/sources/regex", "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii"))],
-        [Command("./monitor", "Left:drregex:/primes1", "Right:drregex:/primes2").withparser(dm_pipes_stats)])
-dm_pipes_time_c.report(msg="C program")
-dm_pipes_time_py.report(msg="Python program")
-dm_pipes_stats.report()
-
-
-# In[ ]:
 
 
 dm_drio_time_c = ParseTime()
@@ -247,26 +195,6 @@ dm_drio_time_py.report(msg="Python program")
 dm_drio_stats.report()
 
 
-# In[ ]:
-
-
-dm_pipes_time_c1 = ParseTime()
-dm_pipes_time_c2 = ParseTime()
-dm_pipes_stats2 = ParseStats()
-measure("'Differential monitor C/C for primes' piping",
-        [PipedCommands(Command(f"{PRIMESPATH}/primes", NUM).withparser(dm_pipes_time_c1),
-                       Command(f"{SHAMONPATH}/sources/regex", "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii")),
-         PipedCommands(Command(f"{PRIMESPATH}/primes", NUM).withparser(dm_pipes_time_c2),
-                       Command(f"{SHAMONPATH}/sources/regex", "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii"))],
-        [Command("./monitor", "Left:drregex:/primes1", "Right:drregex:/primes2").withparser(dm_pipes_stats2)])
-dm_pipes_time_c1.report(msg="C program (1)")
-dm_pipes_time_c2.report(msg="C program (2)")
-dm_pipes_stats2.report()
-
-
-# In[ ]:
-
-
 dm_drio_time_c1 = ParseTime()
 dm_drio_time_c2 = ParseTime()
 dm_drio_stats2 = ParseStats()
@@ -283,28 +211,90 @@ dm_drio_time_c2.report(msg="Python program")
 dm_drio_stats2.report()
 
 
-# In[ ]:
+dm_drio_bad_time_c1 = ParseTime()
+dm_drio_bad_time_c2 = ParseTime()
+dm_drio_bad_stats2 = ParseStats()
+measure("'Differential monitor C/C for primes' DynamoRIO sources, 10% errors",
+        [Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
+                 "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
+                 f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_bad_time_c1),
+         Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
+                 "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
+                 f"{PRIMESPATH}/primes-bad", NUM, str(int(NUM)/10)).withparser(dm_drio_bad_time_c2)],
+        [Command("./monitor", "Left:drregex:/primes1",
+                 "Right:drregex:/primes2").withparser(dm_drio_bad_stats2)])
+dm_drio_bad_time_c1.report(msg="C program")
+dm_drio_bad_time_c2.report(msg="Python program")
+dm_drio_bad_stats2.report()
 
-
-dm_pipes_bad_time_c1 = ParseTime()
-dm_pipes_bad_time_c2 = ParseTime()
-dm_pipes_bad_stats2 = ParseStats()
-measure("'Differential monitor C/C for primes' piping, 10% mistakes",
-        [PipedCommands(Command(f"{PRIMESPATH}/primes", NUM).withparser(dm_pipes_bad_time_c1),
-                       Command(f"{SHAMONPATH}/sources/regex", "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii")),
-         PipedCommands(Command(f"{PRIMESPATH}/primes-bad", NUM, str(int(NUM)/10)).withparser(dm_pipes_bad_time_c2),
-                       Command(f"{SHAMONPATH}/sources/regex", "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii"))],
-        [Command("./monitor", "Left:drregex:/primes1", "Right:drregex:/primes2").withparser(dm_pipes_bad_stats2)])
-dm_pipes_bad_time_c1.report(msg="C program (1)")
-dm_pipes_bad_time_c2.report(msg="C program (2)")
-dm_pipes_bad_stats2.report()
-
-
-# In[ ]:
 
 
 log(f"-- Removing working directory {WORKINGDIR} --")
 close_log()
 # chdir("/")
 # rmtree(WORKINGDIR)
+
+
+# c_pipes = ParseTime()
+# measure("'C primes' piping (monitor reads and drops)",
+#         [PipedCommands(Command(f"{PRIMESPATH}/primes", NUM).withparser(c_pipes),
+#                        Command(f"{SHAMONPATH}/sources/regex", "/primes",
+#                                 "prime", "#([0-9]+): ([0-9]+)", "ii"))],
+#         [Command(f"{SHAMONPATH}/experiments/monitor-consume",
+#                   "primes:regex:/primes")])
+# c_pipes.report()
+
+
+# python_pipe = ParseTime()
+# measure("'Python primes' piping (monitor reads and drops)",
+#         [PipedCommands(Command("python3", f"{PRIMESPATH}/primes.py", NUM).withparser(python_pipe),
+#                        Command(f"{SHAMONPATH}/sources/regex", "/primes", "prime", "#([0-9]+): ([0-9]+)", "ii"))],
+#         [Command(f"{SHAMONPATH}/experiments/monitor-consume", "primes:regex:/primes")])
+# python_pipe.report()
+
+
+
+# dm_pipes_time_c = ParseTime()
+# dm_pipes_time_py = ParseTime()
+# dm_pipes_stats = ParseStats()
+# measure("'Differential monitor C/Py for primes' piping",
+#         [PipedCommands(Command(f"{PRIMESPATH}/primes", NUM).withparser(dm_pipes_time_c),
+#                        Command(f"{SHAMONPATH}/sources/regex", "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii")),
+#          PipedCommands(Command("python3", f"{PRIMESPATH}/primes.py", NUM).withparser(dm_pipes_time_py),
+#                        Command(f"{SHAMONPATH}/sources/regex", "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii"))],
+#         [Command("./monitor", "Left:drregex:/primes1", "Right:drregex:/primes2").withparser(dm_pipes_stats)])
+# dm_pipes_time_c.report(msg="C program")
+# dm_pipes_time_py.report(msg="Python program")
+# dm_pipes_stats.report()
+
+
+
+# dm_pipes_time_c1 = ParseTime()
+# dm_pipes_time_c2 = ParseTime()
+# dm_pipes_stats2 = ParseStats()
+# measure("'Differential monitor C/C for primes' piping",
+#         [PipedCommands(Command(f"{PRIMESPATH}/primes", NUM).withparser(dm_pipes_time_c1),
+#                        Command(f"{SHAMONPATH}/sources/regex", "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii")),
+#          PipedCommands(Command(f"{PRIMESPATH}/primes", NUM).withparser(dm_pipes_time_c2),
+#                        Command(f"{SHAMONPATH}/sources/regex", "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii"))],
+#         [Command("./monitor", "Left:drregex:/primes1", "Right:drregex:/primes2").withparser(dm_pipes_stats2)])
+# dm_pipes_time_c1.report(msg="C program (1)")
+# dm_pipes_time_c2.report(msg="C program (2)")
+# dm_pipes_stats2.report()
+
+
+
+# dm_pipes_bad_time_c1 = ParseTime()
+# dm_pipes_bad_time_c2 = ParseTime()
+# dm_pipes_bad_stats2 = ParseStats()
+# measure("'Differential monitor C/C for primes' piping, 10% mistakes",
+#         [PipedCommands(Command(f"{PRIMESPATH}/primes", NUM).withparser(dm_pipes_bad_time_c1),
+#                        Command(f"{SHAMONPATH}/sources/regex", "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii")),
+#          PipedCommands(Command(f"{PRIMESPATH}/primes-bad", NUM, str(int(NUM)/10)).withparser(dm_pipes_bad_time_c2),
+#                        Command(f"{SHAMONPATH}/sources/regex", "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii"))],
+#         [Command("./monitor", "Left:drregex:/primes1", "Right:drregex:/primes2").withparser(dm_pipes_bad_stats2)])
+# dm_pipes_bad_time_c1.report(msg="C program (1)")
+# dm_pipes_bad_time_c2.report(msg="C program (2)")
+# dm_pipes_bad_stats2.report()
+
 
