@@ -5,11 +5,14 @@ from tempfile import mkdtemp
 from shutil import rmtree
 from os import chdir
 from measure import *
+from sys import argv
 
 SHAMONPATH="/opt/shamon"
 DRIOPATH="/opt/dynamorio/"
-set_repeat_num(10)
+set_repeat_num(20)
 NUM="10000"
+if len(argv) > 0:
+    NUM=argv[1]
 
 WORKINGDIR = mkdtemp(prefix="midmon.", dir="/tmp")
 DRRUN=f"{DRIOPATH}/build/bin64/drrun"
@@ -89,7 +92,7 @@ class ParseStats:
                     log(out)
                     lprint(f"left: {(dl, sl, il, pl)}, right: {(dr, sr, ir, pr)}, errs: {errs}")
                     lprint("Did not find right values", color=RED)
-                print((dl, sl, il, pl),(dr, sr, ir, pr), errs)
+                #print((dl, sl, il, pl),(dr, sr, ir, pr), errs)
                 self.stats.append(((dl, sl, il, pl),(dr, sr, ir, pr), errs))
                 self.dl, self.dr = dl, dr
                 self.sl, self.sr = sl, sr
@@ -189,7 +192,8 @@ measure("'Differential monitor C/Py for primes' DynamoRIO sources",
          Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
                  "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  "python3", f"{PRIMESPATH}/primes.py", NUM).withparser(dm_drio_time_py)],
-        [Command("./monitor", "Left:drregex:/primes1", "Right:drregex:/primes2").withparser(dm_drio_stats)])
+        [Command("./monitor", "Left:drregex:/primes1",
+                 "Right:drregex:/primes2", stdout=PIPE).withparser(dm_drio_stats)])
 dm_drio_time_c.report(msg="C program")
 dm_drio_time_py.report(msg="Python program")
 dm_drio_stats.report()
@@ -205,11 +209,27 @@ measure("'Differential monitor C/C for primes' DynamoRIO sources",
          Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
                  "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_time_c2)],
-        [Command("./monitor", "Left:drregex:/primes1", "Right:drregex:/primes2").withparser(dm_drio_stats2)])
-dm_drio_time_c1.report(msg="C program")
-dm_drio_time_c2.report(msg="Python program")
+        [Command("./monitor", "Left:drregex:/primes1", "Right:drregex:/primes2",
+                 stdout=PIPE).withparser(dm_drio_stats2)])
+dm_drio_time_c1.report(msg="C (1) program")
+dm_drio_time_c2.report(msg="C (2) program")
 dm_drio_stats2.report()
 
+dm_drio_time_py1 = ParseTime()
+dm_drio_time_py2 = ParseTime()
+dm_drio_stats_pp = ParseStats()
+measure("'Differential monitor Py/Py for primes' DynamoRIO sources",
+        [Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
+                 "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
+                 "python3", f"{PRIMESPATH}/primes.py", NUM).withparser(dm_drio_time_py1),
+         Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
+                 "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
+                 "python3", f"{PRIMESPATH}/primes.py", NUM).withparser(dm_drio_time_py2)],
+        [Command("./monitor", "Left:drregex:/primes1",
+                 "Right:drregex:/primes2", stdout=PIPE).withparser(dm_drio_stats_pp)])
+dm_drio_time_py1.report(msg="Python program")
+dm_drio_time_py2.report(msg="Python program")
+dm_drio_stats_pp.report()
 
 dm_drio_bad_time_c1 = ParseTime()
 dm_drio_bad_time_c2 = ParseTime()
@@ -222,11 +242,10 @@ measure("'Differential monitor C/C for primes' DynamoRIO sources, 10% errors",
                  "/primes2", "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  f"{PRIMESPATH}/primes-bad", NUM, str(int(NUM)/10)).withparser(dm_drio_bad_time_c2)],
         [Command("./monitor", "Left:drregex:/primes1",
-                 "Right:drregex:/primes2").withparser(dm_drio_bad_stats2)])
-dm_drio_bad_time_c1.report(msg="C program")
-dm_drio_bad_time_c2.report(msg="Python program")
+                 "Right:drregex:/primes2", stdout=PIPE).withparser(dm_drio_bad_stats2)])
+dm_drio_bad_time_c1.report(msg="Python (1) program")
+dm_drio_bad_time_c2.report(msg="Python (2) program")
 dm_drio_bad_stats2.report()
-
 
 
 log(f"-- Removing working directory {WORKINGDIR} --")
