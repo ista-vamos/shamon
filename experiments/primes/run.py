@@ -9,7 +9,7 @@ from sys import argv
 
 SHAMONPATH="/opt/shamon"
 DRIOPATH="/opt/dynamorio/"
-set_repeat_num(20)
+set_repeat_num(10)
 NUM="10000"
 if len(argv) > 0:
     NUM=argv[1]
@@ -39,10 +39,12 @@ class ParseTime:
 
     def parse(self, out, err):
         if self.dbg:
-            for line in out.splitlines():
-                lprint(f"[stdout] {line}", color=GRAY, end='')
-            for line in err.splitlines():
-                lprint(f"[stdout] {line}", color=GRAY, end='')
+            if out:
+               for line in out.splitlines():
+                   lprint(f"[stdout] {line}", color=GRAY, end='')
+            if err:
+                for line in err.splitlines():
+                    lprint(f"[stderr] {line}", color=GRAY, end='')
         for line in err.splitlines():
             if line.startswith(b'time:'):
                 parts = line.split()

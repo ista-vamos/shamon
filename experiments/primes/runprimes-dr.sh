@@ -1,23 +1,24 @@
 #!/bin/bash
 
 SOURCESDIR="$(pwd)/../../sources"
-REGEXSOURCE=$SOURCESDIR/regex
 NUM=$1
 test -z $NUM && NUM=10000
 
-/home/marek/monitoring/dynamorio//build/bin64/drrun\
-	-root /home/marek/monitoring/dynamorio//build/\
+PERF='/usr/lib/linux-tools/5.13.0-1011-intel/perf'
+$PERF record \
+/opt/dynamorio//build/bin64/drrun\
+	-root /opt/dynamorio//build/\
 	-opt_cleancall 2 -opt_speed\
-	-c /home/marek/monitoring/shamon/sources/drregex/libdrregex.so\
+	-c /opt/shamon/sources/drregex/libdrregex.so\
 	/primes1 prime '#([0-9]+): ([0-9]+)' ii --\
 	./primes $NUM &
 
-/home/marek/monitoring/dynamorio//build/bin64/drrun\
-	-root /home/marek/monitoring/dynamorio//build/\
+/opt/dynamorio//build/bin64/drrun\
+	-root /opt/dynamorio//build/\
 	-opt_cleancall 2 -opt_speed\
-	-c /home/marek/monitoring/shamon/sources/drregex/libdrregex.so\
+	-c /opt/shamon/sources/drregex/libdrregex.so\
 	/primes2 prime '#([0-9]+): ([0-9]+)' ii --\
-	python3 ./primes.py $NUM&
+	./primes $NUM&
 
 wait
 wait
