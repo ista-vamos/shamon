@@ -6,13 +6,20 @@ from shutil import rmtree
 from os import chdir
 from measure import *
 from sys import argv
+from csv import writer as csvwriter
 
 SHAMONPATH="/opt/shamon"
 DRIOPATH="/opt/dynamorio/"
 set_repeat_num(10)
 NUM="10000"
-if len(argv) > 0:
-    NUM=argv[1]
+if len(argv) > 1:
+    BS = argv[1]
+    if len(argv) > 2:
+        NUM=argv[2]
+else:
+    print("args: buffer-size [number of primes]")
+    print("buffer-size is the compiled (!) size, it does not set the size.")
+    exit(1)
 
 WORKINGDIR = mkdtemp(prefix="midmon.", dir="/tmp")
 DRRUN=f"{DRIOPATH}/build/bin64/drrun"
@@ -22,8 +29,11 @@ PRIMESPATH=f"{SHAMONPATH}/experiments/primes"
 PRIMESSRC=f"{SHAMONPATH}/mmtest/mmprimes.c"
 COMPILESH=f"{SHAMONPATH}/gen/compile.sh"
 
-open_log()
+csv_name = f"times-{BS}-{NUM}.csv"
+csvlogf = open(csv_name, 'a')
+csvlog = csvwriter(csvlogf)
 
+open_log()
 
 chdir(WORKINGDIR)
 lprint(f"-- Working directory is {WORKINGDIR} --")
@@ -38,7 +48,7 @@ class ParseTime:
         self.dbg = dbg
 
     def parse(self, out, err):
-        if self.dbg:
+        if True or self.dbg:
             if out:
                for line in out.splitlines():
                    lprint(f"[stdout] {line}", color=GRAY, end='')
@@ -60,13 +70,15 @@ class ParseTime:
         log(err)
         raise RuntimeError("Did not find time value")
 
-    def report(self, msg=None):
+    def report(self, key, msg=None):
         assert self.time > 0, f"Invalid time: {self.time}"
         if msg:
             lprint(msg, end=' ', color="\033[0;32m")
         val = self.time / repeat_num()
         lprint(f"Avg CPU time ({repeat_num()} measurements): {val} seconds.",
                color="\033[0;32m")
+        for t in self.times:
+            csvlog.writerow([key, t])
         return val
 
 class ParseStats:
@@ -107,7 +119,7 @@ class ParseStats:
         log(out)
         raise RuntimeError("Did not find right values")
 
-    def report(self, msg=None):
+    def report(self, key, msg=None):
         assert self.stats
         if msg:
             lprint(msg, end=' ', color="\033[0;32m")
@@ -136,6 +148,9 @@ Left processed: {pl / N}
 Right processed: {pr / N}
 Detected errors: {errs/ N}""",
                color=GREEN)
+
+        for Sl, Sr, E in self.stats:
+            csvlog.writerow([key, *Sl, *Sr, E])
         return ((dl, sl, il, pl),(dr, sr, ir, pr), errs)
 
 #####################################################################
@@ -146,12 +161,12 @@ lprint(f"Taking average of {repeat_num()} runs...\n")
 c_native = ParseTime()
 measure("'C primes' alone",
         [Command(f"{PRIMESPATH}/primes", NUM).withparser(c_native)])
-c_native.report()
+c_native.report('c-native')
 
 c_drio = ParseTime()
 measure("'C primes' DynamoRIO (no monitor)",
         [Command(*DRIO, "--", f"{PRIMESPATH}/primes", NUM).withparser(c_drio)])
-c_drio.report()
+c_drio.report('c-drio')
 
 c_drio_consume = ParseTime()
 measure("'C primes' DynamoRIO (monitor reads and drops)",
@@ -160,19 +175,19 @@ measure("'C primes' DynamoRIO (monitor reads and drops)",
                  "--", f"{PRIMESPATH}/primes", NUM).withparser(c_drio_consume)],
         [Command(f"{SHAMONPATH}/experiments/monitor-consume",
                   "primes:drregex:/primes1")])
-c_drio_consume.report()
+c_drio_consume.report('c-empty-mon')
 
 python_native = ParseTime()
 measure("'Python primes' alone",
         [Command(f"{PRIMESPATH}/primes.py", NUM).withparser(python_native)])
-python_native.report()
+python_native.report('py-native')
 
 
 python_drio = ParseTime()
 measure("'Python primes' DynamoRIO (no monitor)",
         [Command(*DRIO, "--", "python3",
                  f"{PRIMESPATH}/primes.py", NUM).withparser(python_drio)])
-python_drio.report()
+python_drio.report('py-drio')
 
 
 python_drio_consume = ParseTime()
@@ -181,7 +196,7 @@ measure("'Python primes' DynamoRIO (monitor reads and drops)",
                  "/primes1", "prime", "#([0-9]+): ([0-9]+)", "ii",
                  "--", "python3", f"{PRIMESPATH}/primes.py", NUM).withparser(python_drio_consume)],
         [Command(f"{SHAMONPATH}/experiments/monitor-consume", "primes:drregex:/primes1")])
-python_drio_consume.report()
+python_drio_consume.report('py-empty-mon')
 
 
 dm_drio_time_c = ParseTime()
@@ -196,10 +211,9 @@ measure("'Differential monitor C/Py for primes' DynamoRIO sources",
                  "python3", f"{PRIMESPATH}/primes.py", NUM).withparser(dm_drio_time_py)],
         [Command("./monitor", "Left:drregex:/primes1",
                  "Right:drregex:/primes2", stdout=PIPE).withparser(dm_drio_stats)])
-dm_drio_time_c.report(msg="C program")
-dm_drio_time_py.report(msg="Python program")
-dm_drio_stats.report()
-
+dm_drio_time_c.report('c-py-dm-c', msg="C program")
+dm_drio_time_py.report('c-py-dm-py', msg="Python program")
+dm_drio_stats.report('c-py-dm-stats')
 
 dm_drio_time_c1 = ParseTime()
 dm_drio_time_c2 = ParseTime()
@@ -213,9 +227,9 @@ measure("'Differential monitor C/C for primes' DynamoRIO sources",
                  f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_time_c2)],
         [Command("./monitor", "Left:drregex:/primes1", "Right:drregex:/primes2",
                  stdout=PIPE).withparser(dm_drio_stats2)])
-dm_drio_time_c1.report(msg="C (1) program")
-dm_drio_time_c2.report(msg="C (2) program")
-dm_drio_stats2.report()
+dm_drio_time_c1.report('c-c-dm', msg="C (1) program")
+dm_drio_time_c2.report('c-c-dm', msg="C (2) program")
+dm_drio_stats2.report('c-c-dm-stats')
 
 dm_drio_time_py1 = ParseTime()
 dm_drio_time_py2 = ParseTime()
@@ -229,9 +243,9 @@ measure("'Differential monitor Py/Py for primes' DynamoRIO sources",
                  "python3", f"{PRIMESPATH}/primes.py", NUM).withparser(dm_drio_time_py2)],
         [Command("./monitor", "Left:drregex:/primes1",
                  "Right:drregex:/primes2", stdout=PIPE).withparser(dm_drio_stats_pp)])
-dm_drio_time_py1.report(msg="Python program")
-dm_drio_time_py2.report(msg="Python program")
-dm_drio_stats_pp.report()
+dm_drio_time_py1.report('py-py-dm', msg="Python program")
+dm_drio_time_py2.report('py-py-dm', msg="Python program")
+dm_drio_stats_pp.report('py-py-dm-stats')
 
 dm_drio_bad_time_c1 = ParseTime()
 dm_drio_bad_time_c2 = ParseTime()
@@ -245,13 +259,15 @@ measure("'Differential monitor C/C for primes' DynamoRIO sources, 10% errors",
                  f"{PRIMESPATH}/primes-bad", NUM, str(int(NUM)/10)).withparser(dm_drio_bad_time_c2)],
         [Command("./monitor", "Left:drregex:/primes1",
                  "Right:drregex:/primes2", stdout=PIPE).withparser(dm_drio_bad_stats2)])
-dm_drio_bad_time_c1.report(msg="Python (1) program")
-dm_drio_bad_time_c2.report(msg="Python (2) program")
-dm_drio_bad_stats2.report()
+dm_drio_bad_time_c1.report('c-c-dm-errs-good', msg="C (1) program (good)")
+dm_drio_bad_time_c2.report('c-c-dm-errs-bad', msg="C (2) program (bad)")
+dm_drio_bad_stats2.report('c-c-dm-errs-stats')
 
 
 log(f"-- Removing working directory {WORKINGDIR} --")
 close_log()
+csvlogf.close()
+
 # chdir("/")
 # rmtree(WORKINGDIR)
 
