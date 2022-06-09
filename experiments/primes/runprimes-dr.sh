@@ -4,8 +4,6 @@ SOURCESDIR="$(pwd)/../../sources"
 NUM=$1
 test -z $NUM && NUM=10000
 
-PERF='/usr/lib/linux-tools/5.13.0-1011-intel/perf'
-$PERF record \
 /opt/dynamorio//build/bin64/drrun\
 	-root /opt/dynamorio//build/\
 	-opt_cleancall 2 -opt_speed\
