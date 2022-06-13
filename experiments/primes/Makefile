@@ -12,4 +12,4 @@ primes-2: primes-2.c
 clean:
 	-rm *.o primes primes-2
 
-.PHONY: clean all
+.PHONY: clean all experiments
