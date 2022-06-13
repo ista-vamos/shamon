@@ -82,8 +82,13 @@ class ParseTime:
         val = self.time / repeat_num()
         lprint(f"Avg CPU time ({repeat_num()} measurements): {val} seconds.",
                color="\033[0;32m")
-        for t, c in zip(self.times, self.waiting):
-            csvlog.writerow([key, t, c])
+        if self.waiting:
+            for t, c in zip(self.times, self.waiting):
+                csvlog.writerow([key, t, c])
+        else:
+            assert not self.withwaitstats
+            for t in self.times:
+                csvlog.writerow([key, t])
         return val
 
 class ParseStats:
