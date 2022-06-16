@@ -1,16 +1,16 @@
 CPPFLAGS=#-I.. -I/home/fabian/DynamoRIO-Linux-9.0.0/include -I/home/fabian/DynamoRIO-Linux-9.0.0/ext/include
-CFLAGS=-O0 -g
+CFLAGS=-O3
 
 all: monitor bank monbank monbanknw monitornw smtmonitor #gennums_hardcoded-instr
 
 monitor: monitor.o shm_monitor.o shm_common.o
-	$(CC) $^ -O0 -g $(CPPFLAGS) -o $@ -lrt -lm -lpthread
+	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -lrt -lm -lpthread
 
 smtmonitor: smtmonitor.o shm_monitor.o shm_common.o smt.o
-	$(CC) $^ -O0 -g $(CPPFLAGS) -o $@ -lrt -lm -lpthread -lz3
+	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -lrt -lm -lpthread -lz3
 
 monitornw: monitornw.o shm_monitor.o shm_common.o
-	$(CC) $^ -O0 -g $(CPPFLAGS) -o $@ -lrt -lm -lpthread
+	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -lrt -lm -lpthread
 
 monitor.o: monitor.c
 	$(CC) -c $< $(CFLAGS) $(CPPFLAGS) -o $@
