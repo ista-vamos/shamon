@@ -9,14 +9,17 @@ from sys import argv
 from run_common import *
 
 NUM="10000"
-if len(argv) > 1:
+if len(argv) > 2:
     BS = argv[1]
-    if len(argv) > 2:
-        NUM=argv[2]
+    ABS = argv[2]
+    if len(argv) > 3:
+        NUM=argv[3]
 else:
-    print("args: buffer-size [number of primes]")
-    print("buffer-size is the compiled (!) size, it does not set the size.")
+    print("args: shm-buffer-size arbiter-buffer-size [number of primes]")
+    print("shm-buffer-size is the compiled (!) size, it does not set the size.")
+    print("arbiter-buffer-size is will set the size of the arbiter buffer in the monitor.")
     exit(1)
+
 
 open_log()
 open_csvlog(BS, NUM)
@@ -29,7 +32,7 @@ lprint(f"Enumerating primes up to {NUM}th prime...")
 lprint(f"Taking average of {repeat_num()} runs...\n")
 
 lprint("-- Compiling empty monitor --")
-compile_monitor(COMPILESH, EMPTYMONSRC)
+compile_monitor(COMPILESH, EMPTYMONSRC, ABS)
 
 ###############################################################################
 
@@ -51,7 +54,7 @@ dm_drio_time_py.report('c-py-empty-py', msg="Python program")
 ###############################################################################
 
 lprint("-- Compiling differential monitor --")
-compile_monitor(COMPILESH, PRIMESMONSRC)
+compile_monitor(COMPILESH, PRIMESMONSRC, ABS)
 
 ###############################################################################
 

@@ -165,8 +165,9 @@ def measure(name, cmds, moncmds=()):
         f"\033[0;34m------- {name} ------\033[0m")
     _measure(cmds, moncmds)
 
-def compile_monitor(compilesh, primessrc):
-    p = Popen([compilesh, primessrc], stdout=PIPE, stderr=PIPE)
+def compile_monitor(compilesh, primessrc, arbiter_bufsize):
+    p = Popen([compilesh, f"-DSHMBUF_ARBITER_BUFSIZE={arbiter_bufsize}",
+               primessrc], stdout=PIPE, stderr=PIPE)
     out, err = p.communicate()
 
     if out:
