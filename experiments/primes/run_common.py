@@ -11,7 +11,7 @@ DRRUN=f"{DRIOPATH}/build/bin64/drrun"
 DRIO=[DRRUN, "-root",  f"{DRIOPATH}/build/",
              "-opt_cleancall", "2", "-opt_speed"]
 PRIMESPATH=f"{SHAMONPATH}/experiments/primes"
-PRIMESMONSRC=f"{SHAMONPATH}/mmtest/mmprimes.c"
+PRIMESMONSRC=f"{SHAMONPATH}/mmtest/mmprimes-man.c"
 EMPTYMONSRC=f"{SHAMONPATH}/mmtest/mmempty.c"
 COMPILESH=f"{SHAMONPATH}/gen/compile.sh"
 
@@ -102,32 +102,38 @@ class ParseStats:
 
     def parse(self, out, err):
         errs = 0
+        dl, dr = None, None
+        pl, pr = None, None
+        sl, sr = None, None
+
         for line in out.splitlines():
             if line.startswith(b'ERROR'):
                 errs += 1
-            if line.startswith(b'Done!'):
+            # LEFT : processed 100000 events (21397 compared, 52293 dropped (in 348 holes), 26310 skipped)
+            if line.startswith(b'LEFT'):
                 parts = line.split()
-                assert len(parts) == 25, parts
-                dl, dr = int(parts[2]), int(parts[5])
-                sl, sr = int(parts[8]), int(parts[11])
-                il, ir = int(parts[14]), int(parts[17])
-                pl, pr = int(parts[20]), int(parts[23])
-                if dl + sl + il + pl == 0 or dl + sl + il + pl != dr + sr + ir + pr:
-                    log(out)
-                    lprint(f"left: {(dl, sl, il, pl)}, right: {(dr, sr, ir, pr)}, errs: {errs}")
-                    lprint("Did not find right values", color=RED)
-                #print((dl, sl, il, pl),(dr, sr, ir, pr), errs)
-                self.stats.append(((dl, sl, il, pl),(dr, sr, ir, pr), errs))
-                self.dl, self.dr = dl, dr
-                self.sl, self.sr = sl, sr
-                self.il, self.ir = il, ir
-                self.pl, self.pr = pl, pr
-                self.errs = errs
-                return
+                assert len(parts) == 13, parts
+                pl = int(parts[4][1:])
+                dl = int(parts[6])
+                sl = int(parts[11])
+            if line.startswith(b'RIGHT'):
+                parts = line.split()
+                assert len(parts) == 13, parts
+                pr = int(parts[4][1:])
+                dr = int(parts[6])
+                sr = int(parts[11])
+        if dl + sl + pl == 0 or dl + sl + pl != dr + sr + pr:
+            log(out)
+            lprint(f"left: {(dl, sl, pl)}, right: {(dr, sr, pr)}, errs: {errs}")
+            lprint("-- ERROR while parsing monitor output (see log.txt)--")
+            lprint("Did not find right values", color=RED)
+            raise RuntimeError("Did not find right values")
+        self.stats.append(((dl, sl, pl),(dr, sr, pr), errs))
+        self.dl, self.dr = dl, dr
+        self.sl, self.sr = sl, sr
+        self.pl, self.pr = pl, pr
+        self.errs = errs
 
-        lprint("-- ERROR while parsing monitor output (see log.txt)--")
-        log(out)
-        raise RuntimeError("Did not find right values")
 
     def report(self, key, msg=None):
         assert self.stats
@@ -138,10 +144,8 @@ class ParseStats:
         dr = sum(self.stats[i][1][0] for i in range(len(self.stats)))
         sl = sum(self.stats[i][0][1] for i in range(len(self.stats)))
         sr = sum(self.stats[i][1][1] for i in range(len(self.stats)))
-        il = sum(self.stats[i][0][2] for i in range(len(self.stats)))
-        ir = sum(self.stats[i][1][2] for i in range(len(self.stats)))
-        pl = sum(self.stats[i][0][3] for i in range(len(self.stats)))
-        pr = sum(self.stats[i][1][3] for i in range(len(self.stats)))
+        pl = sum(self.stats[i][0][2] for i in range(len(self.stats)))
+        pr = sum(self.stats[i][1][2] for i in range(len(self.stats)))
         errs = sum(self.stats[i][2] for i in range(len(self.stats)))
         N = repeat_num()
         lprint(\
@@ -152,8 +156,6 @@ Left dropped: {dl / N}
 Right dropped: {dr / N}
 Left skipped: {sl / N}
 Right skipped: {sr / N}
-Left ignored: {il / N}
-Right ignored: {ir / N}
 Left processed: {pl / N}
 Right processed: {pr / N}
 Detected errors: {errs/ N}""",
@@ -161,7 +163,7 @@ Detected errors: {errs/ N}""",
 
         for Sl, Sr, E in self.stats:
             csvlog.writerow([key, *Sl, *Sr, E])
-        return ((dl, sl, il, pl),(dr, sr, ir, pr), errs)
+        return ((dl, sl, pl),(dr, sr, pr), errs)
 
 #####################################################################
 
