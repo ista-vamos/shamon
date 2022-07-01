@@ -11,7 +11,7 @@ DRRUN=f"{DRIOPATH}/build/bin64/drrun"
 DRIO=[DRRUN, "-root",  f"{DRIOPATH}/build/",
              "-opt_cleancall", "2", "-opt_speed"]
 PRIMESPATH=f"{SHAMONPATH}/experiments/primes"
-PRIMESMONSRC=f"{SHAMONPATH}/mmtest/mmprimes-man.c"
+PRIMESMONSRC=f"{SHAMONPATH}/mmtest/mmprimes.c"
 EMPTYMONSRC=f"{SHAMONPATH}/mmtest/mmempty.c"
 COMPILESH=f"{SHAMONPATH}/gen/compile.sh"
 
