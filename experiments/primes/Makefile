@@ -3,6 +3,8 @@ CFLAGS=-O3
 
 all: prepare
 
+prepare: primes primes-bad primes-java primes-python
+
 primes: primes.c
 
 primes-bad: primes-bad.c
@@ -13,9 +15,8 @@ primes-java: primes.java
 	javac -Werror $<
 
 primes-python: primes.py
-	python -O -m compileall -o 1 *.py
-
-.PHONY prepare: primes primes-bad primes-java primes-python
+	python3 -O -m compileall *.py
+	#python3 -O -m compileall -o 1 *.py
 
 experiments: prepare
 	./experiments.sh
