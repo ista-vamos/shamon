@@ -1,6 +1,9 @@
 #!/bin/bash
-SHAMONBASE="/home/fabian/shamon"
-DYNAMORIOBASE="/home/fabian/dynamorio"
+SHAMONBASE="/opt/shamon"
+DYNAMORIOBASE="/opt/dynamorio"
+
+set -x
+set -e
 
 ORGIRESULTSPATH=$(pwd)
 TIME=$(date +%Y%m%d%H%M%S)
