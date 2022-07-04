@@ -54,6 +54,6 @@ for source_freq in (0, 100, 500, 1000, 5000, 10000):
 close_log()
 close_csvlog()
 
-# chdir("/")
-# rmtree(WORKINGDIR)
+chdir("/")
+rmtree(WORKINGDIR)
 

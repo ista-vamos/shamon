@@ -1,4 +1,5 @@
 all: source monitor
+
 CFLAGS=-g3 -O3 -flto  -fno-fat-lto-objects -fPIC -std=c11
 CPPFLAGS=-D_POSIX_C_SOURCE=200809L -DNDEBUG
 LDFLAGS=-lpthread
@@ -26,3 +27,12 @@ monitor.o: monitor.c
 
 monitor: monitor.o
 	$(CC) monitor.o -o monitor ../../vector.c ../utils.c -I../.. $(CFLAGS)  $(MONITOR_LIBS)  $(LDFLAGS)
+
+experiments: source monitor
+	python3 -O -m compileall *.py
+	./experiments.sh
+
+.PHONY clean:
+	-rm *.o monitor source
+	-rm -rf __pycache__
+
