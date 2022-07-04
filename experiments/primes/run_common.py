@@ -19,7 +19,10 @@ csvlog = None
 csvlogf = None
 
 def open_csvlog(BS, NUM):
-    csv_name = f"times-{BS}-{NUM}.csv"
+    method = "gen" if PRIMESMONSRC.endswith("mmprimes.c") else "man"
+    assert method == "gen" or PRIMESMONSRC.endswith("mmprimes-man.c"),\
+            "Invalid monitor"
+    csv_name = f"times-{method}-{BS}-{NUM}.csv"
 
     global csvlogf
     csvlogf = open(csv_name, 'a')
@@ -101,6 +104,20 @@ class ParseStats:
         self.errs = None
 
     def parse(self, out, err):
+        if PRIMESMONSRC.endswith("mmprimes.c"):
+            return self._parse_mon_gen(out, err)
+        elif PRIMESMONSRC.endswith("mmprimes-man.c"):
+            return self._parse_mon_man(out, err)
+        raise RuntimeError("Unknown monitor")
+
+    def report(self, key, msg=None):
+        if PRIMESMONSRC.endswith("mmprimes.c"):
+            return self._report_mon_gen(key, msg)
+        elif PRIMESMONSRC.endswith("mmprimes-man.c"):
+            return self._report_mon_man(key, msg)
+        raise RuntimeError("Unknown monitor")
+
+    def _parse_mon_man(self, out, err):
         errs = 0
         dl, dr = None, None
         pl, pr = None, None
@@ -136,7 +153,7 @@ class ParseStats:
         self.errs = errs
 
 
-    def report(self, key, msg=None):
+    def _report_mon_man(self, key, msg=None):
         assert self.stats
         if msg:
             lprint(msg, end=' ', color="\033[0;32m")
@@ -165,6 +182,70 @@ Detected errors: {errs/ N}""",
         for Sl, Sr, E in self.stats:
             csvlog.writerow([key, *Sl, *Sr, E])
         return ((dl, sl, pl),(dr, sr, pr), errs)
+
+
+    def _parse_mon_gen(self, out, err):
+        errs = 0
+        for line in out.splitlines():
+            if line.startswith(b'ERROR'):
+                errs += 1
+            if line.startswith(b'Done!'):
+                parts = line.split()
+                assert len(parts) == 25, parts
+                dl, dr = int(parts[2]), int(parts[5])
+                sl, sr = int(parts[8]), int(parts[11])
+                il, ir = int(parts[14]), int(parts[17])
+                pl, pr = int(parts[20]), int(parts[23])
+                if dl + sl + il + pl == 0 or dl + sl + il + pl != dr + sr + ir + pr:
+                    log(out)
+                    lprint(f"left: {(dl, sl, il, pl)}, right: {(dr, sr, ir, pr)}, errs: {errs}")
+                    lprint("Did not find right values", color=RED)
+                #print((dl, sl, il, pl),(dr, sr, ir, pr), errs)
+                self.stats.append(((dl, sl, il, pl),(dr, sr, ir, pr), errs))
+                self.dl, self.dr = dl, dr
+                self.sl, self.sr = sl, sr
+                self.il, self.ir = il, ir
+                self.pl, self.pr = pl, pr
+                self.errs = errs
+                return
+
+        lprint("-- ERROR while parsing monitor output (see log.txt)--")
+        log(out)
+        raise RuntimeError("Did not find right values")
+
+    def _report_mon_gen(self, key, msg=None):
+        assert self.stats
+        if msg:
+            lprint(msg, end=' ', color="\033[0;32m")
+        # FIXME: average is not a good statistics here
+        dl = sum(self.stats[i][0][0] for i in range(len(self.stats)))
+        dr = sum(self.stats[i][1][0] for i in range(len(self.stats)))
+        sl = sum(self.stats[i][0][1] for i in range(len(self.stats)))
+        sr = sum(self.stats[i][1][1] for i in range(len(self.stats)))
+        il = sum(self.stats[i][0][2] for i in range(len(self.stats)))
+        ir = sum(self.stats[i][1][2] for i in range(len(self.stats)))
+        pl = sum(self.stats[i][0][3] for i in range(len(self.stats)))
+        pr = sum(self.stats[i][1][3] for i in range(len(self.stats)))
+        errs = sum(self.stats[i][2] for i in range(len(self.stats)))
+        N = repeat_num()
+        lprint(\
+f"""
+Average of {N} measurements:
+
+Left dropped: {dl / N}
+Right dropped: {dr / N}
+Left skipped: {sl / N}
+Right skipped: {sr / N}
+Left ignored: {il / N}
+Right ignored: {ir / N}
+Left processed: {pl / N}
+Right processed: {pr / N}
+Detected errors: {errs/ N}""",
+               color=GREEN)
+
+        for Sl, Sr, E in self.stats:
+            csvlog.writerow([key, *Sl, *Sr, E])
+        return ((dl, sl, il, pl),(dr, sr, ir, pr), errs)
 
 #####################################################################
 
