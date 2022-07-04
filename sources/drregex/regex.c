@@ -397,7 +397,7 @@ event_exit(void)
     free(partial_line);
 
     dr_printf("Destroying shared buffer\n");
-    release_shared_buffer(shm);
+    destroy_shared_buffer(shm);
 }
 
 static void

@@ -10,12 +10,14 @@ shift  # consume the first argument in case there are some additional ones
 GENDIR=$(dirname $0)
 SHAMONDIR="$GENDIR/.."
 
+CPPFLAGS="-D_POSIX_C_SOURCE=200809L -I$SHAMONDIR -I$SHAMONDIR/streams -I$SHAMONDIR/shmbuf"
 if grep -q 'CMAKE_BUILD_TYPE.*=Debug' $CURDIR/../CMakeCache.txt; then
 	CFLAGS="-g -O0 -fsanitize=address,undefined"
 else
 	CFLAGS="-g3 -O3 -flto  -fno-fat-lto-objects -fPIC -std=c11"
+        CPPFLAGS="$CPPFLAGS -DNDEBUG"
 fi
-CPPFLAGS="-D_POSIX_C_SOURCE=200809L -DNDEBUG -I$SHAMONDIR -I$SHAMONDIR/streams -I$SHAMONDIR/shmbuf"
+
 LDFLAGS=-lpthread
 LIBRARIES="$SHAMONDIR/libshamon-arbiter.a\
            $SHAMONDIR/libshamon-utils.a\
