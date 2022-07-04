@@ -2,6 +2,8 @@
 
 set -x
 
+rm /tmp/log.txt
+
 cd $(dirname 0)
 
 SRCDIR="$(dirname $0)/../.."

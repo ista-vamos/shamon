@@ -23,9 +23,9 @@ GRAY="\033[0;37m"
 _logf = None
 _debug = False
 
-def open_log(f='log.txt'):
+def open_log(f='/tmp/log.txt'):
     global _logf
-    _logf = open(f, 'w')
+    _logf = open(f, 'a')
 
 def close_log():
     _logf.close()
@@ -37,6 +37,8 @@ def log_debug(v):
 def log(msg, outmsg=None, end='\n', color=None):
     global _logf
     print(msg, file=_logf, end=end)
+    _logf.flush()
+
     if _debug:
         print("[DBG] " + msg)
     if outmsg:

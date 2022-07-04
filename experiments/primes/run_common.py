@@ -122,7 +122,8 @@ class ParseStats:
                 pr = int(parts[4][1:])
                 dr = int(parts[6])
                 sr = int(parts[11])
-        if dl + sl + pl == 0 or dl + sl + pl != dr + sr + pr:
+        if dl is None or sl is None or pl is None or\
+           dl + sl + pl == 0 or dl + sl + pl != dr + sr + pr:
             log(out)
             lprint(f"left: {(dl, sl, pl)}, right: {(dr, sr, pr)}, errs: {errs}")
             lprint("-- ERROR while parsing monitor output (see log.txt)--")

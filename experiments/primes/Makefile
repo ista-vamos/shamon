@@ -7,7 +7,7 @@ primes: primes.c
 
 primes-bad: primes-bad.c
 
-primes-2: primes-2.c
+#primes-2: primes-2.c
 
 primes-java: primes.java
 	javac -Werror $<
@@ -21,7 +21,7 @@ experiments: prepare
 	./experiments.sh
 
 clean:
-	-rm *.o primes primes-2
-	-rm __pycache__
+	-rm *.o primes primes-2 primes-bad
+	-rm -rf __pycache__
 
 .PHONY: clean all experiments
