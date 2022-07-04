@@ -1,7 +1,7 @@
 CPPFLAGS=
 CFLAGS=-O3
 
-all: experiments
+all: prepare
 
 primes: primes.c
 
@@ -9,10 +9,19 @@ primes-bad: primes-bad.c
 
 primes-2: primes-2.c
 
-experiments: primes primes-bad
+primes-java: primes.java
+	javac -Werror $<
+
+primes-python: primes.py
+	python -O -m compileall -o 1 *.py
+
+.PHONY prepare: primes primes-bad primes-java primes-python
+
+experiments: prepare
 	./experiments.sh
 
 clean:
 	-rm *.o primes primes-2
+	-rm __pycache__
 
 .PHONY: clean all experiments
