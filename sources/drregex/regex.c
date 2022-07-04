@@ -397,7 +397,7 @@ event_exit(void)
     free(partial_line);
 
     dr_printf("Destroying shared buffer\n");
-    destroy_shared_buffer(shm);
+    release_shared_buffer(shm);
 }
 
 static void
@@ -463,9 +463,16 @@ event_post_syscall(void *drcontext, int sysnum)
         return;
     }
     per_thread_t *data = (per_thread_t *)drmgr_get_cls_field(drcontext, tcls_idx);
+    /*
     if(data->fd>2)
     {
         return;
+    }
+    */
+    /* right now we can handle just *one* filedescriptor (we have just one buffer
+     * for incomplete lines), so use stdout */
+    if (data->fd != 1) {
+            return;
     }
     ssize_t len = *((ssize_t*)&retval);
     // dr_printf("Syscall: %i; len: %li; result: %lu\n",sysnum, len, len);
