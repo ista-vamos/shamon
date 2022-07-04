@@ -19,9 +19,9 @@ do
   make
 	for arbufsize in 16 64 128 512;
 	do
-	gen/compile.sh mmtest/mmbank.c "$arbufsize"
+	gen/compile.sh mmtest/mmbank.c -DSHMBUF_ARBITER_BUFZIE="$arbufsize"
 	mv monitor bankmonitor
-	gen/compile.sh mmtest/mmbankempty.c "$arbufsize"
+	gen/compile.sh mmtest/mmbankempty.c -DSHMBUF_ARBITER_BUFZIE="$arbufsize"
 	mv monitor bankemptymonitor
   
     cd "experiments/bank/"
