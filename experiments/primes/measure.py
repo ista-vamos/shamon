@@ -3,8 +3,8 @@
 from os import environ
 from sys import argv
 from time import sleep
-from subprocess import Popen, PIPE, DEVNULL
-
+from itertools import chain
+from subprocess import Popen, PIPE, DEVNULL, TimeoutExpired
 
 REPEAT_NUM=10
 
@@ -64,6 +64,8 @@ class Command:
         self.parser = None
         self.proc = None
         self.retval = None
+        self.out = None
+        self.err = None
 
         self.stdout = DEVNULL
         self.stderr = PIPE
@@ -82,12 +84,20 @@ class Command:
                           stdout=self.stdout, stderr=self.stderr)
         return self
 
-    def communicate(self):
-        out, err = self.proc.communicate()
+    def communicate(self, timeout=None):
+        out, err = self.proc.communicate(timeout=timeout)
         if self.parser:
             self.parser.parse(out, err)
+        self.out, self.err = out, err
         self.retval = self.proc.returncode
         return self.retval
+
+    def poll(self):
+        return self.proc.poll()
+
+    def kill(self):
+        self.proc.terminate()
+        self.proc.kill()
 
     def __str__(self):
         return " ".join(map(lambda s: f"'{s}'" if ' ' in s else s, self.cmd))
@@ -119,14 +129,22 @@ class PipedCommands:
             procs.append(c)
         return self
 
-    def communicate(self):
+    def communicate(self, timeout=None):
         ret = None
         for proc in self.procs:
-            ret = proc.communicate()
+            ret = proc.communicate(timeout=timeout)
             if ret != 0:
-                lprint(f"Subcommand '{proc}' returned {retval}", color="\033[0;31m")
+                log(f"Subcommand '{proc}' returned {retval}\n{proc.err}",
+                    f"Subcommand '{proc}' returned {retval}", color="\033[0;31m")
         # return value is from the last process
         return ret
+
+    def poll(self):
+        return self.procs[-1].poll()
+
+    def kill(self):
+        for proc in self.procs:
+            proc.kill()
 
     def __str__(self):
         return " | ".join(map(str, self.cmds))
@@ -145,6 +163,26 @@ def _measure(cmds, moncmds = (), pipe=False):
         for c in moncmds:
             c.run()
 
+        monitors = list(moncmds)
+        while monitors:
+            for proc in monitors:
+                rv = proc.poll()
+                if rv is None:
+                    continue
+                monitors.remove(proc)
+                for cmd in cmds:
+                    if cmd.poll() is None:
+                        log(f"Monitor finished before client\n"
+                            f"\033[0;31mMonitor finished before client\033[0m\n")
+                        # kill other processes
+                        for p in chain(moncmds, cmds):
+                            log(f"{p.cmd}\n")
+                            p.kill()
+                            out, err = p.proc.communicate()
+                            log(f"ret: {p.proc.returncode}\nstdout: {out}\nstderr: {err}")
+                        raise RuntimeError("Failed measurement, see /tmp/log.txt")
+            sleep(0.5)
+
         # -- PROCESS OUTPUTS OF CLIENTS --
         for cmd in cmds:
             ret = cmd.communicate()
@@ -157,9 +195,7 @@ def _measure(cmds, moncmds = (), pipe=False):
             ret = mon.communicate()
             if ret != 0:
                 log(f"Monitor {mon} had errors",
-                    f"\033[0;31mMonitor {mon} had errors\033[0m")
-                print(mon.proc)
-
+                    f"\033[0;31mMonitor {mon} had errors\033[0m\n")
 
 
 def measure(name, cmds, moncmds=()):
