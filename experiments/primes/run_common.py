@@ -1,8 +1,11 @@
 from measure import *
 from csv import writer as csvwriter
+from sys import argv
+from os.path import dirname, abspath, join as pathjoin
 
-SHAMONPATH="/opt/shamon"
-DRIOPATH="/opt/dynamorio/"
+SHAMONPATH=abspath(pathjoin(dirname(argv[0]), "../..")) # "/opt/shamon"
+# assume that dynamorio is in the same folder as shamon
+DRIOPATH=abspath(pathjoin(SHAMONPATH, "..", "dynamorio/"))
 
 # we repeat whole experiments with the shell script, so do not repeat here
 set_repeat_num(1)
