@@ -2,6 +2,9 @@ import java.util.*;
 import java.util.Random;
 import java.lang.Math;
 import java.util.Scanner;
+/* measure time */
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 
 public class primes {
 	public static void main(String[] args) {
@@ -82,6 +85,8 @@ public class primes {
 		}
 		else
 		{
+                        ThreadMXBean mxBean = ManagementFactory.getThreadMXBean();
+                        long start = mxBean.getCurrentThreadCpuTime();
 			if(tcount>0)
 			{
 				System.out.println("#1: 2");
@@ -122,6 +127,8 @@ public class primes {
 					}
 				}
 			}
+                        long end = mxBean.getCurrentThreadCpuTime();
+                        System.err.println("time: " + ((end - start) / 1000000000.0) + " seconds.");
 		}
 		
 	}

@@ -18,3 +18,15 @@ done
 for i in `seq 1 $REP`; do
         ./run-py.py $@
 done
+
+# for i in `seq 1 $REP`; do
+#         ./run-java.py $@
+# done
+# 
+# for i in `seq 1 $REP`; do
+#         ./run-cjava.py $@
+# done
+# 
+# for i in `seq 1 $REP`; do
+#         ./run-pyjava.py $@
+# done

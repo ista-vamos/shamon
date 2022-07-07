@@ -1,6 +1,7 @@
 from measure import *
 from csv import writer as csvwriter
 from sys import argv
+from tempfile import mktemp
 from os.path import dirname, basename, abspath, join as pathjoin
 
 SHAMONPATH=abspath(pathjoin(dirname(argv[0]), "../..")) # "/opt/shamon"
@@ -247,3 +248,7 @@ Detected errors: {errs/ N}""",
 
 #####################################################################
 
+def rand_shm_name(key):
+    if key[0] == '/':
+        key = key[1:]
+    return mktemp(prefix=f"/{key}.")

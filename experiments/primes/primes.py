@@ -2,13 +2,13 @@
 
 from sys import argv, stderr
 from itertools import cycle, accumulate
-from time import process_time
+from time import clock_gettime_ns, CLOCK_PROCESS_CPUTIME_ID
 
 if __name__ == "__main__":
     NUM = int(argv[1])
     primes=[]
 
-    start = process_time()
+    start = clock_gettime_ns(CLOCK_PROCESS_CPUTIME_ID)
     for i in range(1,3):
         print(f"#{i}: {i+1}")
         if i >= NUM:
@@ -25,8 +25,8 @@ if __name__ == "__main__":
             if len(primes) >= NUM:
                 break
 
-    end = process_time()
-    print(f"time: {end - start} seconds.", file=stderr)
+    end = clock_gettime_ns(CLOCK_PROCESS_CPUTIME_ID)
+    print(f"time: {(end - start)/1000000000} seconds.", file=stderr)
   # num = 1
   # for step in cycle((4,2)):
   #     if len(primes) >= NUM:
