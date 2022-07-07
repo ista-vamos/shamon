@@ -18,6 +18,12 @@ with open(argv[1], 'r') as f:
         else:
             data[row[0]] = [[float(x)] for x in row[1:]]
 
+def var(V):
+    if len(V) < 2:
+        return -1
+    return stdev(V)
+
 srtd = sorted(list(data.items()), key=lambda x: x[0])
 for k, vals in srtd:
-    print(k, ": ", ", ".join(map(lambda V: f"{mean(V):.3f}±{stdev(V):.3f}", vals)))
+    assert all(map(lambda V: len(V) == len(vals[0]), vals))
+    print(f"[n={len(vals[0])}]", k, ": ", ", ".join(map(lambda V: f"{mean(V):.3f}±{var(V):.3f}", vals)))

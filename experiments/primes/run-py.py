@@ -91,6 +91,7 @@ measure("'Differential monitor Py/Py for primes' DynamoRIO sources",
 dm_drio_time_py1.report('py-py-dm', msg="Python program")
 dm_drio_time_py2.report('py-py-dm', msg="Python program")
 dm_drio_stats_pp.report('py-py-dm-stats')
+assert dm_drio_stats_pp.errs == 0, "Had errors in non-error traces"
 
 log(f"-- Removing working directory {WORKINGDIR} --")
 close_log()

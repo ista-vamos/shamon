@@ -23,17 +23,8 @@ else:
 open_log()
 open_csvlog(BS, NUM)
 
-WORKINGDIR = mkdtemp(prefix="midmon.", dir="/tmp")
-chdir(WORKINGDIR)
-lprint(f"-- Working directory is {WORKINGDIR} --")
-
 lprint(f"Enumerating primes up to {NUM}th prime...")
 lprint(f"Taking average of {repeat_num()} runs...\n")
-
-###############################################################################
-
-lprint("-- Compiling empty monitor --")
-compile_monitor(COMPILESH, EMPTYMONSRC, ABS)
 
 ###############################################################################
 
@@ -46,6 +37,14 @@ c_drio = ParseTime(withwaitstats=False)
 measure("'C primes' DynamoRIO (no monitor)",
         [Command(*DRIO, "--", f"{PRIMESPATH}/primes", NUM).withparser(c_drio)])
 c_drio.report('c-drio')
+###############################################################################
+
+WORKINGDIR = mkdtemp(prefix="midmon.", dir="/tmp")
+chdir(WORKINGDIR)
+lprint(f"-- Working directory is {WORKINGDIR} --")
+
+lprint("-- Compiling empty monitor --")
+compile_monitor(COMPILESH, EMPTYMONSRC, ABS)
 
 # create temporary names for SHM files
 primes1 = rand_shm_name('primes1')
@@ -67,6 +66,14 @@ dm_drio_consume_time_c2.report('c-c-empty', msg="C (2) program")
 
 ###############################################################################
 
+log(f"-- Removing working directory {WORKINGDIR} --")
+chdir("/")
+rmtree(WORKINGDIR)
+
+WORKINGDIR = mkdtemp(prefix="midmon.", dir="/tmp")
+chdir(WORKINGDIR)
+lprint(f"-- Working directory is {WORKINGDIR} --")
+
 lprint("-- Compiling differential monitor --")
 compile_monitor(COMPILESH, PRIMESMONSRC, ABS)
 
@@ -87,6 +94,7 @@ measure("'Differential monitor C/C for primes' DynamoRIO sources",
 dm_drio_time_c1.report('c-c-dm', msg="C (1) program")
 dm_drio_time_c2.report('c-c-dm', msg="C (2) program")
 dm_drio_stats2.report('c-c-dm-stats')
+assert dm_drio_stats2.errs == 0, "Had errors in non-error traces"
 
 dm_drio_bad_time_c1 = ParseTime()
 dm_drio_bad_time_c2 = ParseTime()
@@ -105,9 +113,13 @@ dm_drio_bad_time_c2.report('c-c-dm-errs-bad', msg="C (2) program (bad)")
 dm_drio_bad_stats2.report('c-c-dm-errs-stats')
 
 log(f"-- Removing working directory {WORKINGDIR} --")
+chdir("/")
+rmtree(WORKINGDIR)
+
+log("-- This run is DONE! --")
+
+log("-- Closing logs --")
 close_log()
 close_csvlog()
 
-chdir("/")
-rmtree(WORKINGDIR)
 
