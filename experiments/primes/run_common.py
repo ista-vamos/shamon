@@ -1,30 +1,29 @@
 from measure import *
 from csv import writer as csvwriter
 from sys import argv
-from os.path import dirname, abspath, join as pathjoin
+from os.path import dirname, basename, abspath, join as pathjoin
 
 SHAMONPATH=abspath(pathjoin(dirname(argv[0]), "../..")) # "/opt/shamon"
 # assume that dynamorio is in the same folder as shamon
 DRIOPATH=abspath(pathjoin(SHAMONPATH, "..", "dynamorio/"))
 
-# we repeat whole experiments with the shell script, so do not repeat here
-set_repeat_num(1)
-
 DRRUN=f"{DRIOPATH}/build/bin64/drrun"
 DRIO=[DRRUN, "-root",  f"{DRIOPATH}/build/",
              "-opt_cleancall", "2", "-opt_speed"]
 PRIMESPATH=f"{SHAMONPATH}/experiments/primes"
-PRIMESMONSRC=f"{SHAMONPATH}/mmtest/mmprimes.c"
+PRIMESMONSRC=f"{SHAMONPATH}/mmtest/monprimes.c"
 EMPTYMONSRC=f"{SHAMONPATH}/mmtest/mmempty.c"
 COMPILESH=f"{SHAMONPATH}/gen/compile.sh"
 
 csvlog = None
 csvlogf = None
 
+# check if the monitor is a known monitor
+assert basename(PRIMESMONSRC) in ("mmprimes.c", "monprimes.c", "mmprimes-man.c"), PRIMESMONSRC
+
 def open_csvlog(BS, NUM):
     method = "gen" if PRIMESMONSRC.endswith("mmprimes.c") else "man"
-    assert method == "gen" or PRIMESMONSRC.endswith("mmprimes-man.c"),\
-            "Invalid monitor"
+    assert method in ("gen", "man"), method
     csv_name = f"times-{method}-{BS}-{NUM}.csv"
 
     global csvlogf
@@ -109,16 +108,12 @@ class ParseStats:
     def parse(self, out, err):
         if PRIMESMONSRC.endswith("mmprimes.c"):
             return self._parse_mon_gen(out, err)
-        elif PRIMESMONSRC.endswith("mmprimes-man.c"):
-            return self._parse_mon_man(out, err)
-        raise RuntimeError("Unknown monitor")
+        return self._parse_mon_man(out, err)
 
     def report(self, key, msg=None):
         if PRIMESMONSRC.endswith("mmprimes.c"):
             return self._report_mon_gen(key, msg)
-        elif PRIMESMONSRC.endswith("mmprimes-man.c"):
-            return self._report_mon_man(key, msg)
-        raise RuntimeError("Unknown monitor")
+        return self._report_mon_man(key, msg)
 
     def _parse_mon_man(self, out, err):
         errs = 0
@@ -251,5 +246,4 @@ Detected errors: {errs/ N}""",
         return ((dl, sl, il, pl),(dr, sr, ir, pr), errs)
 
 #####################################################################
-
 

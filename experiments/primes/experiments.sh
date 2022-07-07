@@ -3,7 +3,7 @@
 set -x
 set -e
 
-rm /tmp/log.txt
+rm -f /tmp/log.txt
 
 cd $(dirname 0)
 

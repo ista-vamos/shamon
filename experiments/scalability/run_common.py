@@ -5,10 +5,6 @@ from os.path import dirname, abspath, join as pathjoin
 
 SHAMONPATH=abspath(pathjoin(dirname(argv[0]), "../..")) # "/opt/shamon"
 
-# we repeat whole experiments with the shell script, so do not repeat here
-set_repeat_num(1)
-
-
 csvlog = None
 csvlogf = None
 

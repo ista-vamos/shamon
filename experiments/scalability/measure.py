@@ -6,7 +6,7 @@ from time import sleep
 from subprocess import Popen, PIPE, DEVNULL
 
 
-REPEAT_NUM=10
+REPEAT_NUM=1
 
 def set_repeat_num(n):
     global REPEAT_NUM

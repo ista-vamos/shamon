@@ -6,7 +6,9 @@ from time import sleep
 from itertools import chain
 from subprocess import Popen, PIPE, DEVNULL, TimeoutExpired
 
-REPEAT_NUM=10
+# we repeat whole experiments with the shell script, so do not repeat the
+# experiments by default 
+REPEAT_NUM=1
 
 def set_repeat_num(n):
     global REPEAT_NUM
@@ -163,6 +165,7 @@ def _measure(cmds, moncmds = (), pipe=False):
         for c in moncmds:
             c.run()
 
+        # --- wait until monitors finish ---
         monitors = list(moncmds)
         while monitors:
             for proc in monitors:
