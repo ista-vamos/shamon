@@ -1,7 +1,9 @@
 from measure import *
 from csv import writer as csvwriter
+from sys import argv
+from os.path import dirname, abspath, join as pathjoin
 
-SHAMONPATH="/opt/shamon"
+SHAMONPATH=abspath(pathjoin(dirname(argv[0]), "../..")) # "/opt/shamon"
 
 # we repeat whole experiments with the shell script, so do not repeat here
 set_repeat_num(1)
