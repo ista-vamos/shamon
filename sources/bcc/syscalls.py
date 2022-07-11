@@ -5,6 +5,33 @@ from time import sleep
 
 from bcc import BPF
 
+submit_next_event=\
+r"""
+    event = buffer.ringbuf_reserve(sizeof(struct event));
+    if (!event) {
+        bpf_trace_printk("FAILED RESERVING SLOT (2) IN BUFFER\\n");
+        return 1;
+    }
+    max_read_len = (args->count - off > BUF_SIZE) ? BUF_SIZE : args->count - off;
+    len = bpf_probe_read_user_str(event->buf, max_read_len, user_buf + off);
+    if (len < 0) {
+        bpf_trace_printk("FAILED READING USER STRING\\n");
+        buffer.ringbuf_discard(event, 0);
+        return 1;
+    } else {
+        bpf_trace_printk("SUBMIT EVENT\\n");
+        event->count = args->count - off;
+        event->fd = args->fd;
+        event->len = len;
+        event->off = off;
+        buffer.ringbuf_submit(event, 0);
+    }
+    off += len;
+    if (off >= args->count)
+        return 0;
+
+"""
+
 src = r"""
 BPF_RINGBUF_OUTPUT(buffer, 1 << 4);
 
@@ -54,151 +81,9 @@ TRACEPOINT_PROBE(syscalls, sys_enter_write) {
     if (off >= args->count)
         return 0;
 
-    /* 2nd PART */
-    event = buffer.ringbuf_reserve(sizeof(struct event));
-    if (!event) {
-        bpf_trace_printk("FAILED RESERVING SLOT (2) IN BUFFER\\n");
-        return 1;
-    }
-    max_read_len = (args->count - off > BUF_SIZE) ? BUF_SIZE : args->count - off;
-    len = bpf_probe_read_user_str(event->buf, max_read_len, user_buf + off);
-    if (len < 0) {
-        bpf_trace_printk("FAILED READING USER STRING\\n");
-        buffer.ringbuf_discard(event, 0);
-        return 1;
-    } else {
-        bpf_trace_printk("SUBMIT EVENT\\n");
-        event->count = args->count - off;
-        event->fd = args->fd;
-        event->len = len;
-        event->off = off;
-        buffer.ringbuf_submit(event, 0);
-    }
-    off += len;
-    if (off >= args->count)
-        return 0;
+    @SUBMIT_NEXT_EVENTS
 
-    /* 3rd PART */
-    event = buffer.ringbuf_reserve(sizeof(struct event));
-    if (!event) {
-        bpf_trace_printk("FAILED RESERVING SLOT (2) IN BUFFER\\n");
-        return 1;
-    }
-    max_read_len = (args->count - off > BUF_SIZE) ? BUF_SIZE : args->count - off;
-    len = bpf_probe_read_user_str(event->buf, max_read_len, user_buf + off);
-    if (len < 0) {
-        bpf_trace_printk("FAILED READING USER STRING\\n");
-        buffer.ringbuf_discard(event, 0);
-        return 1;
-    } else {
-        bpf_trace_printk("SUBMIT EVENT\\n");
-        event->count = args->count - off;
-        event->fd = args->fd;
-        event->len = len;
-        event->off = off;
-        buffer.ringbuf_submit(event, 0);
-    }
-    off += len;
-    if (off >= args->count)
-        return 0;
-
-    /* 4th PART */
-    event = buffer.ringbuf_reserve(sizeof(struct event));
-    if (!event) {
-        bpf_trace_printk("FAILED RESERVING SLOT (2) IN BUFFER\\n");
-        return 1;
-    }
-    max_read_len = (args->count - off > BUF_SIZE) ? BUF_SIZE : args->count - off;
-    len = bpf_probe_read_user_str(event->buf, max_read_len, user_buf + off);
-    if (len < 0) {
-        bpf_trace_printk("FAILED READING USER STRING\\n");
-        buffer.ringbuf_discard(event, 0);
-        return 1;
-    } else {
-        bpf_trace_printk("SUBMIT EVENT\\n");
-        event->count = args->count - off;
-        event->fd = args->fd;
-        event->len = len;
-        event->off = off;
-        buffer.ringbuf_submit(event, 0);
-    }
-    off += len;
-    if (off >= args->count)
-        return 0;
-
-    /* 5th PART */
-    event = buffer.ringbuf_reserve(sizeof(struct event));
-    if (!event) {
-        bpf_trace_printk("FAILED RESERVING SLOT (2) IN BUFFER\\n");
-        return 1;
-    }
-    max_read_len = (args->count - off > BUF_SIZE) ? BUF_SIZE : args->count - off;
-    len = bpf_probe_read_user_str(event->buf, max_read_len, user_buf + off);
-    if (len < 0) {
-        bpf_trace_printk("FAILED READING USER STRING\\n");
-        buffer.ringbuf_discard(event, 0);
-        return 1;
-    } else {
-        bpf_trace_printk("SUBMIT EVENT\\n");
-        event->count = args->count - off;
-        event->fd = args->fd;
-        event->len = len;
-        event->off = off;
-        buffer.ringbuf_submit(event, 0);
-    }
-    off += len;
-    if (off >= args->count)
-        return 0;
-
-    /* 6th PART */
-    event = buffer.ringbuf_reserve(sizeof(struct event));
-    if (!event) {
-        bpf_trace_printk("FAILED RESERVING SLOT (2) IN BUFFER\\n");
-        return 1;
-    }
-    max_read_len = (args->count - off > BUF_SIZE) ? BUF_SIZE : args->count - off;
-    len = bpf_probe_read_user_str(event->buf, max_read_len, user_buf + off);
-    if (len < 0) {
-        bpf_trace_printk("FAILED READING USER STRING\\n");
-        buffer.ringbuf_discard(event, 0);
-        return 1;
-    } else {
-        bpf_trace_printk("SUBMIT EVENT\\n");
-        event->count = args->count - off;
-        event->fd = args->fd;
-        event->len = len;
-        event->off = off;
-        buffer.ringbuf_submit(event, 0);
-    }
-    off += len;
-    if (off >= args->count)
-        return 0;
-
-    /* 7th PART */
-    event = buffer.ringbuf_reserve(sizeof(struct event));
-    if (!event) {
-        bpf_trace_printk("FAILED RESERVING SLOT (2) IN BUFFER\\n");
-        return 1;
-    }
-    max_read_len = (args->count - off > BUF_SIZE) ? BUF_SIZE : args->count - off;
-    len = bpf_probe_read_user_str(event->buf, max_read_len, user_buf + off);
-    if (len < 0) {
-        bpf_trace_printk("FAILED READING USER STRING\\n");
-        buffer.ringbuf_discard(event, 0);
-        return 1;
-    } else {
-        bpf_trace_printk("SUBMIT EVENT\\n");
-        event->count = args->count - off;
-        event->fd = args->fd;
-        event->len = len;
-        event->off = off;
-        buffer.ringbuf_submit(event, 0);
-    }
-    off += len;
-    if (off >= args->count)
-        return 0;
-
-    /* 7th PART */
+    /* THE REST */
     event = buffer.ringbuf_reserve(sizeof(struct event));
     if (!event) {
         bpf_trace_printk("FAILED RESERVING SLOT (2) IN BUFFER\\n");
@@ -215,7 +100,7 @@ TRACEPOINT_PROBE(syscalls, sys_enter_write) {
 
     return 0;
 }
-"""
+""".replace("@SUBMIT_NEXT_EVENTS", 15*submit_next_event)
 
 
 b = BPF(text=src)
