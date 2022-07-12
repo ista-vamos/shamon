@@ -18,8 +18,7 @@
 #include "vector.h"
 
 shm_stream *create_stream(int argc, char *argv[], int arg_i,
-                          const char *expected_stream_name,
-                          struct source_control **control);
+                          const char *expected_stream_name);
 
 static int stream_running;
 
@@ -79,8 +78,7 @@ int main(int argc, char *argv[]) {
 
     initialize_events() ;
 
-    struct source_control *control; 
-    shm_stream *stream = create_stream(argc, argv, 1, NULL, &control);
+    shm_stream *stream = create_stream(argc, argv, 1, NULL);
     shm_arbiter_buffer *buffer
         = shm_arbiter_buffer_create(stream,
                                     sizeof(shm_event) + sizeof(size_t),
