@@ -341,7 +341,7 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
     /* Initialize the info about this source */
     /* FIXME: do this more user-friendly */
     size_t control_size = sizeof(size_t) + sizeof(struct event_record)*exprs_num;
-    control = initialize_shared_control_buffer(shmkey, control_size);
+    control = malloc(control_size);
     assert(control);
     control->size = control_size;
     size_t size, max_size = 0;
@@ -370,7 +370,7 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
 
     if (max_size < sizeof(shm_event_dropped))
         max_size = sizeof(shm_event_dropped);
-    shm = initialize_shared_buffer(shmkey, max_size, control);
+    shm = create_shared_buffer(shmkey, max_size, control);
     assert(shm);
     dr_fprintf(STDERR, "info: waiting for the monitor to attach\n");
     buffer_wait_for_monitor(shm);
