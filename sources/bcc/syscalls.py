@@ -1,9 +1,13 @@
 #!/usr/bin/python3
 
-from sys import stderr
+from sys import stderr, path as importpath, argv
+from os.path import abspath
 from time import sleep
 
 from bcc import BPF
+
+importpath.append(abspath("../../python"))
+from shamon import *
 
 submit_next_event=\
 r"""
@@ -102,24 +106,46 @@ TRACEPOINT_PROBE(syscalls, sys_enter_write) {
 }
 """.replace("@SUBMIT_NEXT_EVENTS", 15*submit_next_event)
 
-
 b = BPF(text=src)
 get_data = b['buffer'].event
 partial = ""
 
 def printstderr(x): print(x, file=stderr)
 
+shmkey = argv[1]
+event_name = argv[2]
+regex = argv[3]
+signature = argv[4]
+
+event_size = signature_get_size(signature) + 16  # + kind + id
+print("Event size: ", event_size)
+
+shmbuf = initialize_shared_buffer(shmkey, event_size)
+# FIXME: 256 is a magic number
+#control = initialize_shared_control_buffer(shmkey, 256)
+
+kind = 2     # FIXME
+text_long_kind = 3 # FIXME
+evid = 1
+
 def callback(ctx, data, size):
     global partial
+    global evid
     event = get_data(data)
     s = event.buf.decode('utf-8', 'ignore')
     if event.len == event.count:
         printstderr(f"\033[34;1m[fd: {event.fd}, count: {event.count}, off: {event.off}, len: {event.len}]\033[0m:")
+        addr = buffer_start_push(shmbuf)
+        addr = buffer_partial_push(shmbuf, addr, kind.to_bytes(4, "big"), 4)
+        addr = buffer_partial_push(shmbuf, addr, evid.to_bytes(4, "big"), 4)
         if partial:
             printstderr(f"{partial}{s}")
+            addr = buffer_partial_push_str(shmbuf, addr, evid, f"{partial}{s}")
             partial = ""
         else:
-            printstderr(f"{s}")
+            printstderr(s)
+            addr = buffer_partial_push_str(shmbuf, addr, evid, s)
+        evid += 1
     elif event.len < event.count:
         printstderr(f"\033[34;1m[fd: {event.fd}, count: {event.count}, off: {event.off}, len: {event.len}]\033[0m")
         if event.len == -1:
@@ -140,3 +166,5 @@ try:
         sleep(0.01)
 except KeyboardInterrupt:
     exit()
+finally:
+    destroy_shared_buffer(shmbuf)
