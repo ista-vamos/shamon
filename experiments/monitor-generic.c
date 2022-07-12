@@ -48,8 +48,7 @@ static inline void dump_args(shm_stream *stream, shm_event_generic *ev) {
 }
 
 shm_stream *create_stream(int argc, char *argv[], int arg_i,
-                          const char *expected_stream_name,
-                          struct source_control **control);
+                          const char *expected_stream_name);
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -62,9 +61,8 @@ int main(int argc, char *argv[]) {
     assert(shmn);
 
     for (int i = 1; i < argc; ++i) {
-        fprintf(stderr, "Connecting stream '%s'", argv[i]);
-        struct source_control *control;
-        shm_stream *stream = create_stream(argc, argv, i, NULL, &control);
+        fprintf(stderr, "Connecting stream '%s' ...\n", argv[i]);
+        shm_stream *stream = create_stream(argc, argv, i, NULL);
         assert(stream && "Creating stream failed");
         shamon_add_stream(shmn, stream,
                           /* buffer capacity = */4*4096);

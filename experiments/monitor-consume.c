@@ -15,15 +15,13 @@
 #include "arbiter.h"
 
 shm_stream *shm_stream_create(const char *name,
-                              struct source_control **control,
                               int argc,
                               char *argv[]);
 #define SLEEP_NS_INIT (50)
 #define SLEEP_THRESHOLD_NS (10000000)
 
 shm_stream *create_stream(int argc, char *argv[], int arg_i,
-                          const char *expected_stream_name,
-                          struct source_control **control);
+                          const char *expected_stream_name);
 
 static int buffer_manager_thrd(void *data) {
     shm_arbiter_buffer *buffer = (shm_arbiter_buffer*) data;
@@ -64,8 +62,7 @@ int main(int argc, char *argv[]) {
 
     initialize_events();
 
-    struct source_control *control;
-    shm_stream *stream = create_stream(argc, argv, 1, NULL, &control);
+    shm_stream *stream = create_stream(argc, argv, 1, NULL);
     assert(stream && "Creating stream failed");
 
     shm_arbiter_buffer *buffer = shm_arbiter_buffer_create(stream,

@@ -37,15 +37,8 @@ int main (int argc, char *argv[]) {
     long N = atol(argv[2]);
 
     /* Initialize the info about this source */
-    size_t control_size = sizeof(size_t) + sizeof(struct event_record);
-    struct source_control *control = malloc(control_size);
+    struct source_control *control = source_control_define(1, "addr", "p");
     assert(control);
-    control->size = control_size;
-    strncpy(control->events[0].name, "addr", 5);
-    strncpy((char*)control->events[0].signature, "p", 2);
-    control->events[0].kind = 0;
-    control->events[0].size
-        = signature_get_size((const unsigned char *)"p") + sizeof(struct event);
 
     struct buffer *shm = create_shared_buffer(shmkey,
                                               control->events[0].size,
