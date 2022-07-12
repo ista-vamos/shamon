@@ -571,9 +571,9 @@ int main(int argc, char **argv)
     /* FIXME: do this more user-friendly */
     size_t control_size_out = sizeof(size_t) + sizeof(struct event_record)*(exprs_num_out);
     size_t control_size_in = sizeof(size_t) + sizeof(struct event_record)*(exprs_num_in);
-    struct source_control *control_out = initialize_shared_control_buffer(shmkey_name_out, control_size_out);
+    struct source_control *control_out = malloc(control_size_out);
     assert(control_out);
-    struct source_control *control_in = initialize_shared_control_buffer(shmkey_name_in, control_size_in);
+    struct source_control *control_in = malloc(control_size_in);
     assert(control_in);
     pd_out->control=control_out;
     pd_in->control=control_in;
@@ -619,12 +619,12 @@ int main(int argc, char **argv)
         control_in->events[i].size = signature_get_size((unsigned char*)signatures_in[i]) + sizeof(struct event);
     }
 
-    struct buffer *shm_out = initialize_shared_buffer(shmkey_name_out,
+    struct buffer *shm_out = create_shared_buffer(shmkey_name_out,
                                                   compute_elem_size(signatures_out, exprs_num_out),
                                                   control_out);
-    struct buffer *shm_in = initialize_shared_buffer(shmkey_name_in,
-                                                  compute_elem_size(signatures_in, exprs_num_in),
-                                                  control_in);
+    struct buffer *shm_in = create_shared_buffer(shmkey_name_in,
+                                                 compute_elem_size(signatures_in, exprs_num_in),
+                                                 control_in);
     assert(shm_out);
     assert(shm_in);
     pd_out->shm=shm_out;

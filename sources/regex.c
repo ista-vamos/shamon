@@ -89,7 +89,7 @@ int main (int argc, char *argv[]) {
     /* Initialize the info about this source */
     /* FIXME: do this more user-friendly */
     size_t control_size = sizeof(size_t) + sizeof(struct event_record)*exprs_num;
-    struct source_control *control = initialize_shared_control_buffer(shmkey, control_size);
+    struct source_control *control = malloc(control_size);
     assert(control);
     control->size = control_size;
     for (int i = 0; i < (int)exprs_num; ++i) {
@@ -113,9 +113,9 @@ int main (int argc, char *argv[]) {
     }
 
     (void)signatures;
-    struct buffer *shm = initialize_shared_buffer(shmkey,
-                                                  compute_elem_size(signatures, exprs_num),
-                                                  control);
+    struct buffer *shm = create_shared_buffer(shmkey,
+                                              compute_elem_size(signatures, exprs_num),
+                                              control);
     assert(shm);
     fprintf(stderr, "info: waiting for the monitor to attach... ");
     buffer_wait_for_monitor(shm);

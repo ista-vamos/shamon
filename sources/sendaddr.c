@@ -38,8 +38,7 @@ int main (int argc, char *argv[]) {
 
     /* Initialize the info about this source */
     size_t control_size = sizeof(size_t) + sizeof(struct event_record);
-    struct source_control *control
-        = initialize_shared_control_buffer(shmkey, control_size);
+    struct source_control *control = malloc(control_size);
     assert(control);
     control->size = control_size;
     strncpy(control->events[0].name, "addr", 5);
@@ -48,9 +47,9 @@ int main (int argc, char *argv[]) {
     control->events[0].size
         = signature_get_size((const unsigned char *)"p") + sizeof(struct event);
 
-    struct buffer *shm = initialize_shared_buffer(shmkey,
-                                                  control->events[0].size,
-                                                  control);
+    struct buffer *shm = create_shared_buffer(shmkey,
+                                              control->events[0].size,
+                                              control);
     assert(shm);
     fprintf(stderr, "info: waiting for the monitor to attach... ");
     buffer_wait_for_monitor(shm);
