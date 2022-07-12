@@ -341,35 +341,12 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
     }
 
     /* Initialize the info about this source */
-    /* FIXME: do this more user-friendly */
-    size_t control_size = sizeof(size_t) + sizeof(struct event_record)*exprs_num;
-    struct source_control *control = malloc(control_size);
+    struct source_control *control = source_control_define_pairwise(exprs_num,
+                                                                    (const char **)names,
+                                                                    (const char **)signatures);
     assert(control);
-    control->size = control_size;
-    size_t size, max_size = 0;
-    for (int i = 0; i < (int)exprs_num; ++i) {
-        strncpy(control->events[i].name, names[i],
-                sizeof(control->events[i].name));
-#ifdef WITH_LINES
-        assert(strlen(signatures[i]) + 1 <= sizeof(control->events[i].signature));
-        control->events[i].signature[0] = 'l'; /* first param is line */
 
-        strncpy((char*)control->events[i].signature + 1,
-                signatures[i],
-                sizeof(control->events[i].signature));
-#else
-        assert(strlen(signatures[i])  <= sizeof(control->events[i].signature));
-        strncpy((char*)control->events[i].signature,
-                signatures[i],
-                sizeof(control->events[i].signature));
-#endif
-        control->events[i].kind = 0;
-        size = signature_get_size((unsigned char*)signatures[i]) + sizeof(shm_event_drregex);
-        control->events[i].size = size;
-        if (max_size < size)
-            max_size = size;
-    }
-
+    size_t max_size = source_control_max_event_size(control);
     if (max_size < sizeof(shm_event_dropped))
         max_size = sizeof(shm_event_dropped);
     shm = create_shared_buffer(shmkey, max_size, control);

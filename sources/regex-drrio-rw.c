@@ -567,55 +567,15 @@ int main(int argc, char **argv)
         }
     }
 
-    /* Initialize the info about this source */
-    /* FIXME: do this more user-friendly */
-    size_t control_size_out = sizeof(size_t) + sizeof(struct event_record)*(exprs_num_out);
-    size_t control_size_in = sizeof(size_t) + sizeof(struct event_record)*(exprs_num_in);
-    struct source_control *control_out = malloc(control_size_out);
-    assert(control_out);
-    struct source_control *control_in = malloc(control_size_in);
+    /* Initialize the info about the sources */
+    struct source_control *control_in = source_control_define_pairwise(exprs_num_in,
+                                                                       (const char **)names_in,
+                                                                       (const char **)signatures_in);
     assert(control_in);
-    control_out->size = control_size_out;
-    control_in->size = control_size_in;
-    for (int i = 0; i < (int)exprs_num_out; ++i) {
-        strncpy(control_out->events[i].name, names_out[i],
-                sizeof(control_out->events[i].name));
-#ifdef WITH_LINES
-        assert(strlen(signatures[i]) + 1 <= sizeof(control->events[i].signature));
-        control->events[i].signature[0] = 'l'; /* first param is line */
-
-        strncpy((char*)control_out->events[i].signature + 1,
-                signatures_out[i],
-                sizeof(control_out->events[i].signature));
-#else
-        assert(strlen(signatures_out[i])  <= sizeof(control_out->events[i].signature));
-        strncpy((char*)control_out->events[i].signature,
-                signatures_out[i],
-                sizeof(control_out->events[i].signature));
-
-#endif
-        control_out->events[i].kind = i+2;
-        control_out->events[i].size = signature_get_size((unsigned char*)signatures_out[i]) + sizeof(struct event);
-    }
-    for (int i = 0; i < (int)exprs_num_in; ++i) {
-        strncpy(control_in->events[i].name, names_in[i],
-                sizeof(control_in->events[i].name));
-#ifdef WITH_LINES
-        assert(strlen(signatures[i]) + 1 <= sizeof(control->events[i].signature));
-        control->events[i].signature[0] = 'l'; /* first param is line */
-
-        strncpy((char*)control_in->events[i].signature + 1,
-                signatures_in[i],
-                sizeof(control_in->events[i].signature));
-#else
-        assert(strlen(signatures_in[i])  <= sizeof(control_in->events[i].signature));
-        strncpy((char*)control_in->events[i].signature,
-                signatures_in[i],
-                sizeof(control_in->events[i].signature));
-#endif
-        control_in->events[i].kind = i+2;
-        control_in->events[i].size = signature_get_size((unsigned char*)signatures_in[i]) + sizeof(struct event);
-    }
+    struct source_control *control_out = source_control_define_pairwise(exprs_num_out,
+                                                                       (const char **)names_out,
+                                                                       (const char **)signatures_out);
+    assert(control_out);
 
     struct buffer *shm_out = create_shared_buffer(shmkey_name_out,
                                                   compute_elem_size(signatures_out, exprs_num_out),
