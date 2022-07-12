@@ -190,7 +190,7 @@ typedef struct _parsedata
     char **signatures;
     char **names;
     struct buffer *shm;
-    struct source_control *control;
+    struct event_record *events;
     regex_t re[];
 } parsedata;
 parsedata* pd_out;
@@ -200,8 +200,8 @@ int monitoring_thread(void *arg)
 {
     size_t exprs_num_in=pd_in->exprs_num;
     size_t exprs_num_out=pd_out->exprs_num;
-    struct source_control * control_out = pd_out->control;
-    struct source_control * control_in = pd_in->control;
+    struct event_record * events_out = pd_out->events;
+    struct event_record * events_in = pd_in->events;
     char ** signatures_in = pd_in->signatures;
     struct buffer * shm_in = pd_in->shm;
     char ** signatures_out = pd_out->signatures;
@@ -264,7 +264,7 @@ int monitoring_thread(void *arg)
             }
             line[len-1] = '\0';
             for (int i = 0; i < (int)exprs_num_out; ++i) {
-                if (control_out->events[i].kind == 0)
+                if (events_out[i].kind == 0)
                     continue; /* monitor is not interested in this */
 
                 status = regexec(&pd_out->re[i], line, MAXMATCH, matches, 0);
@@ -279,7 +279,7 @@ int monitoring_thread(void *arg)
                 }
                 /* push the base info about event */
                 ++ev_out.base.id;
-                ev_out.base.kind = control_out->events[i].kind;
+                ev_out.base.kind = events_out[i].kind;
                 addr = buffer_partial_push(shm_out, addr, &ev_out, sizeof(ev_out));
 
                 /* push the arguments of the event */
@@ -372,7 +372,7 @@ int monitoring_thread(void *arg)
             }
             line[len-1] = '\0';
             for (int i = 0; i < (int)exprs_num_in; ++i) {
-                if (control_in->events[i].kind == 0)
+                if (events_in[i].kind == 0)
                     continue; /* monitor is not interested in this */
 
                 status = regexec(&pd_in->re[i], line, MAXMATCH, matches, 0);
@@ -387,7 +387,7 @@ int monitoring_thread(void *arg)
                 }
                 /* push the base info about event */
                 ++ev_in.base.id;
-                ev_in.base.kind = control_in->events[i].kind;
+                ev_in.base.kind = events_in[i].kind;
                 addr = buffer_partial_push(shm_in, addr, &ev_in, sizeof(ev_in));
 
                 /* push the arguments of the event */
@@ -575,8 +575,6 @@ int main(int argc, char **argv)
     assert(control_out);
     struct source_control *control_in = malloc(control_size_in);
     assert(control_in);
-    pd_out->control=control_out;
-    pd_in->control=control_in;
     control_out->size = control_size_out;
     control_in->size = control_size_in;
     for (int i = 0; i < (int)exprs_num_out; ++i) {
@@ -627,16 +625,26 @@ int main(int argc, char **argv)
                                                  control_in);
     assert(shm_out);
     assert(shm_in);
+    free(control_out);
+    free(control_in);
     pd_out->shm=shm_out;
     pd_in->shm=shm_in;
     fprintf(stderr, "info: waiting for the monitor to attach\n");
     buffer_wait_for_monitor(shm_out);
     buffer_wait_for_monitor(shm_in);
-	monitored_process proc = attach_to_process(process_id, &register_monitored_thread);
 
-	wait_for_process(proc);
-	monitoring_active = 0;
-	//printf("Processed bytes: %lu\n", processed_bytes);
+    size_t num;
+    pd_out->events=buffer_get_avail_events(shm_out, &num);
+    assert(num == exprs_num_out);
+    pd_in->events=buffer_get_avail_events(shm_in, &num);
+    assert(num == exprs_num_in);
+
+    monitored_process proc = attach_to_process(process_id, &register_monitored_thread);
+
+    wait_for_process(proc);
+    monitoring_active = 0;
+
+    //printf("Processed bytes: %lu\n", processed_bytes);
     /* Free up memory held within the regex memory */
     for (int i = 0; i < (int)exprs_num_out; ++i) {
         regfree(&pd_out->re[i]);

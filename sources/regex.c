@@ -117,6 +117,7 @@ int main (int argc, char *argv[]) {
                                               compute_elem_size(signatures, exprs_num),
                                               control);
     assert(shm);
+    free(control);
     fprintf(stderr, "info: waiting for the monitor to attach... ");
     buffer_wait_for_monitor(shm);
     fprintf(stderr, "done\n");
@@ -133,6 +134,9 @@ int main (int argc, char *argv[]) {
 
     struct event ev;
     memset(&ev, 0, sizeof(ev));
+    size_t num;
+    struct event_record *events = buffer_get_avail_events(shm, &num);
+    assert(num == exprs_num && "Information in shared memory does not fit");
 
     while (1) {
         len = getline(&line, &line_len, stdin);
@@ -149,7 +153,7 @@ int main (int argc, char *argv[]) {
         line[len-1] = '\0';
 
         for (int i = 0; i < (int)exprs_num; ++i) {
-            if (control->events[i].kind == 0)
+            if (events[i].kind == 0)
                 continue; /* monitor is not interested in this */
 
             status = regexec(&re[i], line, MAXMATCH, matches, 0);
@@ -164,7 +168,7 @@ int main (int argc, char *argv[]) {
             }
             /* push the base info about event */
             ++ev.base.id;
-            ev.base.kind = control->events[i].kind;
+            ev.base.kind = events[i].kind;
             addr = buffer_partial_push(shm, addr, &ev, sizeof(ev));
 
             /* push the arguments of the event */

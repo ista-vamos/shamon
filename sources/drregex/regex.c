@@ -51,13 +51,15 @@ static int tcls_idx;
 /* we'll number threads from 0 up */
 static size_t thread_num = 0;
 
-struct source_control *control;
 static struct buffer *shm;
 /* shmbuf assumes one writer and one reader, but here we may have multiple writers
  * (multiple threads), so we must make sure they are seuqntialized somehow
    (until we have the implementation for multiple-writers) */
 static size_t waiting_for_buffer = 0;
 static _Atomic(bool) _write_lock = false;
+
+static struct event_record *events;
+static size_t events_num;
 
 static inline void write_lock() {
     _Atomic bool *l = &_write_lock;
@@ -125,7 +127,7 @@ static void parse_line(bool iswrite, per_thread_t *data, char *line) {
     /* fprintf(stderr, "LINE: %s\n", line); */
 
     for (int i = 0; i < (int)exprs_num; ++i) {
-       if (control->events[i].kind == 0)
+       if (events[i].kind == 0)
            continue; /* monitor is not interested in this */
 
        status = regexec(&re[i], line, MAXMATCH, matches, 0);
@@ -144,7 +146,7 @@ static void parse_line(bool iswrite, per_thread_t *data, char *line) {
        }
        /* push the base info about event */
        ++ev.base.id;
-       ev.base.kind = control->events[i].kind;
+       ev.base.kind = events[i].kind;
 #ifndef DRREGEX_ONLY_ARGS
        ev.write = iswrite;
        ev.fd = data->fd;
@@ -341,7 +343,7 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
     /* Initialize the info about this source */
     /* FIXME: do this more user-friendly */
     size_t control_size = sizeof(size_t) + sizeof(struct event_record)*exprs_num;
-    control = malloc(control_size);
+    struct source_control *control = malloc(control_size);
     assert(control);
     control->size = control_size;
     size_t size, max_size = 0;
@@ -372,6 +374,9 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
         max_size = sizeof(shm_event_dropped);
     shm = create_shared_buffer(shmkey, max_size, control);
     assert(shm);
+    events = buffer_get_avail_events(shm, &events_num);
+    free(control);
+
     dr_fprintf(STDERR, "info: waiting for the monitor to attach\n");
     buffer_wait_for_monitor(shm);
 }

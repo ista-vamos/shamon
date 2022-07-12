@@ -51,13 +51,19 @@ int main (int argc, char *argv[]) {
                                               control->events[0].size,
                                               control);
     assert(shm);
+    free(control);
+
     fprintf(stderr, "info: waiting for the monitor to attach... ");
     buffer_wait_for_monitor(shm);
     fprintf(stderr, "done\n");
 
+    size_t events_num;
+    struct event_record *events = buffer_get_avail_events(shm, &events_num);
+    assert(events_num == 1);
+
     struct event ev;
     ev.base.id = 0;
-    ev.base.kind = control->events[0].kind;
+    ev.base.kind = events[0].kind;
     void *addr, *p;
     while (--N > 0) {
        while (!(addr = buffer_start_push(shm))) {
