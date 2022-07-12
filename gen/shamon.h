@@ -148,7 +148,6 @@ void shm_stream_get_dropped_event(shm_stream *stream,
                                   uint64_t n);
 
 shm_stream *shm_stream_create(const char *name,
-                              struct source_control **control,
                               int argc,
                               char *argv[]);
 
