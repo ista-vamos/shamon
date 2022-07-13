@@ -120,9 +120,7 @@ signature = argv[4]
 event_size = signature_get_size(signature) + 16  # + kind + id
 print("Event size: ", event_size)
 
-shmbuf = initialize_shared_buffer(shmkey, event_size)
-# FIXME: 256 is a magic number
-#control = initialize_shared_control_buffer(shmkey, 256)
+shmbuf = create_shared_buffer(shmkey, event_size, f"{event_name}:{signature}")
 
 kind = 2     # FIXME
 text_long_kind = 3 # FIXME
@@ -136,8 +134,8 @@ def callback(ctx, data, size):
     if event.len == event.count:
         printstderr(f"\033[34;1m[fd: {event.fd}, count: {event.count}, off: {event.off}, len: {event.len}]\033[0m:")
         addr = buffer_start_push(shmbuf)
-        addr = buffer_partial_push(shmbuf, addr, kind.to_bytes(4, "big"), 4)
-        addr = buffer_partial_push(shmbuf, addr, evid.to_bytes(4, "big"), 4)
+        addr = buffer_partial_push(shmbuf, addr, kind.to_bytes(4, "little"), 4)
+        addr = buffer_partial_push(shmbuf, addr, evid.to_bytes(4, "little"), 4)
         if partial:
             printstderr(f"{partial}{s}")
             addr = buffer_partial_push_str(shmbuf, addr, evid, f"{partial}{s}")
@@ -145,6 +143,7 @@ def callback(ctx, data, size):
         else:
             printstderr(s)
             addr = buffer_partial_push_str(shmbuf, addr, evid, s)
+        buffer_finish_push(shmbuf)
         evid += 1
     elif event.len < event.count:
         printstderr(f"\033[34;1m[fd: {event.fd}, count: {event.count}, off: {event.off}, len: {event.len}]\033[0m")
@@ -159,6 +158,7 @@ def callback(ctx, data, size):
         printstderr(f"\033[34;1m[fd: {event.fd}, count: {event.count}, off: {event.off}, len: {event.len}]\033[0m")
 
 b['buffer'].open_ring_buffer(callback)
+
 
 try:
     while 1:
