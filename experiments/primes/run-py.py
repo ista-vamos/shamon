@@ -23,7 +23,7 @@ else:
 
 
 open_log()
-open_csvlog(BS, NUM)
+open_csvlog(BS, ABS, NUM)
 
 WORKINGDIR = mkdtemp(prefix="midmon.", dir="/tmp")
 chdir(WORKINGDIR)

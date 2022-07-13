@@ -21,7 +21,7 @@ else:
     exit(1)
 
 open_log()
-open_csvlog(BS, NUM)
+open_csvlog(BS, ABS, NUM)
 
 lprint(f"Enumerating primes up to {NUM}th prime...")
 lprint(f"Taking average of {repeat_num()} runs...\n")

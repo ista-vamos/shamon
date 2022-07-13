@@ -175,15 +175,23 @@ def _measure(cmds, moncmds = (), pipe=False):
                 monitors.remove(proc)
                 for cmd in cmds:
                     if cmd.poll() is None:
+                        # some clients may take longer to tear down and this would be a false alarm,
+                        # try to wait 1 second before killing the measurement for suspicious behavior
+                        sleep(1)
+                        if cmd.poll() is not None:
+                            continue
+
                         log(f"Monitor finished before client\n"
                             f"\033[0;31mMonitor finished before client\033[0m\n")
+                        log(f"Command still running: {' '.join(cmd.cmd)}\n")
                         # kill other processes
+                        log("Killing all processes and dumping their output...")
                         for p in chain(moncmds, cmds):
-                            log(f"{p.cmd}\n")
                             p.kill()
+                            log(f"COMMAND: {' '.join(p.cmd)}\n")
                             out, err = p.proc.communicate()
-                            log(f"ret: {p.proc.returncode}\nstdout: {out}\nstderr: {err}")
-                        raise RuntimeError("Failed measurement, see /tmp/log.txt")
+                            log(f"ret: {p.proc.returncode}\nstdout: {out}\nstderr: {err}\n---")
+                        raise RuntimeError("Failed measurement (monitor finished before a client), see /tmp/log.txt")
             sleep(0.5)
 
         # -- PROCESS OUTPUTS OF CLIENTS --

@@ -22,10 +22,10 @@ csvlogf = None
 # check if the monitor is a known monitor
 assert basename(PRIMESMONSRC) in ("mmprimes.c", "monprimes.c", "mmprimes-man.c"), PRIMESMONSRC
 
-def open_csvlog(BS, NUM):
+def open_csvlog(BS, ABS, NUM):
     method = "gen" if PRIMESMONSRC.endswith("mmprimes.c") else "man"
     assert method in ("gen", "man"), method
-    csv_name = f"times-{method}-{BS}-{NUM}.csv"
+    csv_name = f"times-{method}-{BS}-{ABS}-{NUM}.csv"
 
     global csvlogf
     csvlogf = open(csv_name, 'a')
