@@ -11,13 +11,13 @@ for i in `seq 1 $REP`; do
         ./run-c.py $@
 done
 
-for i in `seq 1 $REP`; do
-        ./run-cpy.py $@
-done
-
-for i in `seq 1 $REP`; do
-        ./run-py.py $@
-done
+# for i in `seq 1 $REP`; do
+#         ./run-cpy.py $@
+# done
+# 
+# for i in `seq 1 $REP`; do
+#         ./run-py.py $@
+# done
 
 # for i in `seq 1 $REP`; do
 #         ./run-java.py $@
