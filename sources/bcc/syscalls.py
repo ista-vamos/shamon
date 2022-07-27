@@ -3,6 +3,7 @@
 from sys import stderr, path as importpath, argv
 from os.path import abspath
 from time import sleep
+from re import compile as regex_compile
 
 from bcc import BPF
 
@@ -126,6 +127,18 @@ kind = 2     # FIXME
 text_long_kind = 3 # FIXME
 evid = 1
 
+waiting_for_buffer = 0
+
+print(f"Compiling regex `{regex}`...", end="")
+#regexc = regex_compile(regex)
+print(" done")
+
+def parse_line(line):
+    return
+    printstderr("LINE: " + line)
+    m = regexc.match(line)
+    print(m)
+
 def callback(ctx, data, size):
     global partial
     global evid
@@ -134,8 +147,15 @@ def callback(ctx, data, size):
     if event.len == event.count:
         printstderr(f"\033[34;1m[fd: {event.fd}, count: {event.count}, off: {event.off}, len: {event.len}]\033[0m:")
         addr = buffer_start_push(shmbuf)
-        addr = buffer_partial_push(shmbuf, addr, kind.to_bytes(4, "little"), 4)
-        addr = buffer_partial_push(shmbuf, addr, evid.to_bytes(4, "little"), 4)
+        while not addr:
+            addr = buffer_start_push(shmbuf)
+            global waiting_for_buffer
+            waiting_for_buffer += 1
+
+        # push the base data (kind and event ID)
+        addr = buffer_partial_push(shmbuf, addr, kind.to_bytes(8, "little"), 8)
+        addr = buffer_partial_push(shmbuf, addr, evid.to_bytes(8, "little"), 8)
+
         if partial:
             printstderr(f"{partial}{s}")
             addr = buffer_partial_push_str(shmbuf, addr, evid, f"{partial}{s}")
@@ -151,11 +171,12 @@ def callback(ctx, data, size):
             printstderr(f"{partial}{s}")
             printstderr(f"... TEXT TOO LONG, DROPPED {event.count} CHARS")
             partial = ""
+            raise NotImplementedError("Unhandled situation")
         else:
             partial += s
     else:
-        printstderr('UNHANDLED SITUATION', file=stderr)
         printstderr(f"\033[34;1m[fd: {event.fd}, count: {event.count}, off: {event.off}, len: {event.len}]\033[0m")
+        raise NotImplementedError("Unhandled situation")
 
 b['buffer'].open_ring_buffer(callback)
 
@@ -165,6 +186,7 @@ try:
         b.ring_buffer_consume()
         sleep(0.01)
 except KeyboardInterrupt:
-    exit()
+    exit(0)
 finally:
+    print(f"Waited for buffer {waiting_for_buffer} cycles")
     destroy_shared_buffer(shmbuf)
