@@ -224,10 +224,14 @@ def p_buffer_match_exp(p):
     buffer_match_exp : ID ':' INT
                      | ID ':' NOTHING
                      | ID ':' DONE
+                     | ID ':' '|' list_event_calls
+                     | ID ':' list_event_calls '|'
                      | ID ':' list_event_calls '|' list_event_calls
     '''
     if len(p) == 4:
         p[0] = ("buff_match_exp", p[1], p[3])
+    elif len(p) == 5:
+        p[0] = ("buff_match_exp", p[1], p[3], p[4])
     else:
         p[0] = ("buff_match_exp", p[1], p[3], p[5])
 
@@ -236,7 +240,6 @@ def p_list_event_calls(p):
     '''
     list_event_calls : ID '(' listids ')'
                      | ID '(' listids  ')' ',' list_event_calls
-                     |
     '''
 
     if len(p) == 5:

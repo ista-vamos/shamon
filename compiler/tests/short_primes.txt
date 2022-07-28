@@ -23,11 +23,11 @@ arbiter : NumberPairs
 {
     rule set rs
     {
-        on Left : | Prime(ln, lp)  where $$ true $$
+        on Left : | Prime(ln, lp) where $$ true $$
 		$$
 		   if(ln == rn)
 		   {
-		       $ yield NumberPair(ln, lp, rp);
+		       $yield NumberPair(ln, lp, rp);
 			   $drop 1 from Left;
 			   $drop 1 from Right;
 		   }
