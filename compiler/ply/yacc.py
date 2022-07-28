@@ -515,6 +515,7 @@ class LRParser:
                             else:
                                 lineno = 0
                             if lineno:
+                                print(errtoken)
                                 sys.stderr.write('yacc: Syntax error at line %d, token=%s\n' % (lineno, errtoken.type))
                             else:
                                 sys.stderr.write('yacc: Syntax error, token=%s' % errtoken.type)

@@ -1,11 +1,11 @@
 stream type Primes
 {
-    Prime(n : int, p : int);  
+    Prime(n : int, p : int);
 }
 
 stream type NumberPairs
 {
-    NumberPair(i : int, n : int, m : int)
+    NumberPair(i : int, n : int, m : int);
 }
 
 event source Left : Primes -> autodrop(8) PrimeEvents
@@ -23,11 +23,11 @@ arbiter : NumberPairs
 {
     rule set rs
     {
-        on Left : | Prime(ln, lp) , Right : | Prime(rn, rp) where $$ true $$
+        on Left : | Prime(ln, lp)  where $$ true $$
 		$$
 		   if(ln == rn)
 		   {
-		       $yield NumberPair(ln, lp, rp);
+		       $ yield NumberPair(ln, lp, rp);
 			   $drop 1 from Left;
 			   $drop 1 from Right;
 		   }

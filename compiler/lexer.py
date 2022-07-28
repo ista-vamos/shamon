@@ -2,7 +2,55 @@ import ply.lex as lex
 
 
 class MyLexer(object):
-    literals = ['[', ']', '{', '}', '(', ')', ':', ';', '=', ',', '>', '-']
+    literals = ['[', ']', '{', '}', '(', ')', ':', ';', '=', ',', '>', '-', '|']
+
+    # Declare the state
+    states = (
+        ('CCODE', 'exclusive'),
+    )
+
+    # Match the ##. Enter ccode state.
+    def t_BEGIN_CCODE(self, t):
+        r'\$\$'
+        assert(t.lexer.current_state() == "INITIAL")
+        t.lexer.push_state('CCODE')  # Enter 'ccode' state
+
+    def t_CCODE_END(self, t):
+        r'\$\$'
+        assert(t.lexer.current_state() == "CCODE")
+        t.lexer.pop_state()  # Enter INITIAL state
+        assert(t.lexer.current_state() == "INITIAL")
+
+    def t_CCODE_STATEMENT_INITIAL(self, t):
+        r'\$'
+        assert(t.lexer.current_state() == "CCODE")
+        t.lexer.push_state('INITIAL')  # Enter 'initial' state
+
+
+    def t_CCODE_TOKEN(self, t):
+        r"[^$]+"
+        assert(t.lexer.current_state() == "CCODE")
+        t.type = "CCODE_TOKEN"
+        return t
+
+    # Ignored characters (whitespace)
+    t_CCODE_ignore = " \t\n"
+
+    # For bad characters, we just skip over it
+    def t_CCODE_error(self, t):
+        t.lexer.skip(1)
+        print("error")
+
+    def t_semicol(self, t):
+        r";"
+        t.type = ";"
+
+        if len(t.lexer.lexstatestack) > 1:
+            assert(t.lexer.current_state() == "INITIAL")
+            # end code statement
+            t.lexer.pop_state()
+            assert(t.lexer.current_state() == "CCODE")
+        return t
 
     def t_2dots(self, t):
         r"^:$"
@@ -15,43 +63,43 @@ class MyLexer(object):
         return t
 
     def t_equal(self, t):
-        r"^=$"
+        r"="
         t.type = '='
         return t
 
-    def t_semicol(self, t):
-        r"^;$"
-        t.type = ";"
-        return t
-
     def t_lcurly(self, t):
-        r"^\{$"
+        r"\{"
         t.type = '{'  # Set token type to the expected literal
         return t
 
     def t_rcurly(self, t):
-        r"^\}$"
+        r"\}"
         t.type = '}'  # Set token type to the expected literal
         return t
 
     def t_lbracket(self, t):
-        r"^\[$"
+        r"\["
         t.type = '['  # Set token type to the expected literal
         return t
 
     def t_rbracket(self, t):
-        r"^\]$"
+        r"\]"
         t.type = ']'  # Set token type to the expected literal
         return t
 
     def t_lparenthesis(self, t):
-        r"^\($"
+        r"\("
         t.type = '('  # Set token type to the expected literal
         return t
 
     def t_rparenthesis(self, t):
-        r"^\)$"
+        r"\)"
         t.type = ')'  # Set token type to the expected literal
+        return t
+
+    def t_pipe(self, t):
+        r"\|"
+        t.type = '|'  # Set token type to the expected literal
         return t
 
     reserved = {
@@ -78,22 +126,20 @@ class MyLexer(object):
         "monitor": "MONITOR",
         "event": "EVENT",
         "source": "SOURCE",
-        "true": "TRUE",
-        "false": "FALSE"
+        "from": "FROM"
     }
 
     # Token names.
     tokens = [
         # data types
-        "BYTE", "BOOL", "INT", "STRING", "ID",
+        "BOOL", "INT", "ID",
         # operators
         "OP", "BOOL_OP",
+        # ccode
+        "CCODE_TOKEN", # matches everything except $
     ] + list(reserved.values())
 
     # Regular expression rules for simple tokens
-    t_BYTE = r"[0|1]{8}b"
-    # t_BOOL = r"(true|false)"
-    t_STRING = r"\"[a-zA-Z0-9]*\""  # TODO: I am not completely sure what kind of string me want to accept.
     # Maybe this is enough?
     t_OP = r"(\+|\*|\/|\^)"  # arithmetic operators
     t_BOOL_OP = r"(and|or)"  # boolean operators
@@ -123,7 +169,7 @@ class MyLexer(object):
 
     # Error handling rule
     def t_error(self, t):
-        print("Illegal character '%s'" % t.value[0])
+        print(f"Illegal character {t.value[0]} (line {t.lexer.lineno}) (pos {t.lexer.lexpos})")
         t.lexer.skip(1)
 
     # Build the lexer
