@@ -5,4 +5,4 @@ input_file = sys.argv[1] # second argument should be input file
 
 file = " ".join(open(input_file).readlines())
 
-parse_program(file)
+ast = parse_program(file)

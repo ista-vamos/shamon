@@ -357,12 +357,7 @@ def p_expression_list(p):
 
 def p_expression(p):
     '''
-    expression : ID
-               | INT
-               | BOOL
-               | CCODE_TOKEN
-               | expression arithmetic_op expression
-               | expression BOOL_OP expression
+    expression : CCODE_TOKEN
     '''
     if len(p) == 2:
         p[0] = p[1]
