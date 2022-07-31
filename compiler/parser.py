@@ -2,6 +2,8 @@ from lexer import MyLexer
 import ply.lex as lex
 from ply.yacc import yacc
 from tokens import *
+from type_checker import *
+from utils import *
 
 
 # this is the entry point
@@ -28,7 +30,7 @@ def p_stream_type(p):
     '''
     stream_type : STREAM TYPE ID '{' event_list '}'
     '''
-    # TypeChecker.insert_symbol(p[3], STREAM_TYPE_NAME)
+    TypeChecker.insert_symbol(p[3], STREAM_TYPE_NAME)
     p[0] = ("stream_type", p[3], p[5])
 
 
@@ -48,14 +50,12 @@ def p_event_declaration(p):
     '''
     event_decl : ID '(' list_field_decl ')'
     '''
-    # TypeChecker.insert_symbol(p[1], EVENT_NAME)
 
-    # print("--------")
-    # print(p[3])
-    # params = []
-    # get_parameters_types_field_decl(p[3], params)
-    # print(params)
-    # print("--------")
+    # Type checker
+    params = []
+    get_parameters_types_field_decl(p[3], params)
+    TypeChecker.insert_into_args_table(p[1], EVENT_NAME, params)
+
     p[0] = ('event_decl', p[1], p[3])
 
 
@@ -100,7 +100,13 @@ def p_event_source(p):
 
     # EVENT SOURCE ID : ID right_arrow connection_kind ID { perf_layer_rule_list }
     #   1     2     3 4  5      6           7          8  9           10
+
+
+
     p[0] = ("event_source", p[3], p[5], p[7], p[8], p[10])
+
+    TypeChecker.insert_symbol(p[3], EVENT_SOURCE_NAME)
+    TypeChecker.assert_symbol_type(p[5], STREAM_TYPE_NAME)
 
 def p_right_arrow(p):
     '''
@@ -128,6 +134,11 @@ def p_performance_layer_rule(p):
     # ON ID ( listids ) performance_match
     #  1  2  3    4   5          6
 
+
+    TypeChecker.assert_symbol_type(p[2], EVENT_NAME)
+    length_listids = get_count_list_ids(p[4])
+    TypeChecker.assert_num_args_match(p[2], length_listids)
+
     p[0] = ("perf_layer_rule", p[2], p[4], p[6])
 
 
@@ -153,6 +164,7 @@ def p_performance_action(p):
     if len(p) == 2:
         p[0] = p[1]
     else:
+        TypeChecker.assert_symbol_type(p[2], EVENT_NAME)
         p[0] = ("perf_act_forward", p[2], p[4])
 
 
@@ -173,6 +185,8 @@ def p_arbiter_definition(p):
     '''
     arbiter_definition : ARBITER ':' ID '{' arbiter_rule_set_list '}'
     '''
+
+    TypeChecker.assert_symbol_type(p[3], STREAM_TYPE_NAME)
     p[0] = ("arbiter_def", p[3], p[5])
 
 
@@ -191,6 +205,7 @@ def p_arbiter_rule_set(p):
     '''
     arbiter_rule_set : RULE SET ID '{' arbiter_rule_list '}'
     '''
+    TypeChecker.insert_symbol(p[3], ARBITER_RULE_SET)
 
     p[0] = ("arbiter_rule_set", p[3], p[5])
 
@@ -237,6 +252,8 @@ def p_buffer_match_exp(p):
                      | ID ':' list_event_calls '|'
                      | ID ':' list_event_calls '|' list_event_calls
     '''
+
+    TypeChecker.assert_symbol_type(p[1], EVENT_SOURCE_NAME)
     if len(p) == 4:
         p[0] = ("buff_match_exp", p[1], p[3])
     elif len(p) == 5:
@@ -250,6 +267,11 @@ def p_list_event_calls(p):
     list_event_calls : ID '(' listids ')'
                      | ID '(' listids  ')' list_event_calls
     '''
+
+    # TODO: what is E^H
+    # TypeChecker.assert_symbol_type(p[1], EVENT_NAME)
+    # list_ids_length = get_count_list_ids(p[3])
+    # TypeChecker.assert_num_args_match(p[1], list_ids_length)
 
     if len(p) == 5:
         p[0] = ("list_ev_calls", p[1], p[3])
@@ -300,10 +322,16 @@ def p_arbiter_rule_stmt(p):
     if len(p) == 6:
         assert(p[1] == "yield")
         p[0] = ("arb_rule_stmt", p[2], p[4])
+        TypeChecker.assert_symbol_type(p[2], EVENT_NAME)
+        count_expr_list = get_count_list_expr(p[4])
+        TypeChecker.assert_num_args_match(p[2], count_expr_list)
     elif len(p) == 5:
         p[0] = ("arb_rule_stmt", p[2], p[4])
+
+        TypeChecker.assert_symbol_type(p[4], EVENT_SOURCE_NAME)
     else:
         assert(p[1] == "switch")
+        # TODO: should I check something here?
         p[0] = ("arb_rule_stmt", p[3])
 
 
@@ -335,7 +363,10 @@ def p_monitor_rule(p):
 
     # ON ID ( listids ) WHERE expression list_statement
     #  1 2  3    4    5   6       7            8
-    p[0] = ("monitor_rule", p[4], p[7], p[8])
+
+    TypeChecker.assert_symbol_type(p[2], EVENT_NAME)
+    TypeChecker.assert_num_args_match(p[2], get_count_list_ids(p[4]))
+    p[0] = ("monitor_rule", p[2], p[4], p[7], p[8])
 
 # END monitor Specification
 
@@ -358,7 +389,7 @@ def p_expression_list(p):
     '''
 
     if len(p) == 2:
-        p[0] = p[1]
+        p[0] = ("expr",p[1])
     else:
         assert(len(p) == 4)
         p[0] = ("expr_list", p[1], p[3])
@@ -390,7 +421,7 @@ def p_listids(p):
             | ID ',' listids
     '''
     if len(p) == 2:
-        p[0] = p[1]
+        p[0] = ("ID",p[1])
     elif len(p) == 4:
         p[0] = ("listids", p[1], p[3])
     else:

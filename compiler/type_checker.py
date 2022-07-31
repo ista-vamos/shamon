@@ -7,6 +7,8 @@ RESERVED = "reserved"
 # FIELD_NAME = "field_name" # we do not need this type
 EVENT_NAME = "event_name"
 STREAM_TYPE_NAME = "stream_type_name"
+EVENT_SOURCE_NAME = "event_source_name"
+ARBITER_RULE_SET = "arbiter_rule_set"
 
 '''
 TODO: 
@@ -42,7 +44,7 @@ class TypeChecker:
 
     @staticmethod
     def assert_symbol_type(symbol: str, type_: str):
-        return TypeChecker.get_symbol_type(symbol) == type_
+        assert(TypeChecker.get_symbol_type(symbol) == type_)
 
 
     @staticmethod
@@ -50,3 +52,20 @@ class TypeChecker:
         if TypeChecker.symbol_exists(symbol):
             raise Exception(f"Symbol {symbol}  of type {TypeChecker.get_symbol_type(symbol)} already exists")
         TypeChecker.symbol_table[symbol] = type_
+
+    @staticmethod
+    def is_symbol_in_args_table(symbol):
+        return symbol in TypeChecker.args_table.keys()
+
+    @staticmethod
+    def insert_into_args_table(symbol: str, symbol_type: str, args_: List[str]) -> None:
+        TypeChecker.insert_symbol(symbol,  symbol_type)
+        assert(TypeChecker.symbol_exists(symbol))
+
+        assert(not TypeChecker.is_symbol_in_args_table(symbol))
+        TypeChecker.args_table[symbol] = args_
+
+    @staticmethod
+    def assert_num_args_match(symbol, expected_n):
+        assert(len(TypeChecker.args_table[symbol]) == expected_n)
+
