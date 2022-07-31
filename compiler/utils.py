@@ -250,3 +250,4 @@ def get_num_events_to_retrieve(tree, events_to_retrieve) -> None:
                 if tree[i] != '|':
                     count = get_events_count(tree[i])
                     events_to_retrieve[event_source_name] = count
+

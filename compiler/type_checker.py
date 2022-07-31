@@ -71,6 +71,7 @@ class TypeChecker:
         if TypeChecker.get_symbol_type(symbol) != type_:
             raise Exception(f"{symbol} is expected to be of type {type_}, instead is {TypeChecker.get_symbol_type(symbol)}")
 
+
     @staticmethod
     def insert_symbol(symbol: str, type_: str) -> None:
         if TypeChecker.symbol_exists(symbol):
