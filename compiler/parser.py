@@ -28,7 +28,7 @@ def p_stream_type(p):
     '''
     stream_type : STREAM TYPE ID '{' event_list '}'
     '''
-
+    # TypeChecker.insert_symbol(p[3], STREAM_TYPE_NAME)
     p[0] = ("stream_type", p[3], p[5])
 
 
@@ -48,6 +48,14 @@ def p_event_declaration(p):
     '''
     event_decl : ID '(' list_field_decl ')'
     '''
+    # TypeChecker.insert_symbol(p[1], EVENT_NAME)
+
+    # print("--------")
+    # print(p[3])
+    # params = []
+    # get_parameters_types_field_decl(p[3], params)
+    # print(params)
+    # print("--------")
     p[0] = ('event_decl', p[1], p[3])
 
 
@@ -67,6 +75,7 @@ def p_field_declaration(p):
     '''
     field_decl : ID ':' type
     '''
+
     p[0] = ("field_decl", p[1], p[3])
 
 # END event streams

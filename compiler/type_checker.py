@@ -4,7 +4,7 @@ from tokens import reserved
 # define some types:
 VARIABLE = "variable"
 RESERVED = "reserved"
-FIELD_NAME = "field_name"
+# FIELD_NAME = "field_name" # we do not need this type
 EVENT_NAME = "event_name"
 STREAM_TYPE_NAME = "stream_type_name"
 
@@ -44,10 +44,9 @@ class TypeChecker:
     def assert_symbol_type(symbol: str, type_: str):
         return TypeChecker.get_symbol_type(symbol) == type_
 
+
     @staticmethod
-    def insert_symbol(symbol: str) -> None:
-        if TypeChecker.symbol_exists():
+    def insert_symbol(symbol: str, type_: str) -> None:
+        if TypeChecker.symbol_exists(symbol):
             raise Exception(f"Symbol {symbol}  of type {TypeChecker.get_symbol_type(symbol)} already exists")
-
-
-
+        TypeChecker.symbol_table[symbol] = type_
