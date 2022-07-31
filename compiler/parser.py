@@ -239,7 +239,7 @@ def p_buffer_match_exp(p):
 def p_list_event_calls(p):
     '''
     list_event_calls : ID '(' listids ')'
-                     | ID '(' listids  ')' ',' list_event_calls
+                     | ID '(' listids  ')' list_event_calls
     '''
 
     if len(p) == 5:

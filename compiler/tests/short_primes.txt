@@ -23,7 +23,7 @@ arbiter : NumberPairs
 {
     rule set rs
     {
-        on Left : | Prime(ln, lp) where $$ true $$
+        on Left : | Prime(ln, lp) , Right : | Prime(rn, rp) where $$ true $$
 		$$
 		   if(ln == rn)
 		   {
