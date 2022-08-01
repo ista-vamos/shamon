@@ -76,7 +76,6 @@ def p_field_declaration(p):
     '''
     field_decl : ID ':' type
     '''
-
     p[0] = ("field_decl", p[1], p[3])
 
 # END event streams
@@ -180,9 +179,9 @@ def p_connection_kind(p):
                     | INFINITE
     '''
     if len(p) == 0:
-        p[0] = p[1]
+        p[0] = ('conn_kind', p[1])
     else:
-        p[0] = ('CONN_KIND2', p[1], p[3])
+        p[0] = ('conn_kind', p[1], p[3])
 # END performance layer specifications
 
 # BEGIN arbiter Specification
