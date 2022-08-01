@@ -8,12 +8,12 @@ stream type NumberPairs
     NumberPair(i : int, n : int, m : int);
 }
 
-event source Left : Primes -> autodrop(8) PrimeEvents
+event source Left : Primes -> autodrop(8) Primes
 {
     on Prime(n, p) forward Prime($$ n $$, $$ p $$);
 }
 
-event source Right : Primes -> autodrop(8) PrimeEvents
+event source Right : Primes -> autodrop(8) Primes
 {
     on Prime(n, p) forward Prime($$ n $$,$$ p $$);
 }
