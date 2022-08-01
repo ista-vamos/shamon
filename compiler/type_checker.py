@@ -1,5 +1,6 @@
 from typing import Dict, List
 from tokens import reserved
+from utils import *
 
 # define some types:
 VARIABLE = "variable"
@@ -24,6 +25,8 @@ class TypeChecker:
     symbol_table: Dict[str, str] = dict() # maps symbols to types
     args_table: Dict[str, List[str]] = dict() # maps symbol (that represents a function) to a list of the
                                               # types of its arguments
+    stream_events_are_primitive: Dict[str, bool] = dict() # maps 'stream type' declaration to the events that are declared inside
+
     @staticmethod
     def clean_checker():
         TypeChecker.symbol_table = dict()
@@ -44,8 +47,8 @@ class TypeChecker:
 
     @staticmethod
     def assert_symbol_type(symbol: str, type_: str):
-        assert(TypeChecker.get_symbol_type(symbol) == type_)
-
+        if TypeChecker.get_symbol_type(symbol) != type_:
+            raise Exception(f"{symbol} is expected to be of type {type_}, instead is {TypeChecker.get_symbol_type(symbol)}")
 
     @staticmethod
     def insert_symbol(symbol: str, type_: str) -> None:
@@ -67,5 +70,16 @@ class TypeChecker:
 
     @staticmethod
     def assert_num_args_match(symbol, expected_n):
-        assert(len(TypeChecker.args_table[symbol]) == expected_n)
+        if len(TypeChecker.args_table[symbol]) != expected_n:
+            raise Exception(f"Only {expected_n} arguments provided to function {symbol} that receives {len(TypeChecker.args_table[symbol])} arguments.")
 
+    @staticmethod
+    def check_args_are_primitive(symbol: str):
+        if not TypeChecker.stream_events_are_primitive[symbol]:
+            raise Exception("Calling function that has a non-primitive type parameter")
+
+    @staticmethod
+    def insert_event_list(symbol, event_list_tree):
+        assert(symbol in TypeChecker.symbol_table.keys())
+
+        TypeChecker.stream_events_are_primitive[symbol] = are_all_events_decl_primitive(event_list_tree)

@@ -21,3 +21,28 @@ def get_count_list_expr(tree):
     else:
         assert(tree[0] == 'expr')
         return 1
+
+def is_primitive_type(type_ : str):
+    answer = type_ == "int" or type_ == "bool" or type_ =="string" or type_ == "float"
+    answer = answer or type_ == "double"
+    return answer
+
+def is_type_primitive(tree):
+    if tree[0] == 'type':
+        return is_primitive_type(tree[1])
+    else:
+        assert(tree[0] == "array")
+        return is_type_primitive(tree[1])
+
+def are_all_events_decl_primitive(tree):
+    if tree[0] == 'event_list':
+        return are_all_events_decl_primitive(tree[1]) and are_all_events_decl_primitive(tree[2])
+    else:
+        assert(tree[0] == 'event_decl')
+        params = []
+        get_parameters_types_field_decl(tree[2], params)
+        for param in params:
+            if not is_type_primitive(param):
+                return False
+        return True
+

@@ -31,6 +31,7 @@ def p_stream_type(p):
     stream_type : STREAM TYPE ID '{' event_list '}'
     '''
     TypeChecker.insert_symbol(p[3], STREAM_TYPE_NAME)
+    TypeChecker.insert_event_list(p[3], p[5])
     p[0] = ("stream_type", p[3], p[5])
 
 
@@ -107,6 +108,10 @@ def p_event_source(p):
 
     TypeChecker.insert_symbol(p[3], EVENT_SOURCE_NAME)
     TypeChecker.assert_symbol_type(p[5], STREAM_TYPE_NAME)
+    TypeChecker.assert_symbol_type(p[8], STREAM_TYPE_NAME)
+    # TODO: check that p[8] only uses primitive data types
+    TypeChecker.check_args_are_primitive(p[8])
+    TypeChecker.check_args_are_primitive(p[5])
 
 def p_right_arrow(p):
     '''
@@ -317,8 +322,6 @@ def p_arbiter_rule_stmt(p):
                       | DROP INT FROM ID
     '''
 
-    # TODO: like s, without return, but with drop n from S
-
     if len(p) == 6:
         assert(p[1] == "yield")
         p[0] = ("arb_rule_stmt", p[2], p[4])
@@ -376,10 +379,10 @@ def p_type(p):
          | type '[' ']'
     '''
     if len(p) == 2:
-        p[0] = p[1]
+        p[0] = ("type", p[1])
     else:
         assert (len(p) == 4)
-        p[0] = ('array', p[1], [2])
+        p[0] = ('array', p[1])
 
 
 def p_expression_list(p):
