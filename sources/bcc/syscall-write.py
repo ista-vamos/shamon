@@ -2,6 +2,7 @@
 
 from sys import stderr, path as importpath, argv
 from os.path import abspath
+from multiprocessing import Process
 from time import sleep
 from re import compile as regex_compile
 
@@ -24,12 +25,18 @@ r"""
         buffer.ringbuf_discard(event, 0);
         return 1;
     } else {
-        bpf_trace_printk("SUBMIT EVENT\\n");
         event->count = args->count - off;
         event->fd = args->fd;
         event->len = len;
         event->off = off;
         buffer.ringbuf_submit(event, 0);
+        char str[5];
+        str[0] = user_buf[off + 0];
+        str[1] = user_buf[off + 1];
+        str[2] = user_buf[off + 2];
+        str[3] = user_buf[off + 3];
+        str[4] = 0;
+        bpf_trace_printk("sent `%s`...", str);
     }
     off += len;
     if (off >= args->count)
@@ -86,31 +93,21 @@ TRACEPOINT_PROBE(syscalls, sys_enter_write) {
 }
 """.replace("@SUBMIT_EVENTS", 18*submit_next_event)
 
-b = BPF(text=src)
-get_data = b['buffer'].event
-partial = b""
-
-def printstderr(x): print(x, file=stderr)
-
-shmkey = argv[1]
-event_name = argv[2]
-regex = argv[3]
-signature = argv[4]
-
-event_size = signature_get_size(signature) + 16  # + kind + id
-print("Event size: ", event_size)
-
-shmbuf = create_shared_buffer(shmkey, event_size, f"{event_name}:{signature}")
+def printstderr(x):
+    print(x, file=stderr)
 
 kind = 2     # FIXME
 text_long_kind = 3 # FIXME
 evid = 1
 
+regexc = None
+get_event = None
+shmbuf = None
+signature = None
 waiting_for_buffer = 0
+partial = b""
 
-regexc = regex_compile(regex)
-
-def parse_lines(buff):
+def parse_lines(buff, shmbuf):
     global evid
     for line in buff.splitlines():
         printstderr(f"> \033[33;2m`{line}`\033[0m")
@@ -131,7 +128,7 @@ def parse_lines(buff):
         addr = buffer_partial_push(shmbuf, addr, evid.to_bytes(8, "little"), 8)
 
         for o in signature:
-            printstderr("match: " + str(m[n]))
+            printstderr("match: " + str(m.groups()))
             if o == 'i':
                 addr = buffer_partial_push(shmbuf, addr,
                                            int(m[n]).to_bytes(4, "little"), 4)
@@ -153,7 +150,7 @@ def parse_lines(buff):
 def callback(ctx, data, size):
     global partial
 
-    event = get_data(data)
+    event = get_event(data)
     s = event.buf
     printstderr(f"\033[34;1m[fd: {event.fd}, count: {event.count}, "\
                 f"off: {event.off}, len: {event.len}]\033[0m")
@@ -166,7 +163,7 @@ def callback(ctx, data, size):
             buff = s
 
         assert buff is not None
-        parse_lines(buff.decode("utf-8", "ignore"))
+        parse_lines(buff.decode("utf-8", "ignore"), shmbuf)
     elif event.len < event.count:
         if event.len == -1:
             printstderr(partial + s)
@@ -178,15 +175,36 @@ def callback(ctx, data, size):
     else:
         raise NotImplementedError("Unhandled situation")
 
+def main():
+    global regexc
+    global get_event
+    global shmbuf
+    global signature
 
-b['buffer'].open_ring_buffer(callback)
+    shmkey = argv[1]
+    event_name = argv[2]
+    regex = argv[3]
+    signature = argv[4]
 
-try:
-    while 1:
-        b.ring_buffer_consume()
-        sleep(0.01)
-except KeyboardInterrupt:
-    exit(0)
-finally:
-    print(f"Waited for buffer {waiting_for_buffer} cycles")
-    destroy_shared_buffer(shmbuf)
+    regexc = regex_compile(regex)
+
+    event_size = signature_get_size(signature) + 16  # + kind + id
+    print("Event size: ", event_size)
+
+    bpf = BPF(text=src)
+    get_event = bpf['buffer'].event
+    shmbuf = create_shared_buffer(shmkey, event_size, f"{event_name}:{signature}")
+
+    bpf['buffer'].open_ring_buffer(callback)
+    recv_event = bpf.ring_buffer_poll
+    try:
+        while True:
+            recv_event()
+    except KeyboardInterrupt:
+        exit(0)
+    finally:
+        print(f"Waited for buffer {waiting_for_buffer} cycles")
+        destroy_shared_buffer(shmbuf)
+
+if __name__ == "__main__":
+    main()
