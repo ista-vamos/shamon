@@ -439,6 +439,5 @@ def parse_program(s: str):
 
     # Parse an expression
     ast = parser.parse(s)
-    print(ast)
     return ast
 
