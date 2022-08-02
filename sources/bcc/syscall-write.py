@@ -1,14 +1,16 @@
 #!/usr/bin/python3
 
 from sys import stderr, path as importpath, argv
-from os.path import abspath
-from multiprocessing import Process
+from os.path import abspath, dirname
+from os import execve, environ
+from multiprocessing import Process, Value
 from time import sleep
 from re import compile as regex_compile
 
 from bcc import BPF
 
-importpath.append(abspath("../../python"))
+importpath.append(abspath(dirname(argv[0])+"../../../python"))
+print(importpath)
 from shamon import *
 
 submit_next_event=\
@@ -16,8 +18,19 @@ r"""
     event = buffer.ringbuf_reserve(sizeof(struct event));
     if (!event) {
         bpf_trace_printk("FAILED RESERVING SLOT IN BUFFER");
-        return 1;
+        return handle_dropping();
+    } else {
+        u64 *dropped = info.lookup(&zero);
+        if (dropped && *dropped > 0) {
+            event->count = *dropped;
+            event->len = -2;
+            event->off = 0;
+            *dropped = 0;
+            buffer.ringbuf_submit(event, 0);
+            return 0;
+        }
     }
+
     len = (args->count - off > BUF_SIZE) ? BUF_SIZE : args->count - off;
     ret = bpf_probe_read_user(event->buf, len, user_buf + off);
     if (ret != 0) {
@@ -30,13 +43,6 @@ r"""
         event->len = len;
         event->off = off;
         buffer.ringbuf_submit(event, 0);
-        char str[5];
-        str[0] = user_buf[off + 0];
-        str[1] = user_buf[off + 1];
-        str[2] = user_buf[off + 2];
-        str[3] = user_buf[off + 3];
-        str[4] = 0;
-        bpf_trace_printk("sent `%s`...", str);
     }
     off += len;
     if (off >= args->count)
@@ -46,6 +52,7 @@ r"""
 
 src = r"""
 BPF_RINGBUF_OUTPUT(buffer, 1 << 6);
+BPF_ARRAY(info, u64, 1);
 
 #define BUF_SIZE 255
 struct event {
@@ -56,9 +63,28 @@ struct event {
     int fd;
 };
 
+static int handle_dropping(void) {
+    int zero = 0;
+    u64 *dropped = info.lookup(&zero);
+    if (dropped) {
+        u64 newval = *dropped + 1;
+        info.update(&zero, &newval);
+    } else {
+        u64 newval = 1;
+        info.update(&zero, &newval);
+        return 1;
+    }
+    return 0;
+}
+
 TRACEPOINT_PROBE(syscalls, sys_enter_write) {
     int ret;
+    int zero = 0;
     unsigned int len, off = 0;
+
+    if ((bpf_get_current_pid_tgid() >> 32) != @PID) {
+        return 0;
+    }
 
     if (args->fd != 1) {
         return 0; // not interested
@@ -97,23 +123,39 @@ def printstderr(x):
     print(x, file=stderr)
 
 kind = 2     # FIXME
-text_long_kind = 3 # FIXME
+gap_kind = 3 # FIXME
 evid = 1
 
-regexc = None
+_regexc = None
 get_event = None
 shmbuf = None
 signature = None
 waiting_for_buffer = 0
 partial = b""
 
-def parse_lines(buff, shmbuf):
+def push_dropped(shmbuf, count):
+    global evid
+    # start a write into the buffer
+    addr = buffer_start_push(shmbuf)
+    while not addr:
+        addr = buffer_start_push(shmbuf)
+        global waiting_for_buffer
+        waiting_for_buffer += 1
+    # push the base data (kind and event ID)
+    addr = buffer_partial_push(shmbuf, addr, gap_kind.to_bytes(8, "little"), 8)
+    addr = buffer_partial_push(shmbuf, addr, evid.to_bytes(8, "little"), 8)
+    addr = buffer_partial_push(shmbuf, addr,
+                               count.to_bytes(8, "little"), 8)
+    buffer_finish_push(shmbuf)
+    evid += 1
+
+def parse_lines(buff, shmbuf, regexc):
     global evid
     for line in buff.splitlines():
-        printstderr(f"> \033[33;2m`{line}`\033[0m")
         m = regexc.match(line)
         if not m:
             continue
+        #printstderr(f"> \033[33;2m`{line}`\033[0m")
 
         n = 1
 
@@ -128,7 +170,6 @@ def parse_lines(buff, shmbuf):
         addr = buffer_partial_push(shmbuf, addr, evid.to_bytes(8, "little"), 8)
 
         for o in signature:
-            printstderr("match: " + str(m.groups()))
             if o == 'i':
                 addr = buffer_partial_push(shmbuf, addr,
                                            int(m[n]).to_bytes(4, "little"), 4)
@@ -144,7 +185,6 @@ def parse_lines(buff, shmbuf):
             n += 1
 
         buffer_finish_push(shmbuf)
-        printstderr(f"sent ev `{evid}`")
         evid += 1
 
 def callback(ctx, data, size):
@@ -152,9 +192,10 @@ def callback(ctx, data, size):
 
     event = get_event(data)
     s = event.buf
-    printstderr(f"\033[34;1m[fd: {event.fd}, count: {event.count}, "\
-                f"off: {event.off}, len: {event.len}]\033[0m")
-    if event.len == event.count:
+   #printstderr(f"\033[34;1m[fd: {event.fd}, count: {event.count}, "\
+   #            f"off: {event.off}, len: {event.len}]\033[0m")
+    event_len = event.len
+    if event_len == event.count:
         buff = None
         if partial:
             buff = partial + s
@@ -163,48 +204,98 @@ def callback(ctx, data, size):
             buff = s
 
         assert buff is not None
-        parse_lines(buff.decode("utf-8", "ignore"), shmbuf)
-    elif event.len < event.count:
-        if event.len == -1:
-            printstderr(partial + s)
+        parse_lines(buff.decode("utf-8", "ignore"), shmbuf, _regexc)
+    elif event_len < event.count:
+        if event_len == -1:
+            #printstderr(partial + s)
             printstderr(f"... TEXT TOO LONG, DROPPED {event.count} CHARS")
             partial = b""
             raise NotImplementedError("Unhandled situation")
+        elif event_len == -2:
+            printstderr(f"DROPPED {event.count} EVENTS")
+            push_dropped(shmbuf, event.count)
+            partial = b""
         else:
             partial += s
     else:
         raise NotImplementedError("Unhandled situation")
 
+def usage_and_exit():
+    printstderr(f"Usage: {argv[0]} shmkey event-name regex signature -- command arg1 arg2 ...")
+    exit(1)
+
+def spawn_process(cmd, syncval):
+    printstderr("Spawning " + " ".join(cmd))
+
+    # notify parent that we are spawned
+    syncval.value = 1
+    # wait until the parent got our PID and started BPF program
+    while syncval.value != 2:
+        sleep(0.05)
+
+    # everything is ready, go!
+    execve(cmd[0], cmd, environ.copy())
+            
 def main():
-    global regexc
+    global _regexc
     global get_event
     global shmbuf
     global signature
+
+    # for now we assume a fixed structure
+    try:
+        sep_idx = argv.index("--")
+    except ValueError:
+        usage_and_exit()
+    if sep_idx != 5 or len(argv) < 7:
+        usage_and_exit()
 
     shmkey = argv[1]
     event_name = argv[2]
     regex = argv[3]
     signature = argv[4]
+    cmd = argv[6:]
 
-    regexc = regex_compile(regex)
+    _regexc = regex_compile(regex)
 
     event_size = signature_get_size(signature) + 16  # + kind + id
-    print("Event size: ", event_size)
+    printstderr(f"Event size: {event_size}")
 
-    bpf = BPF(text=src)
+    shmbuf = create_shared_buffer(shmkey, event_size,
+                                  f"{event_name}:{signature},gap:l")
+
+    syncval = Value('i', 0)
+    proc = Process(target=spawn_process, args=(cmd, syncval))
+    proc.start()
+    while syncval.value != 1:
+        sleep(0.05)
+
+    bpf = BPF(text=src.replace("@PID", str(proc.pid)))
     get_event = bpf['buffer'].event
-    shmbuf = create_shared_buffer(shmkey, event_size, f"{event_name}:{signature}")
-
     bpf['buffer'].open_ring_buffer(callback)
-    recv_event = bpf.ring_buffer_poll
+
+    # wait until a monitor is attached
+    printstderr("Waiting for a monitor...")
+    while not buffer_monitor_attached(shmbuf):
+        sleep(0.05)
+
+    # let the program proceed
+    syncval.value = 2
+
+    recv_event = bpf.ring_buffer_consume
     try:
         while True:
             recv_event()
+            if not proc.is_alive():
+                # make sure that we have consumed all events
+                bpf.ring_buffer_consume()
+                break
     except KeyboardInterrupt:
         exit(0)
     finally:
-        print(f"Waited for buffer {waiting_for_buffer} cycles")
+        printstderr(f"Waited for buffer {waiting_for_buffer} cycles")
         destroy_shared_buffer(shmbuf)
+        proc.join()
 
 if __name__ == "__main__":
     main()
