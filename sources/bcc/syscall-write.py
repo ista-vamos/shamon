@@ -10,7 +10,6 @@ from re import compile as regex_compile
 from bcc import BPF
 
 importpath.append(abspath(dirname(argv[0])+"../../../python"))
-print(importpath)
 from shamon import *
 
 submit_next_event=\
