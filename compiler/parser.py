@@ -404,8 +404,9 @@ def p_expression(p):
     if len(p) == 2:
         p[0] = p[1]
     else:
-        assert(len(p) == 4)
-        p[0] = ('binop', p[2], p[1], p[3])
+        raise Exception("this should not happen")
+        # assert(len(p) == 4)
+        # p[0] = ('binop', p[2], p[1], p[3])
 
 def p_arithmetic_op(p):
     '''

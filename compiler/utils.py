@@ -17,6 +17,16 @@ def get_count_list_expr(tree):
         assert(tree[0] == 'expr')
         return 1
 
+def get_expressions(tree, result):
+    if tree[0] == 'expr_list':
+        get_expressions(tree[1], result)
+        get_expressions(tree[2], result)
+    else:
+        if tree[0] == "expr":
+            result.append(tree[1])
+        else:
+            result.append(tree[0])
+
 def is_primitive_type(type_ : str):
     answer = type_ == "int" or type_ == "bool" or type_ =="string" or type_ == "float"
     answer = answer or type_ == "double"

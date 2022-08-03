@@ -190,12 +190,54 @@ def build_should_keep_funcs(tree, mapping) -> str:
 {"}"}
 '''
 
-def get_stream_switch_cases(ast) -> str:
-    if ast[0] == 'perf_layer_list':
-        return get_stream_switch_cases(ast[1]) + get_stream_switch_cases(ast[2])
+
+def assign_args(event_name, args, list_expressions, level) -> str:
+    expressions = []
+    get_expressions(list_expressions, expressions)
+    answer = ""
+    tabs = "\t"*level
+    for (arg, expr) in zip(args, expressions):
+        answer+=f"{tabs}outevent->cases.{event_name}.{arg[0]} = {expr};\n"
+    return answer
+
+
+def build_switch_performance_match(tree, mapping_in, mapping_out, level) -> str:
+    if tree[0] == 'perf_match1':
+        performance_action = tree[1]
+        if performance_action[0] == "perf_act_drop":
+            # this shouldn't happen
+            return "return 1;"
+        else:
+            tabs = "\t"*level
+            assert(performance_action[0] == "perf_act_forward")
+            event_out_name = performance_action[1]
+            return f'''
+{tabs}(outevent->head).kind = {mapping_out[performance_action[1]]["index"]};
+{tabs}(outevent->head).id = (inevent->head).id;
+{assign_args(event_out_name, mapping_out[performance_action[1]]["args"], performance_action[2], level)}'''
     else:
+        print(tree[0])
+        assert(tree[0] == 'perf_match2')
+        return f'''
+        if ({tree[1]}) {"{"}
+            {build_switch_performance_match(tree[2], mapping_in, mapping_out, level+1)}
+        {"}"} else {"{"}
+            {build_switch_performance_match(tree[3], mapping_in, mapping_out, level+1)}
+        {"}"}'''
+
+
+def get_stream_switch_cases(ast, mapping_in, mapping_out, level) -> str:
+    if ast[0] == 'perf_layer_list':
+        return get_stream_switch_cases(ast[1], mapping_in, mapping_out, level) \
+               + get_stream_switch_cases(ast[2], mapping_in, mapping_out, level)
+    else:
+        tabs = "\t"*level
+        tabs_plus1 = "\t" * (level+1)
         assert(ast[0] == 'perf_layer_rule')
-        # TODO
+        return f'''
+{tabs}case {mapping_in[ast[1]]["index"]}:
+{build_switch_performance_match(ast[3], mapping_in, mapping_out, level=level+1)}
+{tabs_plus1}break;'''
 
 def event_sources_thread_funcs(tree, mapping) -> str:
     if tree[0] == "event_sources":
@@ -218,16 +260,18 @@ def event_sources_thread_funcs(tree, mapping) -> str:
     {"}"}
     
     while(true) {"{"}
-        inevent = stream_filter_fetch(stream,buffer,&SHOULD_KEEP_{stream_name});
+        inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_{stream_name});
+        
         if (inevent == NULL) {"{"}
+            // no more events
             break;
         {"}"}
         outevent = shm_arbiter_buffer_write_ptr(buffer);
         
         switch ((inevent->head).kind) {"{"}
-{get_stream_switch_cases(tree[5])}
+{get_stream_switch_cases(tree[5], mapping[stream_in_name], mapping[stream_out_name], level=3)}
             default:
-                printf("Default case execute in thread for event source {stream_name}. Exiting thread...");
+                printf("Default case executed in thread for event source {stream_name}. Exiting thread...");
                 return 1;
         {"}"}
         shm_arbiter_buffer_write_finish(b);
