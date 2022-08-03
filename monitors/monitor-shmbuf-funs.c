@@ -1,16 +1,16 @@
-#include <stdio.h>
+#include <assert.h>
+#include <fcntl.h>
 #include <limits.h>
+#include <stdio.h>
 #include <time.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <assert.h>
 
 #include "event.h"
-#include "sources/drfun/eventspec.h"
 #include "shamon.h"
+#include "signatures.h"
+#include "sources/drfun/eventspec.h"
 #include "stream-funs.h"
 #include "utils.h"
-#include "signatures.h"
 
 static inline void dump_args(shm_stream_funs *ss, shm_event_funcall *ev) {
     void *p = ev->args;
@@ -20,20 +20,26 @@ static inline void dump_args(shm_stream_funs *ss, shm_event_funcall *ev) {
             continue;
         }
         if (*o == 'S') {
-            printf(" S[%lu, %lu](%s)",
-                   (*(uint64_t*)p) >> 32,
-                   (*(uint64_t*)p) & 0xffffffff,
-                   shm_stream_funs_get_str(ss, (*(uint64_t*)p)));
+            printf(" S[%lu, %lu](%s)", (*(uint64_t *)p) >> 32,
+                   (*(uint64_t *)p) & 0xffffffff,
+                   shm_stream_funs_get_str(ss, (*(uint64_t *)p)));
             p += sizeof(uint64_t);
             continue;
         }
 
         size_t size = signature_op_get_size(*o);
-        switch(size) {
-        case 1: printf(" %c", *((char*)p)); break;
-        case 4: printf(" %d", *((int*)p)); break;
-        case 8: printf(" %ld", *((long int*)p)); break;
-        default: abort();
+        switch (size) {
+        case 1:
+            printf(" %c", *((char *)p));
+            break;
+        case 4:
+            printf(" %d", *((int *)p));
+            break;
+        case 8:
+            printf(" %ld", *((long int *)p));
+            break;
+        default:
+            abort();
         }
         p += size;
     }
@@ -42,7 +48,6 @@ static inline void dump_args(shm_stream_funs *ss, shm_event_funcall *ev) {
 shm_stream *create_stream(int argc, char *argv[], int arg_i,
                           const char *expected_stream_name,
                           struct source_control **control);
-
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -57,7 +62,7 @@ int main(int argc, char *argv[]) {
     shm_stream *fstream = create_stream(argc, argv, 1, "funs-stream", &control);
     assert(fstream && "Creating stream failed");
     shamon_add_stream(shmn, fstream,
-                      /* buffer capacity = */4*4096);
+                      /* buffer capacity = */ 4 * 4096);
 
     shm_kind kind;
     int cur_arg, last_arg = 0;
@@ -69,7 +74,7 @@ int main(int argc, char *argv[]) {
 
             kind = shm_event_kind(ev);
             if (shm_event_is_dropped(ev)) {
-                printf("Event 'dropped(%lu)'\n", ((shm_event_dropped*)ev)->n);
+                printf("Event 'dropped(%lu)'\n", ((shm_event_dropped *)ev)->n);
                 last_arg = 0;
                 continue;
             }

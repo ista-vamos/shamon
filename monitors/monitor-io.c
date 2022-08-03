@@ -1,8 +1,8 @@
-#include <stdio.h>
-#include <limits.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <assert.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <stdio.h>
+#include <unistd.h>
 
 #include "shamon.h"
 #include "stream-fds.h"
@@ -24,11 +24,11 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-       //if (fdsstream == NULL) {
-       //    fdsstream = (shm_stream_fds *) shm_create_fds_stream();
-       //    assert(fdsstream);
-       //}
-        fdsstream = (shm_stream_fds *) shm_create_fds_stream();
+        // if (fdsstream == NULL) {
+        //     fdsstream = (shm_stream_fds *) shm_create_fds_stream();
+        //     assert(fdsstream);
+        // }
+        fdsstream = (shm_stream_fds *)shm_create_fds_stream();
         shm_stream_fds_add_fd(fdsstream, fd);
         shamon_add_stream(shamon, (shm_stream *)fdsstream, 4096);
         puts(" OK");
@@ -53,14 +53,14 @@ int main(int argc, char *argv[]) {
             printf("Event size %lu\n", shm_event_size(ev));
 
             if (shm_event_is_dropped(ev)) {
-                printf("Dropped %lu events\n", ((shm_event_dropped*)ev)->n);
+                printf("Dropped %lu events\n", ((shm_event_dropped *)ev)->n);
             } else {
-               shm_event_fd_in *fd_ev = (shm_event_fd_in *) ev;
+                shm_event_fd_in *fd_ev = (shm_event_fd_in *)ev;
                 printf("Event time %lu\n", fd_ev->time);
                 assert(fd_ev->str_ref.size < INT_MAX);
-                printf("Data: fd: %d, size: %lu:\n'%.*s'\n",
-                       fd_ev->fd, fd_ev->str_ref.size,
-                       (int)fd_ev->str_ref.size, fd_ev->str_ref.data);
+                printf("Data: fd: %d, size: %lu:\n'%.*s'\n", fd_ev->fd,
+                       fd_ev->str_ref.size, (int)fd_ev->str_ref.size,
+                       fd_ev->str_ref.data);
             }
             puts("--------------------");
         }

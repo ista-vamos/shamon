@@ -1,15 +1,14 @@
-#include <stdio.h>
+#include <assert.h>
+#include <fcntl.h>
 #include <limits.h>
+#include <stdio.h>
 #include <time.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <assert.h>
 
 #include "event.h"
 #include "shamon.h"
 #include "stream-fastbuf-io.h"
 #include "utils.h"
-
 
 /*
 bool is_file(const char *path)
@@ -48,12 +47,12 @@ int main(int argc, char *argv[]) {
             shm_kind kind = shm_event_kind(ev);
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
-            shm_event_io *shm_ev = (shm_event_io *) ev;
-	    assert(shm_ev->str_ref.size < INT_MAX);
+            shm_event_io *shm_ev = (shm_event_io *)ev;
+            assert(shm_ev->str_ref.size < INT_MAX);
             printf("Event time %lu\n", shm_ev->time);
-            printf("Data: fd: %d, size: %lu:\n'%.*s'\n",
-                   shm_ev->fd, shm_ev->str_ref.size,
-                   (int)shm_ev->str_ref.size, shm_ev->str_ref.data);
+            printf("Data: fd: %d, size: %lu:\n'%.*s'\n", shm_ev->fd,
+                   shm_ev->str_ref.size, (int)shm_ev->str_ref.size,
+                   shm_ev->str_ref.data);
             puts("--------------------");
         }
         sleep_ms(100);

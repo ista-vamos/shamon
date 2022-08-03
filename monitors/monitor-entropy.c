@@ -1,9 +1,9 @@
-#include <stdio.h>
-#include <limits.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <assert.h>
 #include <ctype.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <stdio.h>
+#include <unistd.h>
 
 #include "shamon.h"
 #include "stream-fds.h"
@@ -22,10 +22,10 @@ static void update_bytes(unsigned char b) {
 }
 
 static void print_bytes_rat() {
-   for (int i = 0; i < 8; ++i) {
-           printf(" %5.2f", (double)(bytes[i]) / n);
-   }
-   putchar ('\n');
+    for (int i = 0; i < 8; ++i) {
+        printf(" %5.2f", (double)(bytes[i]) / n);
+    }
+    putchar('\n');
 }
 
 int main(int argc, char *argv[]) {
@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
         perror("open failed");
         return 1;
     }
-    fdsstream = (shm_stream_fds *) shm_create_fds_stream();
+    fdsstream = (shm_stream_fds *)shm_create_fds_stream();
     shm_stream_fds_add_fd(fdsstream, fd);
     shamon_add_stream(shamon, (shm_stream *)fdsstream);
     puts(" OK");
@@ -54,17 +54,17 @@ int main(int argc, char *argv[]) {
     while (shamon_is_ready(shamon)) {
         while ((ev = shamon_get_next_ev(shamon))) {
             if (shm_event_is_dropped(ev)) {
-                //printf("Dropped %lu events\n", ((shm_event_dropped*)ev)->n);
+                // printf("Dropped %lu events\n", ((shm_event_dropped*)ev)->n);
                 continue;
             }
             if (++m > 1000) {
                 m = 0;
                 print_bytes_rat();
             }
-            shm_event_fd_in *fd_ev = (shm_event_fd_in *) ev;
+            shm_event_fd_in *fd_ev = (shm_event_fd_in *)ev;
             for (int i = 0; i < fd_ev->str_ref.size; ++i) {
-                //if (isdigit(fd_ev->str_ref.data[i]))
-                    update_bytes(fd_ev->str_ref.data[i]);
+                // if (isdigit(fd_ev->str_ref.data[i]))
+                update_bytes(fd_ev->str_ref.data[i]);
             }
         }
     }

@@ -1,22 +1,20 @@
-#include <stdio.h>
+#include <assert.h>
+#include <immintrin.h> /* _mm_pause */
 #include <limits.h>
+#include <stdio.h>
+#include <string.h>
+#include <threads.h>
 #include <time.h>
 #include <unistd.h>
-#include <string.h>
-#include <assert.h>
-#include <threads.h>
-#include <immintrin.h> /* _mm_pause */
 
+#include "arbiter.h"
 #include "event.h"
-#include "utils.h"
 #include "signatures.h"
 #include "source.h"
 #include "stream.h"
-#include "arbiter.h"
+#include "utils.h"
 
-shm_stream *shm_stream_create(const char *name,
-                              int argc,
-                              char *argv[]);
+shm_stream *shm_stream_create(const char *name, int argc, char *argv[]);
 #define SLEEP_NS_INIT (50)
 #define SLEEP_THRESHOLD_NS (10000000)
 
@@ -24,7 +22,7 @@ shm_stream *create_stream(int argc, char *argv[], int arg_i,
                           const char *expected_stream_name);
 
 static int buffer_manager_thrd(void *data) {
-    shm_arbiter_buffer *buffer = (shm_arbiter_buffer*) data;
+    shm_arbiter_buffer *buffer = (shm_arbiter_buffer *)data;
     shm_stream *stream = shm_arbiter_buffer_stream(buffer);
 
     // wait for buffer->active
@@ -65,15 +63,15 @@ int main(int argc, char *argv[]) {
     shm_stream *stream = create_stream(argc, argv, 1, NULL);
     assert(stream && "Creating stream failed");
 
-    shm_arbiter_buffer *buffer = shm_arbiter_buffer_create(stream,
-                                                           shm_stream_event_size(stream),
-                                                           /*capacity=*/4*4096);
+    shm_arbiter_buffer *buffer =
+        shm_arbiter_buffer_create(stream, shm_stream_event_size(stream),
+                                  /*capacity=*/4 * 4096);
     thrd_t tid;
-    thrd_create(&tid, buffer_manager_thrd, (void*)buffer);
+    thrd_create(&tid, buffer_manager_thrd, (void *)buffer);
     shm_arbiter_buffer_set_active(buffer, true);
 
     size_t n = 0, tmp, trials = 0;
-    while(1) {
+    while (1) {
         tmp = shm_arbiter_buffer_size(buffer);
         if (tmp > 0) {
             n += shm_arbiter_buffer_drop(buffer, tmp);
