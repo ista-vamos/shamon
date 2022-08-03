@@ -5,9 +5,9 @@
 
 #include "shmbuf/buffer.h"
 #include "shmbuf/client.h"
+#include "core/signatures.h"
+#include "core/source.h"
 #include "event.h"
-#include "signatures.h"
-#include "source.h"
 
 
 static void usage_and_exit(int ret) {

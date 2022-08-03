@@ -7,6 +7,7 @@ from os import chdir
 from measure import *
 from sys import argv
 from run_common import *
+from time import clock_gettime, CLOCK_MONOTONIC
 
 NUM="10000000"
 if len(argv) > 1:
@@ -34,6 +35,7 @@ lprint(f"Taking average of {repeat_num()} runs...\n")
 def run_measurement(source_freq, monitor_freq, buffsize, max_consume):
     source = ParseSource()
     monitor = ParseMonitor()
+    start = clock_gettime(CLOCK_MONOTONIC)
     measure(f"Source waits {source_freq} cycles, monitor waits {monitor_freq}, "
             f"buffer has size {buffsize} and can consume at most {max_consume} "
              "events at once",
@@ -41,10 +43,16 @@ def run_measurement(source_freq, monitor_freq, buffsize, max_consume):
             [Command(MONITOR_EXE, "stream:generic:/ev",
                      str(buffsize), str(monitor_freq), str(max_consume),
                      stdout=PIPE).withparser(monitor)])
-    print(source.waiting, monitor.processed, monitor.dropped, monitor.dropped_times)
+    end = clock_gettime(CLOCK_MONOTONIC)
+    print("duration    src-wait     mon-proc     mon-drop     mon-drop-evs"),
+    print(f"{end-start :<12.5f}"
+          f"{source.waiting[0] :<12}",
+          f"{monitor.processed :<12}",
+          f"{monitor.dropped :<12}",
+          f"{monitor.dropped_times :<12}")
     csv.writerow([source_freq, monitor_freq, buffsize, max_consume,
                   source.waiting[0], monitor.processed,
-                  monitor.dropped, monitor.dropped_times])
+                  monitor.dropped, monitor.dropped_times, end-start])
 
 for source_freq in (0, 100, 500, 1000, 5000, 10000):
     for monitor_freq in (0, 100, 500, 1000, 5000, 10000):

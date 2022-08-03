@@ -5,28 +5,29 @@ CPPFLAGS=-D_POSIX_C_SOURCE=200809L -DNDEBUG
 LDFLAGS=-lpthread
 
 SOURCE_LIBS=../../shmbuf/libshamon-shmbuf.a\
-            ../../libshamon-signature.a\
-            ../../libshamon-utils.a
+            ../../core/libshamon-signature.a\
+            ../../core/libshamon-utils.a
 
-MONITOR_LIBS= ../../libshamon-signature.a\
-             ../../libshamon.a\
-             ../../libshamon-arbiter.a\
-             ../../libshamon-parallel-queue.a\
-             ../../libshamon-utils.a\
-             ../../streams/libshamon-streams.a\
-	     ../../shmbuf/libshamon-shmbuf.a
+MONITOR_LIBS= ../../core/libshamon-signature.a\
+              ../../core/libshamon.a\
+              ../../core/libshamon-arbiter.a\
+              ../../core/libshamon-parallel-queue.a\
+              ../../core/libshamon-utils.a\
+              ../../streams/libshamon-streams.a\
+	      ../../shmbuf/libshamon-shmbuf.a
 
 source.o: source.c
-	$(CC) -c source.c -I ../..  $(CFLAGS)
+	$(CC) -c source.c -I ../.. -I ../../core $(CFLAGS)
 
 source: source.o
 	$(CC) source.o -o source $(SOURCE_LIBS)
 
 monitor.o: monitor.c
-	$(CC) -c monitor.c -I ../.. $(CFLAGS)
+	$(CC) -c monitor.c -I ../.. -I ../../core $(CFLAGS)
 
 monitor: monitor.o
-	$(CC) monitor.o -o monitor ../../vector.c ../utils.c -I../.. $(CFLAGS)  $(MONITOR_LIBS)  $(LDFLAGS)
+	$(CC) monitor.o -o monitor ../../core/vector.c ../../monitors/utils.c\
+	      -I../.. -I../../core $(CFLAGS)  $(MONITOR_LIBS)  $(LDFLAGS)
 
 experiments: source monitor
 	python3 -O -m compileall *.py
