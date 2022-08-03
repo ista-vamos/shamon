@@ -101,14 +101,11 @@ def p_event_source(p):
     # EVENT SOURCE ID : ID right_arrow connection_kind ID { perf_layer_rule_list }
     #   1     2     3 4  5      6           7          8  9           10
 
-
-
     p[0] = ("event_source", p[3], p[5], p[7], p[8], p[10])
 
     TypeChecker.insert_symbol(p[3], EVENT_SOURCE_NAME)
     TypeChecker.assert_symbol_type(p[5], STREAM_TYPE_NAME)
     TypeChecker.assert_symbol_type(p[8], STREAM_TYPE_NAME)
-    # TODO: check that p[8] only uses primitive data types
     TypeChecker.check_args_are_primitive(p[8])
     TypeChecker.check_args_are_primitive(p[5])
 
@@ -166,7 +163,7 @@ def p_performance_action(p):
                        | FORWARD ID '(' expression_list ')'
     '''
     if len(p) == 2:
-        p[0] = p[1]
+        p[0] = ("perf_act_drop",p[1])
     else:
         TypeChecker.assert_symbol_type(p[2], EVENT_NAME)
         p[0] = ("perf_act_forward", p[2], p[4])

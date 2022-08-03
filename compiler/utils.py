@@ -1,4 +1,7 @@
 # general utils
+from typing import List, Tuple
+
+
 def get_count_list_ids(tree):
     if tree[0] == 'listids':
         return 1 + get_count_list_ids(tree[2])
@@ -36,6 +39,47 @@ def get_events_names(tree, names) -> None:
     else:
         assert (tree[0] == "event_decl")
         names.append(tree[1])
+
+def get_event_args(tree, event_args: List[Tuple[str, str]]):
+    if tree[0] == "list_field_decl":
+        get_event_args(tree[1], event_args)
+        get_event_args(tree[2], event_args)
+    else:
+        assert(tree[0] == "field_decl")
+        event_args.append((tree[1], tree[2][1]))
+
+
+def get_events_data(tree, events_data) -> None:
+    if tree[0] == "event_list":
+        get_events_data(tree[1], events_data)
+        get_events_data(tree[2], events_data)
+    else:
+        assert (tree[0] == "event_decl")
+        event_args: List[Tuple[str, str]] = [] # list consists of a tuple (name_arg, type_arg)
+        get_event_args(tree[2], event_args)
+
+        data = {
+            "name": tree[1],
+            "args": event_args
+        }
+        events_data.append(data)
+
+
+def get_stream_to_events_mapping(tree, mapping) -> None:
+    if tree[0] == "stream_types":
+        get_stream_to_events_mapping(tree[1], mapping)
+        get_stream_to_events_mapping(tree[2], mapping)
+    else:
+        assert(tree[0] == "stream_type")
+        events_data = []
+        get_events_data(tree[2], events_data)
+        assert(tree[1] not in mapping.keys())
+        mapping_events = {}
+        for (index, data) in enumerate(events_data):
+            data.update({'index': index+2})
+            mapping_events[data['name']] = data
+        mapping[tree[1]] = mapping_events
+
 
 
 def get_parameters_types_field_decl(tree, params):

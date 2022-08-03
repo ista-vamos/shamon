@@ -20,8 +20,13 @@ assert(ast[0] == "main_program")
 # Produce C file
 output_file = open(output_path, "w")
 
+streams_to_events_map = dict()
+get_stream_to_events_mapping(ast[1], streams_to_events_map )
+
+
 program = f'''#include "shamon.h"
 #include "mmlib.h"
+#include <threads.h>
 
 
 struct _EVENT_hole
@@ -32,11 +37,27 @@ typedef struct _EVENT_hole EVENT_hole;
 
 {event_stream_structs(ast[1])}
 
+{build_should_keep_funcs(ast[2], streams_to_events_map)}
+
+// event sources threads
+{declare_evt_srcs_threads(ast)}
 {declare_arbiter_buffers(ast)}
+
+{event_sources_thread_funcs(ast[2], streams_to_events_map)}
 int main(int argc, char **argv) {"{"}
     initialize_events(); // Always call this first
     
 {event_sources_conn_code(ast)}
+    // activate buffers
+{activate_buffers(ast)}
+    /* TODO: Correctness layer */
+    
+    // create source-events threads
+{activate_threads(ast)}
+    // destroy event sources
+{destroy_streams(ast)}
+    // destroy arbiter buffers
+{destroy_buffers(ast)}
 {"}"}
 '''
 
