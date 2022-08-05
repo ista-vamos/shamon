@@ -39,7 +39,7 @@
 #include "dr_api.h"
 #include "drmgr.h"
 #ifdef SHOW_SYMBOLS
-#    include "drsyms.h"
+#include "drsyms.h"
 #endif
 #include "utils.h"
 
@@ -49,17 +49,17 @@
 #include "event.h" /* shm_event_dropped */
 #include "events.h"
 
-static void
-event_exit(void);
+static void event_exit(void);
 /*
 static void
 event_thread_init(void *drcontext);
 static void
 event_thread_exit(void *drcontext);
 */
-static dr_emit_flags_t
-event_app_instruction(void *drcontext, void *tag, instrlist_t *bb, instr_t *instr,
-                      bool for_trace, bool translating, void *user_data);
+static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
+                                             instrlist_t *bb, instr_t *instr,
+                                             bool for_trace, bool translating,
+                                             void *user_data);
 static int tls_idx;
 
 static client_id_t my_id;
@@ -71,9 +71,7 @@ size_t max_event_size;
 
 static uint64_t waiting_for_buffer = 0;
 
-DR_EXPORT void
-dr_client_main(client_id_t id, int argc, const char *argv[])
-{
+DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     dr_set_client_name("DynamoRIO Sample Client 'instrcalls'",
                        "http://dynamorio.org/issues");
     drmgr_init();
@@ -83,33 +81,36 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
     /* also give notification to stderr */
 #ifdef SHOW_RESULTS
     if (dr_is_notify_on()) {
-#    ifdef WINDOWS
-        /* ask for best-effort printing to cmd window.  must be called at init. */
+#ifdef WINDOWS
+        /* ask for best-effort printing to cmd window.  must be called at init.
+         */
         dr_enable_console_printing();
-#    endif
+#endif
         dr_fprintf(STDERR, "Client instrcalls is running\n");
     }
 #endif
 
     events_num = argc - 1;
-    events = initialize_shared_control_buffer(sizeof(struct call_event_spec)*events_num);
+    events = initialize_shared_control_buffer(sizeof(struct call_event_spec) *
+                                              events_num);
     for (int i = 1; i < argc; ++i) {
         const char *sig = strrchr(argv[i], ':');
         if (sig) {
-           ++sig;
-           DR_ASSERT(strlen(sig) <=  sizeof(events[0].signature));
-           strncpy(events[i-1].signature, sig,
-                   sizeof(events[0].signature));
-           strncpy(events[i-1].name, argv[i], sig - argv[i] - 1);
+            ++sig;
+            DR_ASSERT(strlen(sig) <= sizeof(events[0].signature));
+            strncpy(events[i - 1].signature, sig, sizeof(events[0].signature));
+            strncpy(events[i - 1].name, argv[i], sig - argv[i] - 1);
         } else {
             DR_ASSERT(strlen(argv[i]) < 256 && "Too big function name");
-            strncpy(events[i-1].name, argv[i], 255);
-            events[i-1].signature[0] = '\0';
+            strncpy(events[i - 1].name, argv[i], 255);
+            events[i - 1].signature[0] = '\0';
         }
     }
 
     max_event_size += sizeof(void *); /* space for fun address */
-    shm = initialize_shared_buffer(max_event_size > sizeof(shm_event_dropped) ? max_event_size : sizeof(shm_event_dropped));
+    shm = initialize_shared_buffer(max_event_size > sizeof(shm_event_dropped)
+                                       ? max_event_size
+                                       : sizeof(shm_event_dropped));
     DR_ASSERT(shm);
 
     dr_register_exit_event(event_exit);
@@ -120,7 +121,8 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
     */
 #ifdef SHOW_SYMBOLS
     if (drsym_init(0) != DRSYM_SUCCESS) {
-        dr_log(NULL, DR_LOG_ALL, 1, "WARNING: unable to initialize symbol translation\n");
+        dr_log(NULL, DR_LOG_ALL, 1,
+               "WARNING: unable to initialize symbol translation\n");
     }
 #endif
     tls_idx = drmgr_register_tls_field();
@@ -130,12 +132,11 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
     buffer_wait_for_monitor(shm);
 }
 
-static void
-event_exit(void)
-{
+static void event_exit(void) {
 #ifdef SHOW_SYMBOLS
     if (drsym_exit() != DRSYM_SUCCESS) {
-        dr_log(NULL, DR_LOG_ALL, 1, "WARNING: error cleaning up symbol library\n");
+        dr_log(NULL, DR_LOG_ALL, 1,
+               "WARNING: error cleaning up symbol library\n");
     }
 #endif
     drmgr_unregister_tls_field(tls_idx);
@@ -147,9 +148,9 @@ event_exit(void)
 }
 
 #ifdef WINDOWS
-#    define IF_WINDOWS(x) x
+#define IF_WINDOWS(x) x
 #else
-#    define IF_WINDOWS(x) /* nothing */
+#define IF_WINDOWS(x) /* nothing */
 #endif
 
 #if 0
@@ -180,28 +181,31 @@ event_thread_exit(void *drcontext)
 }
 #endif
 
-static inline void *
-call_get_arg_ptr(dr_mcontext_t *mc, int i, char o) {
+static inline void *call_get_arg_ptr(dr_mcontext_t *mc, int i, char o) {
     if (o == 'f') {
         DR_ASSERT(i < 7);
         return &mc->simd[i].u64;
     }
     DR_ASSERT(i < 6);
-    switch(i) {
-        case 0: return &mc->xdi;
-        case 1: return &mc->xsi;
-        case 2: return &mc->xdx;
-        case 3: return &mc->xcx;
-        case 4: return &mc->r8;
-        case 5: return &mc->r9;
+    switch (i) {
+    case 0:
+        return &mc->xdi;
+    case 1:
+        return &mc->xsi;
+    case 2:
+        return &mc->xdx;
+    case 3:
+        return &mc->xcx;
+    case 4:
+        return &mc->r8;
+    case 5:
+        return &mc->r9;
     }
 }
 
 #ifdef SHOW_SYMBOLS
-#    define MAX_SYM_RESULT 256
-static void
-print_address(file_t f, app_pc addr, const char *prefix)
-{
+#define MAX_SYM_RESULT 256
+static void print_address(file_t f, app_pc addr, const char *prefix) {
     drsym_error_t symres;
     drsym_info_t sym;
     char name[MAX_SYM_RESULT];
@@ -228,8 +232,8 @@ print_address(file_t f, app_pc addr, const char *prefix)
         if (symres == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
             dr_fprintf(f, " ??:0\n");
         } else {
-            dr_fprintf(f, " %s:%" UINT64_FORMAT_CODE "+" PIFX "\n", sym.file, sym.line,
-                       sym.line_offs);
+            dr_fprintf(f, " %s:%" UINT64_FORMAT_CODE "+" PIFX "\n", sym.file,
+                       sym.line, sym.line_offs);
         }
     } else
         dr_fprintf(f, "%s " PFX " ? ??:0\n", prefix, addr);
@@ -237,41 +241,36 @@ print_address(file_t f, app_pc addr, const char *prefix)
 }
 #endif
 
-static void
-at_call(app_pc instr_addr, app_pc target_addr)
-{
-    file_t f =
-        (file_t)(ptr_uint_t)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
-    dr_mcontext_t mc = { sizeof(mc), DR_MC_CONTROL /*only need xsp*/ };
+static void at_call(app_pc instr_addr, app_pc target_addr) {
+    file_t f = (file_t)(ptr_uint_t)drmgr_get_tls_field(
+        dr_get_current_drcontext(), tls_idx);
+    dr_mcontext_t mc = {sizeof(mc), DR_MC_CONTROL /*only need xsp*/};
     dr_get_mcontext(dr_get_current_drcontext(), &mc);
 #ifdef SHOW_SYMBOLS
     print_address(f, instr_addr, "CALL @ ");
     print_address(f, target_addr, "\t to ");
     dr_fprintf(f, "\tTOS is " PFX "\n", mc.xsp);
 #else
-    dr_fprintf(f, "CALL @ " PFX " to " PFX ", TOS is " PFX "\n", instr_addr, target_addr,
-               mc.xsp);
+    dr_fprintf(f, "CALL @ " PFX " to " PFX ", TOS is " PFX "\n", instr_addr,
+               target_addr, mc.xsp);
 #endif
 }
 
-static void
-at_call_ind(app_pc instr_addr, app_pc target_addr)
-{
-    file_t f =
-        (file_t)(ptr_uint_t)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
+static void at_call_ind(app_pc instr_addr, app_pc target_addr) {
+    file_t f = (file_t)(ptr_uint_t)drmgr_get_tls_field(
+        dr_get_current_drcontext(), tls_idx);
 #ifdef SHOW_SYMBOLS
     print_address(f, instr_addr, "CALL INDIRECT @ ");
     print_address(f, target_addr, "\t to ");
 #else
-    dr_fprintf(f, "CALL INDIRECT @ " PFX " to " PFX "\n", instr_addr, target_addr);
+    dr_fprintf(f, "CALL INDIRECT @ " PFX " to " PFX "\n", instr_addr,
+               target_addr);
 #endif
 }
 
-static void
-at_return(app_pc instr_addr, app_pc target_addr)
-{
-    file_t f =
-        (file_t)(ptr_uint_t)drmgr_get_tls_field(dr_get_current_drcontext(), tls_idx);
+static void at_return(app_pc instr_addr, app_pc target_addr) {
+    file_t f = (file_t)(ptr_uint_t)drmgr_get_tls_field(
+        dr_get_current_drcontext(), tls_idx);
 #ifdef SHOW_SYMBOLS
     print_address(f, instr_addr, "RETURN @ ");
     print_address(f, target_addr, "\t to ");
@@ -280,10 +279,10 @@ at_return(app_pc instr_addr, app_pc target_addr)
 #endif
 }
 
-static dr_emit_flags_t
-event_app_instruction(void *drcontext, void *tag, instrlist_t *bb, instr_t *instr,
-                      bool for_trace, bool translating, void *user_data)
-{
+static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
+                                             instrlist_t *bb, instr_t *instr,
+                                             bool for_trace, bool translating,
+                                             void *user_data) {
     /* instrument calls and returns -- ignore far calls/rets */
     if (instr_is_call_direct(instr)) {
         dr_insert_call_instrumentation(drcontext, bb, instr, (app_pc)at_call);
