@@ -80,6 +80,7 @@ def get_stream_to_events_mapping(tree, mapping) -> None:
         get_stream_to_events_mapping(tree[1], mapping)
         get_stream_to_events_mapping(tree[2], mapping)
     else:
+        print(tree[0])
         assert(tree[0] == "stream_type")
         events_data = []
         get_events_data(tree[2], events_data)
@@ -90,6 +91,14 @@ def get_stream_to_events_mapping(tree, mapping) -> None:
             mapping_events[data['name']] = data
         mapping[tree[1]] = mapping_events
 
+def get_stream_types(tree, mapping) -> None:
+    if tree[0] == "event_sources":
+        get_stream_types(tree[1], mapping)
+        get_stream_types(tree[2], mapping)
+    else:
+        assert(tree[0] == "event_source")
+        assert(tree[1] not in mapping.keys())
+        mapping[tree[1]] = (tree[2], tree[4])
 
 
 def get_parameters_types_field_decl(tree, params):
@@ -156,3 +165,23 @@ def get_out_names(tree, out_names) -> None:
         out_names.append(tree[4])
 
 
+def get_rule_set_names(tree, names) -> None:
+    if tree[0] == 'arb_rule_set_l':
+        get_rule_set_names(tree[1], names)
+        get_rule_set_names(tree[2], names)
+    else:
+        assert(tree[0] == 'arbiter_rule_set')
+        names.append(tree[1])
+
+def get_event_kinds(tree, kinds, mapping) -> None:
+    assert(tree[0] != "|")
+
+    if tree[0] == "list_ev_calls":
+        kinds.append(mapping[tree[1]]["index"])
+        get_event_kinds(tree[3], kinds, mapping)
+    else:
+        assert(tree[0] == "ev_call")
+        if tree[1] == "hole":
+            kinds.append(1)
+        else:
+            kinds.append(mapping[tree[1]]["index"])

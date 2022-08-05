@@ -61,6 +61,26 @@ typedef struct _STREAM_{stream_name}_out STREAM_{stream_name}_out;
         '''
         return value
 
+def declare_event_sources(ast):
+    event_srcs_names = []
+    get_event_sources_names(ast[2], event_srcs_names)
+    answer = ""
+    for name in event_srcs_names:
+        answer += f"shm_stream *EV_SOURCE_{name};\n"
+    return answer
+
+def declare_event_sources_flags(ast):
+    event_srcs_names = []
+    get_event_sources_names(ast[2], event_srcs_names)
+    answer = ""
+    for name in event_srcs_names:
+        answer += f"bool is_{name}_done;\n"
+    return answer
+
+def get_count_events_sources(ast):
+    event_srcs_names = []
+    get_event_sources_names(ast[2], event_srcs_names)
+    return len(event_srcs_names)
 
 def event_sources_conn_code(ast) -> str:
     event_srcs_names = []
@@ -75,7 +95,7 @@ def event_sources_conn_code(ast) -> str:
     answer = ""
     for (name, buff_size, out_name) in zip(event_srcs_names, buffer_sizes, out_names):
         answer += f"\t// connect to event source {name}\n"
-        answer += f"\tshm_stream *EV_SOURCE_{name} = shm_stream_create(\"{name}\", argc, argv);\n"
+        answer += f"\tEV_SOURCE_{name} = shm_stream_create(\"{name}\", argc, argv);\n"
         answer += f"\tBUFFER_{name} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
 
     return answer
@@ -259,11 +279,13 @@ def event_sources_thread_funcs(tree, mapping) -> str:
         sleep_ns(10);
     {"}"}
     
+    is_{stream_name}_done = 0;
     while(true) {"{"}
         inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_{stream_name});
         
         if (inevent == NULL) {"{"}
             // no more events
+            is_{stream_name}_done = 1;
             break;
         {"}"}
         outevent = shm_arbiter_buffer_write_ptr(buffer);
@@ -280,3 +302,154 @@ def event_sources_thread_funcs(tree, mapping) -> str:
 {"}"}
 '''
         return value
+
+
+# BEGIN CORRECTNESS LAYER
+def declare_rule_sets(tree):
+    assert (tree[0] == "arbiter_def")
+    rule_set_names = []
+    get_rule_set_names(tree[2], rule_set_names)
+
+    rule_set_declarations = ""
+    for name in rule_set_names:
+        rule_set_declarations += f"int RULE_SET_{name}();\n"
+    return rule_set_declarations
+
+def exists_open_streams(tree):
+    event_srcs_names = []
+    get_event_sources_names(tree[2], event_srcs_names)
+    code = ""
+    for name in event_srcs_names:
+        code += f"\tc += is_{name}_done;\n"
+
+    return f'''bool exists_open_streams() {"{"}
+    int c = 0;
+{code}\treturn c < count_event_streams;
+{"}"}
+    '''
+def arbiter_code(tree):
+    assert(tree[0] == "arbiter_def")
+
+    rule_set_names = []
+    get_rule_set_names(tree[2], rule_set_names)
+
+    rule_set_invocations = ""
+    rule_set_declarations = ""
+    for name in rule_set_names:
+        rule_set_invocations += f"\tRULE_SET_{name}();\n"
+        rule_set_declarations += f"int RULE_SET_{name}();"
+
+
+    return f'''int arbiter() {"{"}
+
+    while (exists_open_stream()) {"{"}
+    {rule_set_invocations}\t{"}"}
+{"}"}
+    '''
+
+def rule_set_streams_condition(tree, mapping, stream_types):
+    # output_stream should be the output type of the event source
+    if tree[0] == 'l_buff_match_exp':
+        return rule_set_streams_condition(tree[1], mapping, stream_types)+ " && " + \
+               rule_set_streams_condition(tree[2], mapping, stream_types)
+    else:
+        assert(tree[0] == 'buff_match_exp')
+        stream_name = tree[1]
+        if len(tree) == 3:
+
+            if tree[2] == "nothing":
+                return f"check_n_events(EV_SOURCE_{stream_name}, 0)"
+            elif tree[2] == "done":
+                return f"is_{stream_name}_done"
+            else:
+                # check if there are n events
+                return f"check_n_events(EV_SOURCE_{stream_name}, {tree[2]})"
+
+        else:
+            assert(len(tree) == 4)
+            event_kinds = []
+            out_type = stream_types[stream_name][1]
+            if tree[2] != "|":
+                get_event_kinds(tree[2], event_kinds, mapping[out_type])
+
+            if tree[3] != "|":
+                get_event_kinds(tree[3], event_kinds, mapping[out_type])
+            kinds = ",".join([str(x) for x in event_kinds])
+            return f"are_events_in_head(EV_SOURCE_{stream_name}, BUFFER_{stream_name}, sizeof(STREAM_{out_type}_out), [{kinds}], {len(event_kinds)})"
+
+def process_arb_rule_stmt(tree, mapping, stream_types, output_ev_source) -> str:
+    if tree[0] == "switch":
+        switch_rule_name = tree[1]
+        return f"RULE_SET_{switch_rule_name}();\n"
+    if tree[0] == "yield":
+        pass
+    assert(tree[0] == "drop")
+    return f"shm_arbiter_buffer_drop(BUFFER_{tree[2]}, {tree[1]});\n"
+
+
+def process_code_stmt_list(tree, mapping, stream_types, output_ev_source) -> str:
+    assert (tree[0] == "ccode_statement_l")
+
+    if len(tree) == 2:
+        return tree[1]
+
+    assert(len(tree) > 1)
+
+    if len(tree) == 3:
+        assert(tree[2] == ";")
+        return process_arb_rule_stmt(tree[1], mapping, stream_types, output_ev_source)
+
+    assert(len(tree) == 4)
+
+    if tree[3] == ";":
+        return tree[1] + "\n" + process_arb_rule_stmt(tree[2], mapping, stream_types, output_ev_source)
+    else:
+        assert(tree[2] == ";")
+        return process_arb_rule_stmt(tree[1], mapping, stream_types, output_ev_source) + "\n" + tree[3]
+
+def get_arb_rule_stmt_list_code(tree, mapping, stream_types, output_ev_source) -> str:
+    if tree[0] == 'arb_rule_stmt_l':
+        return process_code_stmt_list(tree[1], mapping, stream_types, output_ev_source) + \
+               get_arb_rule_stmt_list_code(tree[2], mapping, stream_types, output_ev_source)
+    else:
+        assert(tree[0] == "ccode_statement_l")
+        return process_code_stmt_list(tree, mapping, stream_types, output_ev_source)
+
+
+def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
+    # output_stream should be the output type of the event source
+    if tree[0] == "arb_rule_list":
+        return arbiter_rule_code(tree[1], mapping, stream_types, output_ev_source) + \
+               arbiter_rule_code(tree[2], mapping, stream_types, output_ev_source)
+    else:
+        assert(tree[0] == "arbiter_rule")
+        return f'''
+    if ({rule_set_streams_condition(tree[1], mapping, stream_types)}) {"{"}
+        if({tree[2]}) {"{"}
+            {get_arb_rule_stmt_list_code(tree[3], mapping, stream_types, output_ev_source)}
+        {"}"}
+    {"}"}
+        '''
+
+
+def get_code_rule_sets(tree, mapping, stream_types, output_ev_source) -> str:
+    if tree[0] == 'arb_rule_set_l':
+        return get_code_rule_sets(tree[1], mapping, stream_types, output_ev_source) \
+               + get_code_rule_sets(tree[2], mapping, stream_types, output_ev_source)
+    else:
+        assert(tree[0] == "arbiter_rule_set")
+        rule_set_name = tree[1]
+        return f'''int RULE_SET_{rule_set_name}() {"{"}
+    {arbiter_rule_code(tree[2], mapping, stream_types, output_ev_source)}
+{"}"}
+'''
+
+
+
+
+def build_rule_set_functions(tree, mapping, stream_types):
+    assert(tree[0] == "arbiter_def")
+    output_stream = tree[1]
+
+    return get_code_rule_sets(tree[2], mapping, stream_types, output_stream)
+

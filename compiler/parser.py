@@ -275,11 +275,11 @@ def p_list_event_calls(p):
     # TypeChecker.assert_num_args_match(p[1], list_ids_length)
 
     if len(p) == 5:
-        p[0] = ("list_ev_calls", p[1], p[3])
-    elif len(p) == 1:
-        p[0] = ("empty_list_ev_calls", "")
+        p[0] = ("ev_call", p[1], p[3])
     else:
-        p[0] = ("list_ev_calls", p[1], p[3], p[6])
+        p[0] = ("list_ev_calls", p[1], p[3], p[5])
+
+
 
 
 def p_arbiter_rule_stmt_list(p):
@@ -289,7 +289,7 @@ def p_arbiter_rule_stmt_list(p):
     '''
 
     if len(p) == 2:
-        p[0] = ("arb_rule_stmt_l", p[1])
+        p[0] = p[1]
     else:
         p[0] = ("arb_rule_stmt_l", p[1], p[2])
 
@@ -304,13 +304,21 @@ def p_ccode_statement_list(p):
     '''
 
     if len(p) == 1:
+        #
         p[0] = ("ccode_statement_l", "")
     elif len(p) == 2:
+        # CCODE_TOKEN
         p[0] = ("ccode_statement_l", p[1])
     elif len(p) == 3:
+        # arbiter_rule_stmt ';'
         p[0] = ("ccode_statement_l", p[1], p[2])
     else:
+        assert(len(p) == 4)
+        # CCODE_TOKEN arbiter_rule_stmt ';'
+        # arbiter_rule_stmt ';' CCODE_TOKEN
         p[0] = ("ccode_statement_l", p[1], p[2], p[3])
+
+
 def p_arbiter_rule_stmt(p):
     '''
     arbiter_rule_stmt : YIELD ID '(' expression_list ')'
@@ -320,18 +328,18 @@ def p_arbiter_rule_stmt(p):
 
     if len(p) == 6:
         assert(p[1] == "yield")
-        p[0] = ("arb_rule_stmt", p[2], p[4])
+        p[0] = ("yield", p[2], p[4])
         TypeChecker.assert_symbol_type(p[2], EVENT_NAME)
         count_expr_list = get_count_list_expr(p[4])
         TypeChecker.assert_num_args_match(p[2], count_expr_list)
     elif len(p) == 5:
-        p[0] = ("arb_rule_stmt", p[2], p[4])
+        p[0] = ("drop", p[2], p[4])
 
         TypeChecker.assert_symbol_type(p[4], EVENT_SOURCE_NAME)
     else:
         assert(p[1] == "switch")
         # TODO: should I check something here?
-        p[0] = ("arb_rule_stmt", p[3])
+        p[0] = ("switch", p[3])
 
 
 # END arbiter Specification
