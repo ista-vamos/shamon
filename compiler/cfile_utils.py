@@ -454,6 +454,7 @@ def build_rule_set_functions(tree, mapping, stream_types):
 # monitor code
 
 def monitor_events_code(tree, possible_events, count_tabs) -> str:
+    # TODO: initialize variable received_event
     if tree[0] == 'monitor_rule_l':
         return monitor_events_code(tree[1], possible_events, count_tabs) + \
                monitor_events_code(tree[2], possible_events, count_tabs)
