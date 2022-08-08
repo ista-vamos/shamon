@@ -236,16 +236,34 @@ int RULE_SET_rs() {
     
     if (are_events_in_head(EV_SOURCE_Left, BUFFER_Left, sizeof(STREAM_Primes_out), [2], 1) && are_events_in_head(EV_SOURCE_Right, BUFFER_Right, sizeof(STREAM_Primes_out), [2], 1)) {
         if(true ) {
+            if(ln == rn)
+ 		   {
+ 		       
+shm_arbiter_buffer_drop(BUFFER_Left, 1);
+shm_arbiter_buffer_drop(BUFFER_Right, 1);
+
+}
+ 		   else if(ln < rn)
+ 		   {
+ 		       drop 1 from Left;
+ 		   }
+ 		   else
+ 		   {
+ 		       drop 1 from Right;
+ 		   }
+ 		
         }
     }
         
     if (are_events_in_head(EV_SOURCE_Left, BUFFER_Left, sizeof(STREAM_Primes_out), [1], 1)) {
         if(true ) {
+            
         }
     }
         
     if (are_events_in_head(EV_SOURCE_Right, BUFFER_Right, sizeof(STREAM_Primes_out), [1], 1)) {
         if(true ) {
+            
         }
     }
         
@@ -282,6 +300,22 @@ int main(int argc, char **argv) {
 
     // create arbiter thread
     thrd_create(&ARBITER_THREAD, arbiter);
+    
+    
+
+    // monitor
+    while(true) {
+
+		if (received_event->head.kind == 2) {
+		  if (true ) {
+		      if(n!=m){
+                printf("Error at index %i: %i is not equal to %i\n", i, n, m);
+              }
+		  }
+		}
+        
+    }
+    
      
     // destroy event sources
 	shm_stream_destroy(EV_SOURCE_Left);

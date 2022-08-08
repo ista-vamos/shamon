@@ -53,8 +53,7 @@ monitor
 {
     on NumberPair(i, n, m) where $$ true $$
     $$
-        if(n!=m)
-        {
+        if(n!=m){
           printf("Error at index %i: %i is not equal to %i\n", i, n, m);
         }
     $$

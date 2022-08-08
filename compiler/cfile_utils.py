@@ -236,7 +236,6 @@ def build_switch_performance_match(tree, mapping_in, mapping_out, level) -> str:
 {tabs}(outevent->head).id = (inevent->head).id;
 {assign_args(event_out_name, mapping_out[performance_action[1]]["args"], performance_action[2], level)}'''
     else:
-        print(tree[0])
         assert(tree[0] == 'perf_match2')
         return f'''
         if ({tree[1]}) {"{"}
@@ -377,12 +376,13 @@ def rule_set_streams_condition(tree, mapping, stream_types):
             kinds = ",".join([str(x) for x in event_kinds])
             return f"are_events_in_head(EV_SOURCE_{stream_name}, BUFFER_{stream_name}, sizeof(STREAM_{out_type}_out), [{kinds}], {len(event_kinds)})"
 
+
 def process_arb_rule_stmt(tree, mapping, stream_types, output_ev_source) -> str:
     if tree[0] == "switch":
         switch_rule_name = tree[1]
         return f"RULE_SET_{switch_rule_name}();\n"
     if tree[0] == "yield":
-        pass
+        return ""
     assert(tree[0] == "drop")
     return f"shm_arbiter_buffer_drop(BUFFER_{tree[2]}, {tree[1]});\n"
 
@@ -406,6 +406,7 @@ def process_code_stmt_list(tree, mapping, stream_types, output_ev_source) -> str
     else:
         assert(tree[2] == ";")
         return process_arb_rule_stmt(tree[1], mapping, stream_types, output_ev_source) + "\n" + tree[3]
+
 
 def get_arb_rule_stmt_list_code(tree, mapping, stream_types, output_ev_source) -> str:
     if tree[0] == 'arb_rule_stmt_l':
@@ -444,12 +445,36 @@ def get_code_rule_sets(tree, mapping, stream_types, output_ev_source) -> str:
 {"}"}
 '''
 
-
-
-
 def build_rule_set_functions(tree, mapping, stream_types):
     assert(tree[0] == "arbiter_def")
     output_stream = tree[1]
 
     return get_code_rule_sets(tree[2], mapping, stream_types, output_stream)
+
+# monitor code
+
+def monitor_events_code(tree, possible_events, count_tabs) -> str:
+    if tree[0] == 'monitor_rule_l':
+        return monitor_events_code(tree[1], possible_events, count_tabs) + \
+               monitor_events_code(tree[2], possible_events, count_tabs)
+    else:
+        assert(tree[0] == "monitor_rule")
+        event = tree[1]
+        tabs = "\t"*count_tabs
+        return f'''
+{tabs}if (received_event->head.kind == {possible_events[event]["index"]}) {"{"}
+{tabs}  if ({tree[3]}) {"{"}
+{tabs}      {tree[4]}
+{tabs}  {"}"}
+{tabs}{"}"}
+        '''
+
+
+def monitor_code(tree, possible_events) -> str:
+    return f'''
+    // monitor
+    while(true) {"{"}
+{monitor_events_code(tree[1], possible_events, 2)}
+    {"}"}
+    '''
 

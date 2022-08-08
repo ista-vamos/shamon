@@ -80,7 +80,6 @@ def get_stream_to_events_mapping(tree, mapping) -> None:
         get_stream_to_events_mapping(tree[1], mapping)
         get_stream_to_events_mapping(tree[2], mapping)
     else:
-        print(tree[0])
         assert(tree[0] == "stream_type")
         events_data = []
         get_events_data(tree[2], events_data)
@@ -185,3 +184,7 @@ def get_event_kinds(tree, kinds, mapping) -> None:
             kinds.append(1)
         else:
             kinds.append(mapping[tree[1]]["index"])
+
+def get_arbiter_event_source(tree) -> str:
+    assert(tree[0] == 'arbiter_def')
+    return tree[1]

@@ -27,6 +27,8 @@ get_stream_to_events_mapping(ast[1], streams_to_events_map )
 stream_types : Dict[str, Tuple[str, str]] = dict() # maps an event source to (input_stream_type, output_stream_type)
 get_stream_types(ast[2], stream_types)
 
+arbiter_event_source = get_arbiter_event_source(ast[3])
+
 
 program = f'''#include "shamon.h"
 #include "mmlib.h"
@@ -108,6 +110,9 @@ int main(int argc, char **argv) {"{"}
 
     // create arbiter thread
     thrd_create(&ARBITER_THREAD, arbiter);
+    
+    
+{monitor_code(ast[4], streams_to_events_map[arbiter_event_source])}
      
     // destroy event sources
 {destroy_streams(ast)}
