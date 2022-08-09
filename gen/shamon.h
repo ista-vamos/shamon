@@ -4,6 +4,7 @@
 #include "utils.h"  /* sleeping */
 #include "source.h"
 #include "stream.h"
+#include "monitor.h"
 #include "arbiter.h"
 
 #include <stdbool.h>
