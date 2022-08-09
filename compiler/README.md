@@ -11,5 +11,5 @@ Python 3 (we use Python 3.8.9).
 Execute main and pass as first argument the input file, and as second argument the output file. For example
 
 ```bash
-python main.py tests/primes.mon monitor.c
+python main.py tests/short_primes.txt monitor.c
 ```
