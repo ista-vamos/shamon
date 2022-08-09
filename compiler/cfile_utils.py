@@ -341,6 +341,7 @@ def arbiter_code(tree):
     int arbiter_counter = 10;
     while (exists_open_stream()) {"{"}
     {rule_set_invocations}\t{"}"}
+    shm_monitor_set_finished();
 {"}"}
     '''
 
