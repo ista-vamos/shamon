@@ -33,11 +33,11 @@ arbiter : NumberPairs
 		   }
 		   else if(ln < rn)
 		   {
-		       drop 1 from Left;
+		       $drop 1 from Left;
 		   }
 		   else
 		   {
-		       drop 1 from Right;
+		       $drop 1 from Right;
 		   }
 		$$
 		on Left : hole(n) | where $$ true $$

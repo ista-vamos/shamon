@@ -311,7 +311,7 @@ def declare_rule_sets(tree):
 
     rule_set_declarations = ""
     for name in rule_set_names:
-        rule_set_declarations += f"int RULE_SET_{name}();\n"
+        rule_set_declarations += f"int RULE_SET_{name}(int &);\n"
     return rule_set_declarations
 
 def exists_open_streams(tree):
@@ -333,14 +333,12 @@ def arbiter_code(tree):
     get_rule_set_names(tree[2], rule_set_names)
 
     rule_set_invocations = ""
-    rule_set_declarations = ""
     for name in rule_set_names:
-        rule_set_invocations += f"\tRULE_SET_{name}();\n"
-        rule_set_declarations += f"int RULE_SET_{name}();"
+        rule_set_invocations += f"\tRULE_SET_{name}(arbiter_counter);\n"
 
 
     return f'''int arbiter() {"{"}
-
+    int arbiter_counter = 10;
     while (exists_open_stream()) {"{"}
     {rule_set_invocations}\t{"}"}
 {"}"}
@@ -377,19 +375,51 @@ def rule_set_streams_condition(tree, mapping, stream_types):
             return f"are_events_in_head(EV_SOURCE_{stream_name}, BUFFER_{stream_name}, sizeof(STREAM_{out_type}_out), [{kinds}], {len(event_kinds)})"
 
 
-def process_arb_rule_stmt(tree, mapping, stream_types, output_ev_source) -> str:
+def buffer_peeks(binded_args, events_to_retrieve):
+    answer = ""
+
+    called_buffers = set()
+
+    for (arg, data) in binded_args.items():
+        if data[0] not in called_buffers:
+            answer += f'''
+                char* e1_{data[0]}; size_t i1_{data[0]};
+	            char* e2_{data[0]}; size_t i2_{data[0]};
+	            shm_arbiter_buffer_peek(BUFFER_{data[0]}, {events_to_retrieve[data[0]]}, &e1_{data[0]}, &i1_{data[0]}, &e2_{data[0]}, &i2_{data[0]});
+            '''
+            called_buffers.add(data[0])
+    return answer
+
+
+def construct_arb_rule_outevent(mapping, binded_args, stream_types, output_ev_source, output_event, raw_args) -> str:
+    local_args = []
+
+    get_expressions(raw_args, local_args)
+
+    answer = f'''outevent->head.kind = {mapping[output_ev_source][output_event]["index"]};
+    outevent->head.id = arbiter_counter++;
+    '''
+    for (arg, outarg) in zip(local_args, mapping[output_ev_source][output_event]["args"]):
+        answer+= f"outevent->cases.{output_event}.{outarg[0]} = {arg};\n"
+    return answer
+
+def process_arb_rule_stmt(tree, mapping, binded_args, stream_types, output_ev_source) -> str:
+
     if tree[0] == "switch":
         switch_rule_name = tree[1]
-        return f"RULE_SET_{switch_rule_name}();\n"
+        return f"RULE_SET_{switch_rule_name}(arbiter_counter);\n"
     if tree[0] == "yield":
-        return ""
+        return f'''
+        outevent = shm_monitor_buffer_write_ptr(monitor_buffer);
+         {construct_arb_rule_outevent(mapping, binded_args, stream_types, output_ev_source, tree[1], tree[2])}
+         shm_monitor_buffer_write_finish(monitor_buffer);
+        '''
     assert(tree[0] == "drop")
-    return f"shm_arbiter_buffer_drop(BUFFER_{tree[2]}, {tree[1]});\n"
+    return f"\tshm_arbiter_buffer_drop(BUFFER_{tree[2]}, {tree[1]});\n"
 
 
-def process_code_stmt_list(tree, mapping, stream_types, output_ev_source) -> str:
+def process_code_stmt_list(tree, mapping, binded_args, stream_types, output_ev_source, events_to_retrieve) -> str:
     assert (tree[0] == "ccode_statement_l")
-
     if len(tree) == 2:
         return tree[1]
 
@@ -397,25 +427,38 @@ def process_code_stmt_list(tree, mapping, stream_types, output_ev_source) -> str
 
     if len(tree) == 3:
         assert(tree[2] == ";")
-        return process_arb_rule_stmt(tree[1], mapping, stream_types, output_ev_source)
+        return process_arb_rule_stmt(tree[1], mapping, binded_args, stream_types, output_ev_source)
 
     assert(len(tree) == 4)
 
     if tree[3] == ";":
-        return tree[1] + "\n" + process_arb_rule_stmt(tree[2], mapping, stream_types, output_ev_source)
+        return tree[1] + "\n" + process_arb_rule_stmt(tree[2], mapping, binded_args, stream_types, output_ev_source)
     else:
         assert(tree[2] == ";")
-        return process_arb_rule_stmt(tree[1], mapping, stream_types, output_ev_source) + "\n" + tree[3]
+        return process_arb_rule_stmt(tree[1], mapping, binded_args, stream_types, output_ev_source) + "\n" + tree[3]
 
 
-def get_arb_rule_stmt_list_code(tree, mapping, stream_types, output_ev_source) -> str:
+def get_arb_rule_stmt_list_code(tree, mapping, binded_args, stream_types, output_ev_source, events_to_retrieve) -> str:
     if tree[0] == 'arb_rule_stmt_l':
-        return process_code_stmt_list(tree[1], mapping, stream_types, output_ev_source) + \
-               get_arb_rule_stmt_list_code(tree[2], mapping, stream_types, output_ev_source)
+        return process_code_stmt_list(tree[1], mapping, binded_args, stream_types, output_ev_source, events_to_retrieve) + \
+               get_arb_rule_stmt_list_code(tree[2], mapping, binded_args, stream_types, output_ev_source, events_to_retrieve)
     else:
         assert(tree[0] == "ccode_statement_l")
-        return process_code_stmt_list(tree, mapping, stream_types, output_ev_source)
+        return process_code_stmt_list(tree, mapping, binded_args, stream_types, output_ev_source, events_to_retrieve)
 
+def define_binded_args(binded_args, stream_types):
+    answer = ""
+    for (arg, data) in binded_args.items():
+        event_source = data[0]
+        event = data[1]
+        arg_name = data[2]
+        arg_type = data[3]
+        stream_type_out = stream_types[event_source][1]
+        index = data[4]
+        answer += f"shm_event * event_for_{arg} = get_event_at_index(e1_{event_source}, i1_{event_source}, e2_{event_source}, " \
+                  f"i2_{event_source}, sizeof(STREAM_{stream_type_out}_out, {index});\n" \
+                  f"{arg_type} {arg} = event_for_{arg}->cases.{event}.{arg_name};\n\n"
+    return answer
 
 def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
     # output_stream should be the output type of the event source
@@ -424,10 +467,16 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
                arbiter_rule_code(tree[2], mapping, stream_types, output_ev_source)
     else:
         assert(tree[0] == "arbiter_rule")
+        binded_args = dict()
+        get_buff_math_binded_args(tree[1], stream_types, mapping, binded_args)
+        events_to_retrieve = dict()
+        get_num_events_to_retrieve(tree[1], events_to_retrieve)
         return f'''
     if ({rule_set_streams_condition(tree[1], mapping, stream_types)}) {"{"}
         if({tree[2]}) {"{"}
-            {get_arb_rule_stmt_list_code(tree[3], mapping, stream_types, output_ev_source)}
+            {buffer_peeks(binded_args, events_to_retrieve)}
+            {define_binded_args(binded_args, stream_types)}
+            {get_arb_rule_stmt_list_code(tree[3], mapping, binded_args, stream_types, output_ev_source, events_to_retrieve)}
         {"}"}
     {"}"}
         '''
@@ -440,7 +489,8 @@ def get_code_rule_sets(tree, mapping, stream_types, output_ev_source) -> str:
     else:
         assert(tree[0] == "arbiter_rule_set")
         rule_set_name = tree[1]
-        return f'''int RULE_SET_{rule_set_name}() {"{"}
+        return f'''int RULE_SET_{rule_set_name}(int &arbiter_counter) {"{"}
+    STREAM_{output_ev_source}_out *outevent;   
     {arbiter_rule_code(tree[2], mapping, stream_types, output_ev_source)}
 {"}"}
 '''
@@ -474,7 +524,12 @@ def monitor_events_code(tree, possible_events, count_tabs) -> str:
 def monitor_code(tree, possible_events) -> str:
     return f'''
     // monitor
+    shm_event * received_event;
     while(true) {"{"}
+        received_event = fetch_arbiter_stream(monitor_buffer);
+        if (received_event == NULL) {"{"}
+            break;
+        {"}"}
 {monitor_events_code(tree[1], possible_events, 2)}
     {"}"}
     '''

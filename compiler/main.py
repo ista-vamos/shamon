@@ -55,7 +55,11 @@ int count_event_streams = {get_count_events_sources(ast)};
 {declare_evt_srcs_threads(ast)}
 // declare arbiter thread
 thrd_t ARBITER_THREAD;
+
 {declare_arbiter_buffers(ast)}
+// monitor buffer
+shm_arbiter_buffer *monitor_buffer;
+
 {event_sources_thread_funcs(ast[2], streams_to_events_map)}
 {exists_open_streams(ast)}
 bool check_n_events(shm_stream* s, size_t n) {"{"}
@@ -74,25 +78,35 @@ bool are_events_in_head(shm_stream *s, shm_arbiter_buffer *b, size_t ev_size, in
 	{"}"}
 	
 	int i = 0;
-	while (i1 > 0) {"{"}
-	    i1--;
-	    shm_event * ev = (shm_event *) (e1 + (i1*ev_size));
+	while (i < i1) {"{"}
+	    shm_event * ev = (shm_event *) (e1);
 	     if (ev->head.kind != event_kinds[i]) {"{"}
 	        return false;
 	    {"}"}
 	    i+=1;
+	    e1 += ev_size;
 	{"}"}
-	
-	while (i2 > 0) {"{"}
-	    i2--;
-	    shm_event * ev = (shm_event *) (e2 + (i2*ev_size));
-	     if (ev->head.kind != event_kinds[i]) {"{"}
+
+	i = 0;
+	while (i < i2) {"{"}
+	    shm_event * ev = (shm_event *) e2;
+	     if (ev->head.kind != event_kinds[i1+i]) {"{"}
 	        return false;
 	    {"}"}
 	    i+=1;
+	    e2 += ev_size;
 	{"}"}
 	
 	return true;
+{"}"}
+
+shm_event * get_event_at_index(char* e1, size_t i1, char* e2_Left, size_t i2_Left, size_t size_event, int element_index) {"{"}
+	if (element_index < i1) {"{"}
+		return e1 + (element_index*size_event);
+	{"}"} else {"{"}
+		element_index -=i1;
+		return e2 + (element_index*size_event);
+	{"}"}
 {"}"}
 
 {declare_rule_sets(ast[3])}

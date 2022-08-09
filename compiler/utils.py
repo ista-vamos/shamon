@@ -9,6 +9,16 @@ def get_count_list_ids(tree):
         assert(tree[0] == 'ID')
         return 1
 
+def get_list_ids(tree, ids):
+    if tree[0] == 'listids':
+        get_list_ids(tree[1], ids)
+        get_list_ids(tree[2], ids)
+    else:
+        if type(tree) == str:
+            ids.append(tree)
+        else:
+            assert(tree[0] == 'ID')
+            ids.append(tree[1])
 
 def get_count_list_expr(tree):
     if tree[0] == 'expr_list':
@@ -25,7 +35,7 @@ def get_expressions(tree, result):
         if tree[0] == "expr":
             result.append(tree[1])
         else:
-            result.append(tree[0])
+            result.append(tree)
 
 def is_primitive_type(type_ : str):
     answer = type_ == "int" or type_ == "bool" or type_ =="string" or type_ == "float"
@@ -88,6 +98,7 @@ def get_stream_to_events_mapping(tree, mapping) -> None:
         for (index, data) in enumerate(events_data):
             data.update({'index': index+2})
             mapping_events[data['name']] = data
+        mapping_events['hole'] = {'index': 1, 'args':[('n', 'int')]}
         mapping[tree[1]] = mapping_events
 
 def get_stream_types(tree, mapping) -> None:
@@ -188,3 +199,54 @@ def get_event_kinds(tree, kinds, mapping) -> None:
 def get_arbiter_event_source(tree) -> str:
     assert(tree[0] == 'arbiter_def')
     return tree[1]
+
+def get_parameters_names(tree, stream_name, mapping, binded_args, index=0):
+    if tree[0] == 'list_ev_calls':
+        ids = []
+        get_list_ids(tree[2], ids)
+        assert(len(ids) == len(mapping[tree[1]]['args']))
+        for (arg_bind, arg) in zip(mapping[tree[1]]['args'], ids):
+            binded_args[arg_bind] = (stream_name, arg[0], arg[1], index)
+        get_parameters_names(tree[3], stream_name, mapping, binded_args, index+1)
+    else:
+        assert(tree[0] == 'ev_call')
+        ids = []
+        get_list_ids(tree[2], ids)
+        assert (len(ids) == len(mapping[tree[1]]['args']))
+        for (arg_bind, arg) in zip(mapping[tree[1]]['args'], ids):
+            binded_args[arg] = (stream_name, tree[1], arg_bind[0], arg_bind[1], index)
+
+
+
+def get_buff_math_binded_args(tree, stream_types, mapping, binded_args) -> None:
+    if tree[0] == 'l_buff_match_exp':
+        get_buff_math_binded_args(tree[1], stream_types, mapping, binded_args)
+        get_buff_math_binded_args(tree[2], stream_types, mapping, binded_args)
+    else:
+        assert(tree[0] == 'buff_match_exp')
+        event_source_name = tree[1]
+        stream_type = stream_types[event_source_name][1]
+        if len(tree) > 3:
+            for i in range(2, len(tree)):
+                if tree[i] != '|':
+                    get_parameters_names(tree[i], event_source_name, mapping[stream_type], binded_args)
+
+def get_events_count(tree):
+    if tree[0] == 'list_ev_calls':
+        return 1 + get_events_count(tree[3])
+    else:
+        assert(tree[0] == 'ev_call')
+        return 1
+
+def get_num_events_to_retrieve(tree, events_to_retrieve) -> None:
+    if tree[0] == 'l_buff_match_exp':
+        get_num_events_to_retrieve(tree[1], events_to_retrieve)
+        get_num_events_to_retrieve(tree[2], events_to_retrieve)
+    else:
+        assert(tree[0] == 'buff_match_exp')
+        event_source_name = tree[1]
+        if len(tree) > 3:
+            for i in range(2, len(tree)):
+                if tree[i] != '|':
+                    count = get_events_count(tree[i])
+                    events_to_retrieve[event_source_name] = count
