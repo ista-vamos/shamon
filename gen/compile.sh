@@ -19,11 +19,11 @@ else
 fi
 
 LDFLAGS=-lpthread
-LIBRARIES="$SHAMONDIR/libshamon-arbiter.a\
-           $SHAMONDIR/libshamon-utils.a\
-           $SHAMONDIR/libshamon-parallel-queue.a\
-           $SHAMONDIR/list.c\
-           $SHAMONDIR/signatures.c\
+LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
+           $SHAMONDIR/core/libshamon-utils.a\
+           $SHAMONDIR/core/libshamon-parallel-queue.a\
+           $SHAMONDIR/core/list.c\
+           $SHAMONDIR/core/signatures.c\
            $SHAMONDIR/shmbuf/libshamon-shmbuf.a\
            $SHAMONDIR/streams/libshamon-streams.a"
 
