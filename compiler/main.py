@@ -32,7 +32,9 @@ arbiter_event_source = get_arbiter_event_source(ast[3])
 
 program = f'''#include "shamon.h"
 #include "mmlib.h"
+#include "monitor.c"
 #include <threads.h>
+#include <stdio.h>
 
 
 struct _EVENT_hole
@@ -58,21 +60,21 @@ thrd_t ARBITER_THREAD;
 
 {declare_arbiter_buffers(ast)}
 // monitor buffer
-shm_arbiter_buffer *monitor_buffer;
+shm_monitor_buffer *monitor_buffer;
 
 {event_sources_thread_funcs(ast[2], streams_to_events_map)}
 {exists_open_streams(ast)}
-bool check_n_events(shm_stream* s, size_t n) {"{"}
+bool check_n_events(shm_arbiter_buffer* b, size_t n) {"{"}
     // checks if there are exactly n elements on a given stream s
     void* e1; size_t i1;
 	void* e2; size_t i2;
 	return shm_arbiter_buffer_peek(b,0, &e1, &i1, &e2, &i2) == n;
 {"}"}
 
-bool are_events_in_head(shm_stream *s, shm_arbiter_buffer *b, size_t ev_size, int event_kinds[], int n_events) {"{"}
+bool are_events_in_head(shm_arbiter_buffer *b, size_t ev_size, int event_kinds[], int n_events) {"{"}
     char* e1; size_t i1;
 	char* e2; size_t i2;
-	int count = shm_arbiter_buffer_peek(b, c_events, &e1, &i1, &e2, &i2);
+	int count = shm_arbiter_buffer_peek(b, n_events, (void **)&e1, &i1,(void**) &e2, &i2);
 	if (count < n_events) {"{"}
 	    return false;
 	{"}"}
@@ -80,7 +82,7 @@ bool are_events_in_head(shm_stream *s, shm_arbiter_buffer *b, size_t ev_size, in
 	int i = 0;
 	while (i < i1) {"{"}
 	    shm_event * ev = (shm_event *) (e1);
-	     if (ev->head.kind != event_kinds[i]) {"{"}
+	     if (ev->kind != event_kinds[i]) {"{"}
 	        return false;
 	    {"}"}
 	    i+=1;
@@ -90,7 +92,7 @@ bool are_events_in_head(shm_stream *s, shm_arbiter_buffer *b, size_t ev_size, in
 	i = 0;
 	while (i < i2) {"{"}
 	    shm_event * ev = (shm_event *) e2;
-	     if (ev->head.kind != event_kinds[i1+i]) {"{"}
+	     if (ev->kind != event_kinds[i1+i]) {"{"}
 	        return false;
 	    {"}"}
 	    i+=1;
@@ -100,12 +102,12 @@ bool are_events_in_head(shm_stream *s, shm_arbiter_buffer *b, size_t ev_size, in
 	return true;
 {"}"}
 
-shm_event * get_event_at_index(char* e1, size_t i1, char* e2_Left, size_t i2_Left, size_t size_event, int element_index) {"{"}
+shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t size_event, int element_index) {"{"}
 	if (element_index < i1) {"{"}
-		return e1 + (element_index*size_event);
+		return (shm_event *) (e1 + (element_index*size_event));
 	{"}"} else {"{"}
 		element_index -=i1;
-		return e2 + (element_index*size_event);
+		return (shm_event *) (e2 + (element_index*size_event));
 	{"}"}
 {"}"}
 
@@ -123,16 +125,19 @@ int main(int argc, char **argv) {"{"}
 {activate_threads(ast)}
 
     // create arbiter thread
-    thrd_create(&ARBITER_THREAD, arbiter);
+    thrd_create(&ARBITER_THREAD, arbiter, 0);
     
     
-{monitor_code(ast[4], streams_to_events_map[arbiter_event_source])}
+{monitor_code(ast[4], streams_to_events_map[arbiter_event_source], arbiter_event_source)}
      
     // destroy event sources
 {destroy_streams(ast)}
     // destroy arbiter buffers
 {destroy_buffers(ast)}
+	// destroy monitor buffer
+	shm_monitor_buffer_destroy(monitor_buffer);
 {"}"}
+
 '''
 
 output_file.write(program)

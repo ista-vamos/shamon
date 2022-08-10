@@ -1,5 +1,11 @@
 # all the function declared here return a string of C-code
+from typing import Any, Dict
 from utils import *
+
+
+class StaticCounter:
+    declarations_counter = 0
+    calls_counter = 0
 
 def events_declaration_structs(tree) -> str:
     if tree[0] == "event_list":
@@ -128,7 +134,7 @@ def activate_threads(ast) -> str:
 
     answer = ""
     for name in event_srcs_names:
-        answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{name});\n"
+        answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{name},0);\n"
 
     return answer
 
@@ -220,6 +226,16 @@ def assign_args(event_name, args, list_expressions, level) -> str:
         answer+=f"{tabs}outevent->cases.{event_name}.{arg[0]} = {expr};\n"
     return answer
 
+def declare_performance_layer_args(event_case: str, mapping_in: Dict[str, Any], ids) -> str:
+    to_declare_ids = []
+    get_expressions(ids, to_declare_ids)
+    assert(len(to_declare_ids) == len(mapping_in['args']))
+    answer = ""
+    args = mapping_in['args']
+    for i in range(len(to_declare_ids)):
+        answer += f"{args[i][1]} {to_declare_ids[i]} = inevent->cases.{event_case}.{args[i][0]} ;\n"
+    return answer
+    
 
 def build_switch_performance_match(tree, mapping_in, mapping_out, level) -> str:
     if tree[0] == 'perf_match1':
@@ -234,6 +250,7 @@ def build_switch_performance_match(tree, mapping_in, mapping_out, level) -> str:
             return f'''
 {tabs}(outevent->head).kind = {mapping_out[performance_action[1]]["index"]};
 {tabs}(outevent->head).id = (inevent->head).id;
+{declare_performance_layer_args(performance_action[1], mapping_in[performance_action[1]], performance_action[2])}
 {assign_args(event_out_name, mapping_out[performance_action[1]]["args"], performance_action[2], level)}'''
     else:
         assert(tree[0] == 'perf_match2')
@@ -295,7 +312,7 @@ def event_sources_thread_funcs(tree, mapping) -> str:
                 printf("Default case executed in thread for event source {stream_name}. Exiting thread...");
                 return 1;
         {"}"}
-        shm_arbiter_buffer_write_finish(b);
+        shm_arbiter_buffer_write_finish(buffer);
         shm_stream_consume(stream, 1);
     {"}"}     
 {"}"}
@@ -311,7 +328,7 @@ def declare_rule_sets(tree):
 
     rule_set_declarations = ""
     for name in rule_set_names:
-        rule_set_declarations += f"int RULE_SET_{name}(int &);\n"
+        rule_set_declarations += f"int RULE_SET_{name}(int *);\n"
     return rule_set_declarations
 
 def exists_open_streams(tree):
@@ -334,34 +351,38 @@ def arbiter_code(tree):
 
     rule_set_invocations = ""
     for name in rule_set_names:
-        rule_set_invocations += f"\tRULE_SET_{name}(arbiter_counter);\n"
+        rule_set_invocations += f"\tRULE_SET_{name}(&arbiter_counter);\n"
 
 
     return f'''int arbiter() {"{"}
     int arbiter_counter = 10;
-    while (exists_open_stream()) {"{"}
+    while (exists_open_streams()) {"{"}
     {rule_set_invocations}\t{"}"}
-    shm_monitor_set_finished();
+    shm_monitor_set_finished(monitor_buffer);
 {"}"}
     '''
 
-def rule_set_streams_condition(tree, mapping, stream_types):
+def rule_set_streams_condition(tree, mapping, stream_types, is_scan=False):
     # output_stream should be the output type of the event source
     if tree[0] == 'l_buff_match_exp':
-        return rule_set_streams_condition(tree[1], mapping, stream_types)+ " && " + \
-               rule_set_streams_condition(tree[2], mapping, stream_types)
+        if not is_scan:
+            return rule_set_streams_condition(tree[1], mapping, stream_types, is_scan)+ " && " + \
+               rule_set_streams_condition(tree[2], mapping, stream_types, is_scan)
+        else:
+            return rule_set_streams_condition(tree[1], mapping, stream_types, is_scan) + rule_set_streams_condition(tree[2], mapping, stream_types, is_scan)
     else:
         assert(tree[0] == 'buff_match_exp')
         stream_name = tree[1]
         if len(tree) == 3:
-
-            if tree[2] == "nothing":
-                return f"check_n_events(EV_SOURCE_{stream_name}, 0)"
-            elif tree[2] == "done":
-                return f"is_{stream_name}_done"
-            else:
-                # check if there are n events
-                return f"check_n_events(EV_SOURCE_{stream_name}, {tree[2]})"
+            if not is_scan:
+                if tree[2] == "nothing":
+                    return f"check_n_events(EV_SOURCE_{stream_name}, 0)"
+                elif tree[2] == "done":
+                    return f"is_{stream_name}_done"
+                else:
+                    # check if there are n events
+                    return f"check_n_events(EV_SOURCE_{stream_name}, {tree[2]})"
+            return []
 
         else:
             assert(len(tree) == 4)
@@ -373,7 +394,11 @@ def rule_set_streams_condition(tree, mapping, stream_types):
             if tree[3] != "|":
                 get_event_kinds(tree[3], event_kinds, mapping[out_type])
             kinds = ",".join([str(x) for x in event_kinds])
-            return f"are_events_in_head(EV_SOURCE_{stream_name}, BUFFER_{stream_name}, sizeof(STREAM_{out_type}_out), [{kinds}], {len(event_kinds)})"
+            if not is_scan:
+                StaticCounter.calls_counter+=1
+                return f"are_events_in_head(BUFFER_{stream_name}, sizeof(STREAM_{out_type}_out), TEMPARR{StaticCounter.calls_counter-1}, {len(event_kinds)})"
+            else:
+                return [event_kinds]
 
 
 def buffer_peeks(binded_args, events_to_retrieve):
@@ -386,7 +411,7 @@ def buffer_peeks(binded_args, events_to_retrieve):
             answer += f'''
                 char* e1_{data[0]}; size_t i1_{data[0]};
 	            char* e2_{data[0]}; size_t i2_{data[0]};
-	            shm_arbiter_buffer_peek(BUFFER_{data[0]}, {events_to_retrieve[data[0]]}, &e1_{data[0]}, &i1_{data[0]}, &e2_{data[0]}, &i2_{data[0]});
+	            shm_arbiter_buffer_peek(BUFFER_{data[0]}, {events_to_retrieve[data[0]]}, (void**)&e1_{data[0]}, &i1_{data[0]},(void**) &e2_{data[0]}, &i2_{data[0]});
             '''
             called_buffers.add(data[0])
     return answer
@@ -398,10 +423,10 @@ def construct_arb_rule_outevent(mapping, binded_args, stream_types, output_ev_so
     get_expressions(raw_args, local_args)
 
     answer = f'''outevent->head.kind = {mapping[output_ev_source][output_event]["index"]};
-    outevent->head.id = arbiter_counter++;
+    outevent->head.id = (*arbiter_counter)++;
     '''
     for (arg, outarg) in zip(local_args, mapping[output_ev_source][output_event]["args"]):
-        answer+= f"outevent->cases.{output_event}.{outarg[0]} = {arg};\n"
+        answer+= f"((STREAM_{output_ev_source}_out *) outevent)->cases.{output_event}.{outarg[0]} = {arg};\n"
     return answer
 
 def process_arb_rule_stmt(tree, mapping, binded_args, stream_types, output_ev_source) -> str:
@@ -456,9 +481,17 @@ def define_binded_args(binded_args, stream_types):
         arg_type = data[3]
         stream_type_out = stream_types[event_source][1]
         index = data[4]
-        answer += f"shm_event * event_for_{arg} = get_event_at_index(e1_{event_source}, i1_{event_source}, e2_{event_source}, " \
-                  f"i2_{event_source}, sizeof(STREAM_{stream_type_out}_out, {index});\n" \
+        answer += f"STREAM_{stream_type_out}_out * event_for_{arg} = (STREAM_{stream_type_out}_out *) get_event_at_index(e1_{event_source}, i1_{event_source}, e2_{event_source}, " \
+                  f"i2_{event_source}, sizeof(STREAM_{stream_type_out}_out), {index});\n" \
                   f"{arg_type} {arg} = event_for_{arg}->cases.{event}.{arg_name};\n\n"
+    return answer
+
+def declare_arrays(scanned_kinds) -> str:
+    answer = ""
+    for kinds in scanned_kinds:
+        s_kinds = [str(x) for x in kinds]
+        answer += f"int TEMPARR{StaticCounter.declarations_counter}[] = {'{'}{','.join(s_kinds)}{'}'};\n"
+        StaticCounter.declarations_counter+=1
     return answer
 
 def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
@@ -472,7 +505,9 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
         get_buff_math_binded_args(tree[1], stream_types, mapping, binded_args)
         events_to_retrieve = dict()
         get_num_events_to_retrieve(tree[1], events_to_retrieve)
+        scanned_conditions = rule_set_streams_condition(tree[1], mapping, stream_types, True)
         return f'''
+        {declare_arrays(scanned_conditions)}
     if ({rule_set_streams_condition(tree[1], mapping, stream_types)}) {"{"}
         if({tree[2]}) {"{"}
             {buffer_peeks(binded_args, events_to_retrieve)}
@@ -490,7 +525,7 @@ def get_code_rule_sets(tree, mapping, stream_types, output_ev_source) -> str:
     else:
         assert(tree[0] == "arbiter_rule_set")
         rule_set_name = tree[1]
-        return f'''int RULE_SET_{rule_set_name}(int &arbiter_counter) {"{"}
+        return f'''int RULE_SET_{rule_set_name}(int *arbiter_counter) {"{"}
     STREAM_{output_ev_source}_out *outevent;   
     {arbiter_rule_code(tree[2], mapping, stream_types, output_ev_source)}
 {"}"}
@@ -504,8 +539,20 @@ def build_rule_set_functions(tree, mapping, stream_types):
 
 # monitor code
 
-def monitor_events_code(tree, possible_events, count_tabs) -> str:
-    # TODO: initialize variable received_event
+def declare_monitor_args(tree, event_name, event_data, count_tabs) -> str:
+    tabs = "\t"*count_tabs
+    ids = []
+    get_list_ids(tree, ids)
+    args = event_data['args']
+    assert(len(ids) == len(args))
+
+    answer = ""
+    for i in range(len(args)):
+        answer += f"{tabs}{args[i][1]} {ids[i]} = received_event->cases.{event_name}.{args[i][0]};\n"
+    return answer
+
+
+def monitor_events_code(tree, stream_name, possible_events, count_tabs) -> str:
     if tree[0] == 'monitor_rule_l':
         return monitor_events_code(tree[1], possible_events, count_tabs) + \
                monitor_events_code(tree[2], possible_events, count_tabs)
@@ -515,6 +562,7 @@ def monitor_events_code(tree, possible_events, count_tabs) -> str:
         tabs = "\t"*count_tabs
         return f'''
 {tabs}if (received_event->head.kind == {possible_events[event]["index"]}) {"{"}
+{declare_monitor_args(tree[2], event, possible_events[event], count_tabs+1)}
 {tabs}  if ({tree[3]}) {"{"}
 {tabs}      {tree[4]}
 {tabs}  {"}"}
@@ -522,16 +570,16 @@ def monitor_events_code(tree, possible_events, count_tabs) -> str:
         '''
 
 
-def monitor_code(tree, possible_events) -> str:
+def monitor_code(tree, possible_events, arbiter_event_source) -> str:
     return f'''
     // monitor
-    shm_event * received_event;
+    STREAM_{arbiter_event_source}_out * received_event;
     while(true) {"{"}
         received_event = fetch_arbiter_stream(monitor_buffer);
         if (received_event == NULL) {"{"}
             break;
         {"}"}
-{monitor_events_code(tree[1], possible_events, 2)}
+{monitor_events_code(tree[1], arbiter_event_source, possible_events, 2)}
     {"}"}
     '''
 
