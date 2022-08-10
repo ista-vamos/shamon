@@ -120,6 +120,8 @@ int main(int argc, char **argv) {"{"}
 {event_sources_conn_code(ast)}
     // activate buffers
 {activate_buffers(ast)}
+	monitor_buffer = shm_monitor_buffer_create(sizeof(STREAM_{arbiter_event_source}_out), 64);
+	shm_monitor_buffer_set_active(monitor_buffer, true);
 
     // create source-events threads
 {activate_threads(ast)}
@@ -135,7 +137,7 @@ int main(int argc, char **argv) {"{"}
     // destroy arbiter buffers
 {destroy_buffers(ast)}
 	// destroy monitor buffer
-	shm_monitor_buffer_destroy(monitor_buffer);
+	// shm_monitor_buffer_destroy(monitor_buffer); TODO: should I call this?
 {"}"}
 
 '''
