@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -x
+set -e
 
 CURDIR="$(pwd)"
 MONITORSRC="$1"
