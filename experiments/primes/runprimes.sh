@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 DIR="$(dirname $0)"
 SOURCESDIR="$DIR/../../sources"
 REGEXSOURCE=$SOURCESDIR/regex
