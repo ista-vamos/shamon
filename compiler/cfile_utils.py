@@ -580,6 +580,7 @@ def monitor_code(tree, possible_events, arbiter_event_source) -> str:
             break;
         {"}"}
 {monitor_events_code(tree[1], arbiter_event_source, possible_events, 2)}
+        shm_monitor_buffer_consume(monitor_buffer, 1);
     {"}"}
     '''
 

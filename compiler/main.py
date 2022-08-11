@@ -121,7 +121,6 @@ int main(int argc, char **argv) {"{"}
     // activate buffers
 {activate_buffers(ast)}
 	monitor_buffer = shm_monitor_buffer_create(sizeof(STREAM_{arbiter_event_source}_out), 64);
-	shm_monitor_buffer_set_active(monitor_buffer, true);
 
     // create source-events threads
 {activate_threads(ast)}
