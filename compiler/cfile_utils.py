@@ -1,6 +1,7 @@
 # all the function declared here return a string of C-code
 from typing import Any, Dict
 from utils import *
+from parser_indices import *
 
 
 class StaticCounter:
@@ -9,7 +10,7 @@ class StaticCounter:
 
 def events_declaration_structs(tree) -> str:
     if tree[0] == "event_list":
-        return events_declaration_structs(tree[1]) + "\n"+ events_declaration_structs(tree[2])
+        return events_declaration_structs(tree[PLIST_BASE_CASE]) + "\n"+ events_declaration_structs(tree[PLIST_TAIL])
     else:
         assert(tree[0] == "event_decl")
         event_name = tree[1]
@@ -33,7 +34,7 @@ typedef struct _EVENT_{event_name} EVENT_{event_name};'''
 
 def event_stream_structs(tree) -> str:
     if tree[0] == "stream_types":
-        return event_stream_structs(tree[1]) +"\n" + event_stream_structs(tree[2])
+        return event_stream_structs(tree[PLIST_BASE_CASE]) +"\n" + event_stream_structs(tree[PLIST_TAIL])
     else:
         assert(tree[0] == "stream_type")
         stream_name = tree[1]
@@ -192,8 +193,8 @@ def process_performance_match(tree) -> str:
 
 def build_drop_funcs_conds(tree, stream_name, mapping) -> str:
     if tree[0] == "perf_layer_list":
-        return build_drop_funcs_conds(tree[1], stream_name, mapping) \
-               + build_drop_funcs_conds(tree[2], stream_name, mapping)
+        return build_drop_funcs_conds(tree[PLIST_BASE_CASE], stream_name, mapping) \
+               + build_drop_funcs_conds(tree[PLIST_TAIL], stream_name, mapping)
     else:
         assert(tree[0] == "perf_layer_rule")
         return f'''if (e->kind == {mapping[tree[1]]["index"]}) {"{"}
@@ -204,7 +205,7 @@ def build_drop_funcs_conds(tree, stream_name, mapping) -> str:
 
 def build_should_keep_funcs(tree, mapping) -> str:
     if tree[0] == 'event_sources':
-        return build_should_keep_funcs(tree[1], mapping) + build_should_keep_funcs(tree[2], mapping)
+        return build_should_keep_funcs(tree[PLIST_BASE_CASE], mapping) + build_should_keep_funcs(tree[PLIST_TAIL], mapping)
     else:
         assert(tree[0] == 'event_source')
         ev_src_name = tree[1]
@@ -264,8 +265,8 @@ def build_switch_performance_match(tree, mapping_in, mapping_out, level) -> str:
 
 def get_stream_switch_cases(ast, mapping_in, mapping_out, level) -> str:
     if ast[0] == 'perf_layer_list':
-        return get_stream_switch_cases(ast[1], mapping_in, mapping_out, level) \
-               + get_stream_switch_cases(ast[2], mapping_in, mapping_out, level)
+        return get_stream_switch_cases(ast[PLIST_BASE_CASE], mapping_in, mapping_out, level) \
+               + get_stream_switch_cases(ast[PLIST_TAIL], mapping_in, mapping_out, level)
     else:
         tabs = "\t"*level
         tabs_plus1 = "\t" * (level+1)
@@ -277,7 +278,8 @@ def get_stream_switch_cases(ast, mapping_in, mapping_out, level) -> str:
 
 def event_sources_thread_funcs(tree, mapping) -> str:
     if tree[0] == "event_sources":
-        return event_sources_thread_funcs(tree[1], mapping) +"\n" + event_sources_thread_funcs(tree[2], mapping)
+        return event_sources_thread_funcs(tree[PLIST_BASE_CASE], mapping) +"\n" \
+               + event_sources_thread_funcs(tree[PLIST_TAIL], mapping)
     else:
         assert(tree[0] == "event_source")
         stream_name = tree[1]
@@ -366,10 +368,11 @@ def rule_set_streams_condition(tree, mapping, stream_types, is_scan=False):
     # output_stream should be the output type of the event source
     if tree[0] == 'l_buff_match_exp':
         if not is_scan:
-            return rule_set_streams_condition(tree[1], mapping, stream_types, is_scan)+ " && " + \
-               rule_set_streams_condition(tree[2], mapping, stream_types, is_scan)
+            return rule_set_streams_condition(tree[PLIST_BASE_CASE], mapping, stream_types, is_scan)+ " && " + \
+               rule_set_streams_condition(tree[PLIST_TAIL], mapping, stream_types, is_scan)
         else:
-            return rule_set_streams_condition(tree[1], mapping, stream_types, is_scan) + rule_set_streams_condition(tree[2], mapping, stream_types, is_scan)
+            return rule_set_streams_condition(tree[PLIST_BASE_CASE], mapping, stream_types, is_scan) \
+                   + rule_set_streams_condition(tree[PLIST_TAIL], mapping, stream_types, is_scan)
     else:
         assert(tree[0] == 'buff_match_exp')
         stream_name = tree[1]
@@ -466,8 +469,8 @@ def process_code_stmt_list(tree, mapping, binded_args, stream_types, output_ev_s
 
 def get_arb_rule_stmt_list_code(tree, mapping, binded_args, stream_types, output_ev_source, events_to_retrieve) -> str:
     if tree[0] == 'arb_rule_stmt_l':
-        return process_code_stmt_list(tree[1], mapping, binded_args, stream_types, output_ev_source, events_to_retrieve) + \
-               get_arb_rule_stmt_list_code(tree[2], mapping, binded_args, stream_types, output_ev_source, events_to_retrieve)
+        return process_code_stmt_list(tree[PLIST_BASE_CASE], mapping, binded_args, stream_types, output_ev_source, events_to_retrieve) + \
+               get_arb_rule_stmt_list_code(tree[PLIST_TAIL], mapping, binded_args, stream_types, output_ev_source, events_to_retrieve)
     else:
         assert(tree[0] == "ccode_statement_l")
         return process_code_stmt_list(tree, mapping, binded_args, stream_types, output_ev_source, events_to_retrieve)
@@ -497,8 +500,8 @@ def declare_arrays(scanned_kinds) -> str:
 def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
     # output_stream should be the output type of the event source
     if tree[0] == "arb_rule_list":
-        return arbiter_rule_code(tree[1], mapping, stream_types, output_ev_source) + \
-               arbiter_rule_code(tree[2], mapping, stream_types, output_ev_source)
+        return arbiter_rule_code(tree[PLIST_BASE_CASE], mapping, stream_types, output_ev_source) + \
+               arbiter_rule_code(tree[PLIST_TAIL], mapping, stream_types, output_ev_source)
     else:
         assert(tree[0] == "arbiter_rule")
         binded_args = dict()
@@ -520,8 +523,8 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
 
 def get_code_rule_sets(tree, mapping, stream_types, output_ev_source) -> str:
     if tree[0] == 'arb_rule_set_l':
-        return get_code_rule_sets(tree[1], mapping, stream_types, output_ev_source) \
-               + get_code_rule_sets(tree[2], mapping, stream_types, output_ev_source)
+        return get_code_rule_sets(tree[PLIST_BASE_CASE], mapping, stream_types, output_ev_source) \
+               + get_code_rule_sets(tree[PLIST_TAIL], mapping, stream_types, output_ev_source)
     else:
         assert(tree[0] == "arbiter_rule_set")
         rule_set_name = tree[1]
@@ -554,8 +557,8 @@ def declare_monitor_args(tree, event_name, event_data, count_tabs) -> str:
 
 def monitor_events_code(tree, stream_name, possible_events, count_tabs) -> str:
     if tree[0] == 'monitor_rule_l':
-        return monitor_events_code(tree[1], possible_events, count_tabs) + \
-               monitor_events_code(tree[2], possible_events, count_tabs)
+        return monitor_events_code(tree[PLIST_BASE_CASE], stream_name, possible_events, count_tabs) + \
+               monitor_events_code(tree[PLIST_TAIL], stream_name, possible_events, count_tabs)
     else:
         assert(tree[0] == "monitor_rule")
         event = tree[1]
