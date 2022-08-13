@@ -32,7 +32,7 @@ arbiter_event_source = get_arbiter_event_source(ast[3])
 
 program = f'''#include "shamon.h"
 #include "mmlib.h"
-#include "monitor.c"
+#include "monitor.h"
 #include <threads.h>
 #include <stdio.h>
 
