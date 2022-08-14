@@ -23,11 +23,11 @@ assert(ast[0] == "main_program")
 output_file = open(output_path, "w")
 
 streams_to_events_map = dict()
-get_stream_to_events_mapping(ast[1], streams_to_events_map )
+get_stream_to_events_mapping(ast[PMAIN_PROGRAM_STREAM_TYPES], streams_to_events_map )
 stream_types : Dict[str, Tuple[str, str]] = dict() # maps an event source to (input_stream_type, output_stream_type)
-get_stream_types(ast[2], stream_types)
+get_stream_types(ast[PMAIN_PROGRAM_EVENT_SOURCES], stream_types)
 
-arbiter_event_source = get_arbiter_event_source(ast[3])
+arbiter_event_source = get_arbiter_event_source(ast[PMAIN_PROGRAM_ARBITER])
 
 
 program = f'''#include "shamon.h"
@@ -43,9 +43,9 @@ struct _EVENT_hole
 {"}"};
 typedef struct _EVENT_hole EVENT_hole;
 
-{event_stream_structs(ast[1])}
+{event_stream_structs(ast[PMAIN_PROGRAM_STREAM_TYPES])}
 
-{build_should_keep_funcs(ast[2], streams_to_events_map)}
+{build_should_keep_funcs(ast[PMAIN_PROGRAM_EVENT_SOURCES], streams_to_events_map)}
 
 int count_event_streams = {get_count_events_sources(ast)};
 
@@ -62,7 +62,7 @@ thrd_t ARBITER_THREAD;
 // monitor buffer
 shm_monitor_buffer *monitor_buffer;
 
-{event_sources_thread_funcs(ast[2], streams_to_events_map)}
+{event_sources_thread_funcs(ast[PMAIN_PROGRAM_EVENT_SOURCES], streams_to_events_map)}
 {exists_open_streams(ast)}
 bool check_n_events(shm_arbiter_buffer* b, size_t n) {"{"}
     // checks if there are exactly n elements on a given stream s
@@ -111,9 +111,9 @@ shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t 
 	{"}"}
 {"}"}
 
-{declare_rule_sets(ast[3])}
-{build_rule_set_functions(ast[3], streams_to_events_map, stream_types)}
-{arbiter_code(ast[3])}
+{declare_rule_sets(ast[PMAIN_PROGRAM_ARBITER])}
+{build_rule_set_functions(ast[PMAIN_PROGRAM_ARBITER], streams_to_events_map, stream_types)}
+{arbiter_code(ast[PMAIN_PROGRAM_ARBITER])}
 int main(int argc, char **argv) {"{"}
     initialize_events(); // Always call this first
     
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {"{"}
     thrd_create(&ARBITER_THREAD, arbiter, 0);
     
     
-{monitor_code(ast[4], streams_to_events_map[arbiter_event_source], arbiter_event_source)}
+{monitor_code(ast[PMAIN_PROGRAM_MONITOR], streams_to_events_map[arbiter_event_source], arbiter_event_source)}
      
     // destroy event sources
 {destroy_streams(ast)}
