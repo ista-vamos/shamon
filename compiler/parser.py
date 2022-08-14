@@ -311,15 +311,15 @@ def p_ccode_statement_list(p):
         p[0] = ("ccode_statement_l", "")
     elif len(p) == 2:
         # CCODE_TOKEN
-        p[0] = ("ccode_statement_l", p[PCODE_STMT_LIST_TOKEN1 ])
+        p[0] = ("ccode_statement_l", p[PCODE_STMT_LIST_TOKEN1])
     elif len(p) == 3:
         # arbiter_rule_stmt ';'
-        p[0] = ("ccode_statement_l", p[PCODE_STMT_LIST_TOKEN1 ], p[PCODE_STMT_LIST_TOKEN2])
+        p[0] = ("ccode_statement_l", p[PCODE_STMT_LIST_TOKEN1], p[PCODE_STMT_LIST_TOKEN2])
     else:
         assert(len(p) == 4)
         # CCODE_TOKEN arbiter_rule_stmt ';'
         # arbiter_rule_stmt ';' CCODE_TOKEN
-        p[0] = ("ccode_statement_l", p[PCODE_STMT_LIST_TOKEN1 ], p[PCODE_STMT_LIST_TOKEN2], p[PCODE_STMT_LIST_TOKEN3])
+        p[0] = ("ccode_statement_l", p[PCODE_STMT_LIST_TOKEN1], p[PCODE_STMT_LIST_TOKEN2], p[PCODE_STMT_LIST_TOKEN3])
 
 
 def p_arbiter_rule_stmt(p):
