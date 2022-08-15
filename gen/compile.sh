@@ -22,6 +22,7 @@ fi
 
 LDFLAGS=-lpthread
 LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
+           $SHAMONDIR/core/libshamon-monitor.a\
            $SHAMONDIR/core/libshamon-utils.a\
            $SHAMONDIR/core/libshamon-parallel-queue.a\
            $SHAMONDIR/core/list.c\
