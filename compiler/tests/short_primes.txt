@@ -42,9 +42,11 @@ arbiter : NumberPairs
 		$$
 		on Left : hole(n) | where $$ true $$
 		$$
+		$drop 1 from Left;
 		$$
 		on Right : hole(n) | where $$ true $$
 		$$
+		$drop 1 from Right;
 		$$
     }
 }
