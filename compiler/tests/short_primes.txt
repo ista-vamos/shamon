@@ -42,11 +42,15 @@ arbiter : NumberPairs
 		$$
 		on Left : hole(n) | where $$ true $$
 		$$
-		$drop 1 from Left;
 		$$
 		on Right : hole(n) | where $$ true $$
 		$$
-		$drop 1 from Right;
+		$$
+		on Left : Prime(n,p) | , Right : done where $$ true $$
+        $$
+		$$
+		on Right : Prime(n,p) | , Left : done where $$ true $$
+        $$
 		$$
     }
 }
