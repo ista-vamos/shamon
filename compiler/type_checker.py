@@ -61,6 +61,8 @@ class TypeChecker:
 
     @staticmethod
     def get_symbol_type(symbol: str) -> str:
+        if symbol == "hole":
+            return EVENT_NAME
         return TypeChecker.symbol_table[symbol]
 
     @staticmethod
@@ -88,7 +90,10 @@ class TypeChecker:
 
     @staticmethod
     def assert_num_args_match(symbol, expected_n):
-        if len(TypeChecker.args_table[symbol]) != expected_n:
+        if symbol == "hole":
+            if expected_n != 1:
+                raise Exception("Event hole takes 1 argument.")
+        elif len(TypeChecker.args_table[symbol]) != expected_n:
             raise Exception(f"Only {expected_n} arguments provided to function {symbol} that receives {len(TypeChecker.args_table[symbol])} arguments.")
 
     @staticmethod
@@ -149,9 +154,68 @@ class TypeChecker:
             TypeChecker.check_perf_layer_list(ast[PPEVENT_SOURCE_PERF_LAYER_LIST],
                                               input_type, output_type)
 
+    @staticmethod
+    def check_list_buff_exprs(ast):
+        if ast[0] == "l_buff_match_exp":
+            TypeChecker.check_arb_rule_stmt_list(ast[PLIST_BASE_CASE], output_type)
+            TypeChecker.check_arb_rule_stmt_list(ast[PLIST_TAIL], output_type)
+        else:
+            assert(ast[0] == "buff_match_exp")
+            if len(ast) == 4:
+                event_source = ast[PPBUFFER_MATCH_EV_NAME]
+                TypeChecker.check_event_calls(ast[PPBUFFER_MATCH_ARG1], event_source)
+                TypeChecker.check_event_calls(ast[PPBUFFER_MATCH_ARG2], event_source)
+                TypeChecker.check_event_calls(ast[PPBUFFER_MATCH_ARG3], event_source)
+
+    @staticmethod
+    def check_event_calls(ast, stream_name):
+        if ast[0] == "list_ev_calls":
+            event = ast[PPLIST_EV_CALL_EV_NAME]
+            TypeChecker.is_event_in_stream(stream_name, event)
+            TypeChecker.check_event_calls(ast[PPLIST_EV_CALL_TAIL], stream_name)
+        elif ast[0] == "ev_call":
+            event = ast[PPLIST_EV_CALL_EV_NAME]
+            TypeChecker.is_event_in_stream(stream_name, event)
+
+    @staticmethod
+    def check_arb_rule_stmt_list(ast, output_type):
+        if ast[0] == "arb_rule_stmt_l":
+            TypeChecker.check_arb_rule_stmt_list(ast[PLIST_BASE_CASE], output_type)
+            TypeChecker.check_arb_rule_stmt_list(ast[PLIST_TAIL], output_type)
+        else:
+            assert(ast[0] == "ccode_statement_l")
+            for i in range(1, len(ast)):
+                if ast[i][0] == "yield":
+                    TypeChecker.is_event_in_stream(output_type, ast[i][PPARB_RULE_STMT_YIELD_EVENT])
+                elif ast[i][0] == "switch":
+                    TypeChecker.assert_symbol_type(ast[i][PPARB_RULE_STMT_SWITCH_ARB_RULE], ARBITER_RULE_SET )
+
+
+
+
+    @staticmethod
+    def check_arbiter_rule_list(ast, output_type):
+        if ast[0] == "arb_rule_list":
+            TypeChecker.check_arbiter_rule_list(ast[PLIST_BASE_CASE], output_type)
+            TypeChecker.check_arbiter_rule_list(ast[PLIST_TAIL], output_type)
+        else:
+            assert(ast[0] == "arbiter_rule")
+            TypeChecker.check_list_buff_exprs(ast[PPARB_RULE_LIST_BUFF_EXPR])
+            TypeChecker.check_arb_rule_stmt_list(ast[PPARB_RULE_STMT_LIST], output_type)
+
+
+    @staticmethod
+    def check_rule_set_list(ast, output_type):
+        if ast[0] == "arb_rule_set_l":
+            TypeChecker.check_rule_set_list(ast[PLIST_BASE_CASE], output_type)
+            TypeChecker.check_rule_set_list(ast[PLIST_TAIL], output_type)
+        else:
+            assert(ast[0] == "arbiter_rule_set")
+            TypeChecker.check_arbiter_rule_list(ast[PPARB_RULE_LIST], output_type)
 
     @staticmethod
     def check_arbiter(ast):
         assert(ast[0] == "arbiter_def")
         output_type = ast[PPARBITER_OUTPUT_TYPE]
+        TypeChecker.check_rule_set_list(ast[PPARBITER_RULE_SET_LIST], output_type)
 

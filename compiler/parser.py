@@ -275,9 +275,9 @@ def p_list_event_calls(p):
     '''
 
     # TODO: what is E^H
-    # TypeChecker.assert_symbol_type(p[1], EVENT_NAME)
-    # list_ids_length = get_count_list_ids(p[3])
-    # TypeChecker.assert_num_args_match(p[1], list_ids_length)
+    TypeChecker.assert_symbol_type(p[PLIST_EV_CALL_EV_NAME], EVENT_NAME)
+    list_ids_length = get_count_list_ids(p[PLIST_EV_CALL_EV_PARAMS])
+    TypeChecker.assert_num_args_match(p[PLIST_EV_CALL_EV_NAME], list_ids_length)
 
     if len(p) == 5:
         p[0] = ("ev_call", p[PLIST_EV_CALL_EV_NAME], p[PLIST_EV_CALL_EV_PARAMS])
@@ -339,11 +339,9 @@ def p_arbiter_rule_stmt(p):
         TypeChecker.assert_num_args_match(p[PARB_RULE_STMT_YIELD_EVENT], count_expr_list)
     elif len(p) == 5:
         p[0] = ("drop", p[PARB_RULE_STMT_DROP_INT], p[PARB_RULE_STMT_DROP_EV_SOURCE])
-
         TypeChecker.assert_symbol_type(p[PARB_RULE_STMT_DROP_EV_SOURCE], EVENT_SOURCE_NAME)
     else:
         assert(p[1] == "switch")
-        # TODO: should I check something here?
         p[0] = ("switch", p[PARB_RULE_STMT_SWITCH_ARB_RULE])
 
 
