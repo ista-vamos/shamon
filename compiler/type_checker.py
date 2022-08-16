@@ -157,8 +157,8 @@ class TypeChecker:
     @staticmethod
     def check_list_buff_exprs(ast):
         if ast[0] == "l_buff_match_exp":
-            TypeChecker.check_arb_rule_stmt_list(ast[PLIST_BASE_CASE], output_type)
-            TypeChecker.check_arb_rule_stmt_list(ast[PLIST_TAIL], output_type)
+            TypeChecker.check_list_buff_exprs(ast[PLIST_BASE_CASE])
+            TypeChecker.check_list_buff_exprs(ast[PLIST_TAIL])
         else:
             assert(ast[0] == "buff_match_exp")
             if len(ast) == 4:
@@ -186,7 +186,9 @@ class TypeChecker:
             assert(ast[0] == "ccode_statement_l")
             for i in range(1, len(ast)):
                 if ast[i][0] == "yield":
-                    TypeChecker.is_event_in_stream(output_type, ast[i][PPARB_RULE_STMT_YIELD_EVENT])
+                    if not TypeChecker.is_event_in_stream(output_type, ast[i][PPARB_RULE_STMT_YIELD_EVENT]):
+                        raise Exception(f"Event {ast[i][PPARB_RULE_STMT_YIELD_EVENT]} does not happen in stream "
+                                        f"{output_type}")
                 elif ast[i][0] == "switch":
                     TypeChecker.assert_symbol_type(ast[i][PPARB_RULE_STMT_SWITCH_ARB_RULE], ARBITER_RULE_SET )
 
