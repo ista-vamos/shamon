@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, Set
 from tokens import reserved
 from utils import *
 
@@ -26,11 +26,29 @@ class TypeChecker:
     args_table: Dict[str, List[str]] = dict() # maps symbol (that represents a function) to a list of the
                                               # types of its arguments
     stream_events_are_primitive: Dict[str, bool] = dict() # maps 'stream type' declaration to the events that are declared inside
+    event_sources_types: Dict[str, Tuple[str, str]] = dict() # ev_source_name -> (input type, output type)
+    stream_types_to_events: Dict[str, Set[str]] = dict() # maps a stream name to the name of events that can happen
+    # in this stream
 
     @staticmethod
     def clean_checker():
         TypeChecker.symbol_table = dict()
         TypeChecker.args_table = dict()
+
+    @staticmethod
+    def get_stream_events(ast):
+        if ast[0] == "stream_types":
+            TypeChecker.get_stream_events(ast[PLIST_BASE_CASE])
+            TypeChecker.get_stream_events(ast[PLIST_TAIL])
+        else:
+            assert(ast[0] == "stream_type")
+            stream_name = ast[PPSTREAM_TYPE_NAME]
+            assert( stream_name in TypeChecker.symbol_table.keys())
+            names = []
+            get_events_names(ast[PPSTREAM_TYPE_EVENT_LIST], names)
+            assert(stream_name not in TypeChecker.stream_types_to_events.keys())
+            TypeChecker.stream_types_to_events[stream_name] = set(names)
+
 
     @staticmethod
     def add_reserved_keywords():
@@ -81,5 +99,59 @@ class TypeChecker:
     @staticmethod
     def insert_event_list(symbol, event_list_tree):
         assert(symbol in TypeChecker.symbol_table.keys())
-
         TypeChecker.stream_events_are_primitive[symbol] = are_all_events_decl_primitive(event_list_tree)
+
+    @staticmethod
+    def is_event_in_stream(stream: str, event_name: str):
+        if event_name == "hole":
+            return True
+        return event_name in TypeChecker.stream_types_to_events[stream]
+
+
+    @staticmethod
+    def check_performance_match(ast, output_type):
+        if ast[0] == "perf_match2":
+            TypeChecker.check_performance_match(ast[PPPERF_MATCH_TRUE_PART], output_type)
+            TypeChecker.check_performance_match(ast[PPPERF_MATCH_FALSE_PART], output_type)
+        else:
+            assert(ast[0] == "perf_match1")
+            perf_action = ast[PPPERF_MATCH_ACTION]
+            output_event = perf_action[PPPERF_ACTION_FORWARD_EVENT]
+            if not TypeChecker.is_event_in_stream(output_type, output_event):
+                raise Exception(f"Event {output_event} does not happen in stream {output_type}.")
+
+
+    @staticmethod
+    def check_perf_layer_list(ast, input_type, output_type):
+        if ast[0] == "perf_layer_list":
+            TypeChecker.check_perf_layer_list(ast[PLIST_BASE_CASE], input_type, output_type)
+            TypeChecker.check_perf_layer_list(ast[PLIST_TAIL], input_type, output_type)
+        else:
+            assert(ast[0] == "perf_layer_rule")
+            if not TypeChecker.is_event_in_stream(input_type, ast[PPPERF_LAYER_EVENT]):
+                raise Exception(f"event {ast[PPPERF_LAYER_EVENT]} does not happen in stream {input_type}.")
+            # we already check right number of arguments at parser.py in p_performance_layer_rule
+
+            # check output types
+            TypeChecker.check_performance_match(ast[PPPERF_LAYER_PERF_MATCH], output_type)
+
+    @staticmethod
+    def check_event_sources_types(ast):
+        if ast[0] == "event_sources":
+            TypeChecker.check_event_sources_types(ast[PLIST_BASE_CASE])
+            TypeChecker.check_event_sources_types(ast[PLIST_TAIL])
+        else:
+            assert(ast[0] == "event_source")
+            event_source = ast[PPEVENT_SOURCE_NAME]
+            input_type = ast[PPEVENT_SOURCE_INPUT_TYPE]
+            output_type = ast[PPEVENT_SOURCE_OUTPUT_TYPE]
+            TypeChecker.event_sources_types[event_source] = (input_type, output_type)
+            TypeChecker.check_perf_layer_list(ast[PPEVENT_SOURCE_PERF_LAYER_LIST],
+                                              input_type, output_type)
+
+
+    @staticmethod
+    def check_arbiter(ast):
+        assert(ast[0] == "arbiter_def")
+        output_type = ast[PPARBITER_OUTPUT_TYPE]
+

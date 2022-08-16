@@ -18,6 +18,10 @@ TypeChecker.add_reserved_keywords()
 ast = parse_program(file)
 assert(ast[0] == "main_program")
 
+# Type checker again
+TypeChecker.get_stream_events(ast[PMAIN_PROGRAM_STREAM_TYPES])
+TypeChecker.check_event_sources_types(ast[PMAIN_PROGRAM_EVENT_SOURCES])
+
 
 # Produce C file
 output_file = open(output_path, "w")

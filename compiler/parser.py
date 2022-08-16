@@ -169,6 +169,8 @@ def p_performance_action(p):
         p[0] = ("perf_act_drop",p[PPERF_ACTION_DROP])
     else:
         TypeChecker.assert_symbol_type(p[PPERF_ACTION_FORWARD_EVENT], EVENT_NAME)
+        length_exprs = get_count_list_expr(p[PPERF_ACTION_FORWARD_EXPRS])
+        TypeChecker.assert_num_args_match(p[PPERF_ACTION_FORWARD_EVENT], length_exprs)
         p[0] = ("perf_act_forward", p[PPERF_ACTION_FORWARD_EVENT], p[PPERF_ACTION_FORWARD_EXPRS])
 
 
