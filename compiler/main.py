@@ -1,5 +1,4 @@
 import sys
-from typing import Dict
 
 from parser import parse_program
 from type_checker import TypeChecker
@@ -22,7 +21,7 @@ assert(ast[0] == "main_program")
 TypeChecker.get_stream_events(ast[PMAIN_PROGRAM_STREAM_TYPES])
 TypeChecker.check_event_sources_types(ast[PMAIN_PROGRAM_EVENT_SOURCES])
 TypeChecker.check_arbiter(ast[PMAIN_PROGRAM_ARBITER])
-
+TypeChecker.check_monitor(ast[PMAIN_PROGRAM_MONITOR])
 
 # Produce C file
 output_file = open(output_path, "w")

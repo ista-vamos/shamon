@@ -235,3 +235,18 @@ class TypeChecker:
         TypeChecker.check_rule_set_list(ast[PPARBITER_RULE_SET_LIST], output_type)
 
 
+    @staticmethod
+    def check_monitor_rule_list(ast):
+        if ast[0] == "monitor_rule_l":
+            TypeChecker.check_monitor_rule_list(ast[PLIST_BASE_CASE], ast[PLIST_TAIL])
+        else:
+            assert(ast[0] == "monitor_rule")
+            event_name = ast[PPMONITOR_RULE_EV_NAME]
+            if not TypeChecker.is_event_in_stream(TypeChecker.arbiter_output_type, event_name):
+                raise Exception(f"Arbiter outputs stream of type {TypeChecker.arbiter_output_type}. "
+                                f"It does not consider event {event_name}.")
+
+    @staticmethod
+    def check_monitor(ast):
+        assert(ast[0] == "monitor_def")
+        TypeChecker.check_monitor_rule_list(ast[PPMONITOR_RULE_LIST])
