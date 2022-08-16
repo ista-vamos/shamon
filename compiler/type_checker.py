@@ -1,4 +1,4 @@
-from typing import Dict, Set
+from typing import Dict, Set, Optional
 from tokens import reserved
 from utils import *
 
@@ -28,6 +28,7 @@ class TypeChecker:
     stream_events_are_primitive: Dict[str, bool] = dict() # maps 'stream type' declaration to the events that are declared inside
     event_sources_types: Dict[str, Tuple[str, str]] = dict() # ev_source_name -> (input type, output type)
     stream_types_to_events: Dict[str, Set[str]] = dict() # maps a stream name to the name of events that can happen
+    arbiter_output_type: Optional[str] = None
     # in this stream
 
     @staticmethod
@@ -161,21 +162,30 @@ class TypeChecker:
             TypeChecker.check_list_buff_exprs(ast[PLIST_TAIL])
         else:
             assert(ast[0] == "buff_match_exp")
-            if len(ast) == 4:
-                event_source = ast[PPBUFFER_MATCH_EV_NAME]
-                TypeChecker.check_event_calls(ast[PPBUFFER_MATCH_ARG1], event_source)
-                TypeChecker.check_event_calls(ast[PPBUFFER_MATCH_ARG2], event_source)
-                TypeChecker.check_event_calls(ast[PPBUFFER_MATCH_ARG3], event_source)
+            event_source = ast[PPBUFFER_MATCH_EV_NAME]
+            for i in range(1, len(ast)):
+                TypeChecker.check_event_calls(ast[i], event_source)
+
+    @staticmethod
+    def is_event_in_event_source(event_source, event, is_input=True):
+        types = TypeChecker.event_sources_types[event_source]
+        if is_input:
+            stream = types[0]
+        else:
+            stream = types[1]
+        return TypeChecker.is_event_in_stream(stream, event)
 
     @staticmethod
     def check_event_calls(ast, stream_name):
         if ast[0] == "list_ev_calls":
             event = ast[PPLIST_EV_CALL_EV_NAME]
-            TypeChecker.is_event_in_stream(stream_name, event)
+            if not TypeChecker.is_event_in_event_source(stream_name, event):
+                raise Exception(f"Event source {stream_name} does not considers event {event}")
             TypeChecker.check_event_calls(ast[PPLIST_EV_CALL_TAIL], stream_name)
         elif ast[0] == "ev_call":
             event = ast[PPLIST_EV_CALL_EV_NAME]
-            TypeChecker.is_event_in_stream(stream_name, event)
+            if not TypeChecker.is_event_in_event_source(stream_name, event):
+                raise Exception(f"Event source {stream_name} does not considers event {event}")
 
     @staticmethod
     def check_arb_rule_stmt_list(ast, output_type):
@@ -185,6 +195,8 @@ class TypeChecker:
         else:
             assert(ast[0] == "ccode_statement_l")
             for i in range(1, len(ast)):
+                if len(ast[i]) == 0:
+                    continue
                 if ast[i][0] == "yield":
                     if not TypeChecker.is_event_in_stream(output_type, ast[i][PPARB_RULE_STMT_YIELD_EVENT]):
                         raise Exception(f"Event {ast[i][PPARB_RULE_STMT_YIELD_EVENT]} does not happen in stream "
@@ -219,5 +231,7 @@ class TypeChecker:
     def check_arbiter(ast):
         assert(ast[0] == "arbiter_def")
         output_type = ast[PPARBITER_OUTPUT_TYPE]
+        TypeChecker.arbiter_output_type = output_type
         TypeChecker.check_rule_set_list(ast[PPARBITER_RULE_SET_LIST], output_type)
+
 
