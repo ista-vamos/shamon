@@ -137,7 +137,9 @@ class MyLexer(object):
         "using": "USING",
         "dynamic": "DYNAMIC",
         "buffer": "BUFFER",
-        "group": "GROUP"
+        "group": "GROUP",
+        "match": "MATCH",
+        "fun" : "FUN"
     }
 
     # Token names.
