@@ -2,11 +2,11 @@ reserved = {
     'if': 'IF',
     'then': 'THEN',
     'else': 'ELSE',
-    'stream': "STREAM",
+    'stream':"STREAM",
     'type': "TYPE",
     'autodrop': "AUTODROP",
     'infinite': "INFINITE",
-    "blocking": "BLOCKING",
+    "blocking" : "BLOCKING",
     'drop': "DROP",
     'forward': "FORWARD",
     "on": "ON",
@@ -25,7 +25,12 @@ reserved = {
     "from": "FROM",
     "round": "ROUND",
     "robin": "ROBIN",
-    "extends": "EXTENDS"
+    "extends": "EXTENDS",
+    "creates": "CREATES",
+    "at": "AT",
+    "most": "MOST",
+    "process": "PROCESS",
+    "using": "USING"
 }
 
 # Token names.

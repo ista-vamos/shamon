@@ -113,22 +113,27 @@ def p_event_source_list(p):
     else:
         p[0] = ('event_sources', p[PLIST_BASE_CASE], p[PLIST_TAIL])
 
-def p_event_source(p):
+def p_stream_processor(p):
     '''
-    event_source : EVENT SOURCE ID ':' ID right_arrow connection_kind ID '{' perf_layer_rule_list '}'
+    stream_processor : STREAM PROCESSOR name_with_args ':' name_with_args right_arrow name_with_args extends_node '{' perf_layer_rule_list '}'
+                 | STREAM PROCESSOR name_with_args ':' name_with_args right_arrow name_with_args '{' perf_layer_rule_list '}'
     '''
+    if len(p) == 11:
+        # STREAM PROCESSOR name_with_args ':' name_with_args right_arrow name_with_args '{' perf_layer_rule_list '}'
+        #   1        2           3         4          5            6           7         8           9           10
 
-    # EVENT SOURCE ID : ID right_arrow connection_kind ID { perf_layer_rule_list }
-    #   1     2     3 4  5      6           7          8  9           10
+        p[0] = ("stream_processor", p[3], p[5], p[7], p[9])
 
-    p[0] = ("event_source", p[PEVENT_SOURCE_NAME], p[PEVENT_SOURCE_INPUT_TYPE], p[PEVENT_CONN_KIND],
-            p[PEVENT_SOURCE_OUTPUT_TYPE], p[PEVENT_SOURCE_PERF_LAYER_LIST])
-
-    TypeChecker.insert_symbol(p[PEVENT_SOURCE_NAME], EVENT_SOURCE_NAME)
-    TypeChecker.assert_symbol_type(p[PEVENT_SOURCE_INPUT_TYPE], STREAM_TYPE_NAME)
-    TypeChecker.assert_symbol_type(p[PEVENT_SOURCE_OUTPUT_TYPE], STREAM_TYPE_NAME)
-    TypeChecker.check_args_are_primitive(p[PEVENT_SOURCE_OUTPUT_TYPE])
-    TypeChecker.check_args_are_primitive(p[PEVENT_SOURCE_INPUT_TYPE])
+        # TypeChecker.insert_symbol(p[PEVENT_SOURCE_NAME], EVENT_SOURCE_NAME)
+        # TypeChecker.assert_symbol_type(p[PEVENT_SOURCE_INPUT_TYPE], STREAM_TYPE_NAME)
+        # TypeChecker.assert_symbol_type(p[PEVENT_SOURCE_OUTPUT_TYPE], STREAM_TYPE_NAME)
+        # TypeChecker.check_args_are_primitive(p[PEVENT_SOURCE_OUTPUT_TYPE])
+        # TypeChecker.check_args_are_primitive(p[PEVENT_SOURCE_INPUT_TYPE])
+    else:
+        assert(len(p) == 12)
+        # STREAM PROCESSOR name_with_args ':' name_with_args right_arrow name_with_args extends_node '{' perf_layer_rule_list '}'
+        #   1        2           3         4          5            6           7              8       9           10
+        p[0] = ("event_source", p[3], p[5], p[7], p[10], p[8])
 
 def p_right_arrow(p):
     '''
@@ -150,18 +155,40 @@ def p_perf_layer_rule_list(p):
 
 def p_performance_layer_rule(p):
     '''
-    perf_layer_rule : ON ID '(' listids ')' performance_match
+    perf_layer_rule : ON name_with_args performance_match
+                    | ON name_with_args CREATES AT MOST INT ID PROCESS USING name_with_args TO connection_kind performance_match
+                    | ON name_with_args CREATES AT MOST INT ID TO connection_kind performance_match
+                    | ON name_with_args CREATES ID PROCESS USING name_with_args TO connection_kind performance_match
+                    | ON name_with_args CREATES ID TO connection_kind performance_match
     '''
 
-    # ON ID ( listids ) performance_match
-    #  1  2  3    4   5          6
+
+    # TypeChecker.assert_symbol_type(p[PPERF_LAYER_EVENT], EVENT_NAME)
+    # length_listids = get_count_list_ids(p[PPERF_LAYER_EV_ARGS])
+    # TypeChecker.assert_num_args_match(p[PPERF_LAYER_EVENT], length_listids)
+
+    if len(p) == 4:
+        p[0] = ("perf_layer_rule", p[2], p[3])
+    elif p[4] == "at":
+        if len(p) == 11:
+            # ON name_with_args CREATES AT MOST INT ID TO connection_kind performance_match
+            # 1        2           3     4   5   6   7  8       9                10
+            p[0] = ("perf_layer_rule", p[2], p[7], p[9], p[10], ("at-most", p[6]))
+        else:
+            # ON name_with_args CREATES AT MOST INT ID PROCESS USING name_with_args TO connection_kind performance_match
+            # 1        2           3     4   5   6   7  8       9                10  11    12                 13
+            p[0] = ("perf_layer_rule", p[2], p[7], p[12], p[13], ("at-most", p[6]), ("process-using", p[10]))
+    elif len(p) == 11:
+        # ON name_with_args CREATES ID PROCESS USING name_with_args TO connection_kind performance_match
+        # 1        2           3    4   5        6         7         8        9               10
+        p[0] = ("perf_layer_rule", p[2], p[4], p[9], p[10], ("process-using", p[7]))
+    else:
+        assert(len(p) == 7)
+        # ON name_with_args CREATES ID TO connection_kind performance_match
+        # 1        2           3    4   5       6               7
+        p[0] = ("perf_layer_rule", p[2], p[4], p[6], p[7])
 
 
-    TypeChecker.assert_symbol_type(p[PPERF_LAYER_EVENT], EVENT_NAME)
-    length_listids = get_count_list_ids(p[PPERF_LAYER_EV_ARGS])
-    TypeChecker.assert_num_args_match(p[PPERF_LAYER_EVENT], length_listids)
-
-    p[0] = ("perf_layer_rule", p[PPERF_LAYER_EVENT], p[PPERF_LAYER_EV_ARGS], p[PPERF_LAYER_PERF_MATCH])
 
 
 def p_performance_match (p):
@@ -182,9 +209,14 @@ def p_performance_action(p):
     '''
     performance_action : DROP
                        | FORWARD ID '(' expression_list ')'
+                       | FORWARD
     '''
     if len(p) == 2:
-        p[0] = ("perf_act_drop",p[PPERF_ACTION_DROP])
+        if p[1] == "drop":
+            p[0] = ("perf_act_drop",p[PPERF_ACTION_DROP])
+        else:
+            assert(p[1] == 'forward')
+            p[0] = ("perf_act_forward",p[PPERF_ACTION_DROP])
     else:
         TypeChecker.assert_symbol_type(p[PPERF_ACTION_FORWARD_EVENT], EVENT_NAME)
         length_exprs = get_count_list_expr(p[PPERF_ACTION_FORWARD_EXPRS])
@@ -401,15 +433,28 @@ def p_monitor_rule(p):
 
 def p_extends_node(p):
     '''
-    extends_node : EXTENDS ID '(' expression_list ')'
-                 | EXTENDS ID
+    extends_node : EXTENDS name_with_args
     '''
+
     if len(p) == 3:
         p[0] = ("extends-node", p[2])
     else:
         assert(len(p) == 6)
         p[0] = ("extends-node", p[2], p[4])
 
+
+
+def p_name_with_args(p):
+    '''
+    name_with_args : ID '(' expression_list ')'
+                   | ID '(' listids ')'
+                   | ID
+    '''
+
+    if len(p) == 2:
+        p[0] = p
+    else:
+        p[0] = ("name-with-args", p[1], p[3])
 
 def p_type(p):
     '''

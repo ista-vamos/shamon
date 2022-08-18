@@ -128,7 +128,13 @@ class MyLexer(object):
         "source": "SOURCE",
         "from": "FROM",
         "round": "ROUND",
-        "robin": "ROBIN"
+        "robin": "ROBIN",
+        "extends": "EXTENDS",
+        "creates": "CREATES",
+        "at": "AT",
+        "most": "MOST",
+        "process": "PROCESS",
+        "using": "USING"
     }
 
     # Token names.
