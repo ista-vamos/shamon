@@ -30,11 +30,30 @@ def p_stream_type_list(p):
 
 def p_stream_type(p):
     '''
-    stream_type : STREAM TYPE ID '{' event_list '}'
+    stream_type : STREAM TYPE ID '(' list_field_decl ')' extends_node '{' event_list '}'
+                | STREAM TYPE ID '(' list_field_decl ')' '{' event_list '}'
+                | STREAM TYPE ID extends_node '{' event_list '}'
+                | STREAM TYPE ID '{' event_list '}'
     '''
     TypeChecker.insert_symbol(p[PSTREAM_TYPE_NAME], STREAM_TYPE_NAME)
     TypeChecker.insert_event_list(p[PSTREAM_TYPE_NAME], p[PSTREAM_TYPE_EVENT_LIST])
-    p[0] = ("stream_type", p[PSTREAM_TYPE_NAME], p[PSTREAM_TYPE_EVENT_LIST])
+    if len(p) == 7:
+        # STREAM TYPE ID '{' event_list '}'
+        p[0] = ("stream_type", p[PSTREAM_TYPE_NAME], p[PSTREAM_TYPE_EVENT_LIST])
+    elif len(p) == 8:
+        # STREAM TYPE ID extends_node '{' event_list '}'
+        #    1     2   3      4        5      6       7
+        p[0] = ("stream_type", p[PSTREAM_TYPE_NAME], p[6], p[4])
+    elif len(p) == 11:
+        # STREAM TYPE ID '(' list_field_decl ')' extends_node '{' event_list '}'
+        #   1      2   3  4         5         6       7        8      9       10
+        p[0] = ("stream_type", p[PSTREAM_TYPE_NAME], p[9], p[5] , p[7])
+    else:
+        # STREAM TYPE ID '(' list_field_decl ')' '{' event_list '}'
+        #   1      2   3  4        5          6   7      8       9
+        assert(len(p) == 10)
+        p[0] = ("stream_type", p[PSTREAM_TYPE_NAME], p[8], p[5])
+
 
 
 def p_event_declaration_list(p):
@@ -379,6 +398,18 @@ def p_monitor_rule(p):
             p[PMONITOR_RULE_CODE])
 
 # END monitor Specification
+
+def p_extends_node(p):
+    '''
+    extends_node : EXTENDS ID '(' expression_list ')'
+                 | EXTENDS ID
+    '''
+    if len(p) == 3:
+        p[0] = ("extends-node", p[2])
+    else:
+        assert(len(p) == 6)
+        p[0] = ("extends-node", p[2], p[4])
+
 
 def p_type(p):
     '''

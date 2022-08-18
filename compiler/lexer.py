@@ -126,7 +126,9 @@ class MyLexer(object):
         "monitor": "MONITOR",
         "event": "EVENT",
         "source": "SOURCE",
-        "from": "FROM"
+        "from": "FROM",
+        "round": "ROUND",
+        "robin": "ROBIN"
     }
 
     # Token names.

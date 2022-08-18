@@ -22,7 +22,10 @@ reserved = {
     "monitor": "MONITOR",
     "event": "EVENT",
     "source": "SOURCE",
-    "from": "FROM"
+    "from": "FROM",
+    "round": "ROUND",
+    "robin": "ROBIN",
+    "extends": "EXTENDS"
 }
 
 # Token names.
