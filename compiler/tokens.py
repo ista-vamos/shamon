@@ -30,7 +30,8 @@ reserved = {
     "at": "AT",
     "most": "MOST",
     "process": "PROCESS",
-    "using": "USING"
+    "using": "USING",
+    "dynamic": "DYNAMIC"
 }
 
 # Token names.

@@ -133,7 +133,7 @@ def p_stream_processor(p):
         assert(len(p) == 12)
         # STREAM PROCESSOR name_with_args ':' name_with_args right_arrow name_with_args extends_node '{' perf_layer_rule_list '}'
         #   1        2           3         4          5            6           7              8       9           10
-        p[0] = ("event_source", p[3], p[5], p[7], p[10], p[8])
+        p[0] = ("stream_processor", p[3], p[5], p[7], p[10], p[8])
 
 def p_right_arrow(p):
     '''
@@ -223,6 +223,40 @@ def p_performance_action(p):
         TypeChecker.assert_num_args_match(p[PPERF_ACTION_FORWARD_EVENT], length_exprs)
         p[0] = ("perf_act_forward", p[PPERF_ACTION_FORWARD_EVENT], p[PPERF_ACTION_FORWARD_EXPRS])
 
+def p_event_source(p):
+    '''
+    event_source : DYNAMIC EVENT SOURCE event_source_decl ':' ID event_source_tail
+                 | EVENT SOURCE event_source_decl ':' ID event_source_tail
+    '''
+
+    if len(p) == 7:
+        p[0] = ('event_source', '', p[3], p[5], p[6])
+    else:
+        assert(len(p) == 8)
+        p[0] = ('event_source', 'dynamic', p[4], p[6], p[7])
+
+
+
+def p_event_source_decl(p):
+    '''
+    event_source_decl : name_with_args
+                      | name_with_args [' INT ']
+    '''
+
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ('event-decl', p[1], p[3])
+
+def p_event_source_tail(p):
+    '''
+    event_source_tail : PROCESS USING name_with_args TO connection_kind
+                      | TO connection_kind
+    '''
+    if len(p) == 3:
+        p[0] = p[2]
+    else:
+        p[0] = ('ev-source-tail', p[5], ('process-using', p[3]))
 
 def p_connection_kind(p):
     '''
@@ -452,7 +486,7 @@ def p_name_with_args(p):
     '''
 
     if len(p) == 2:
-        p[0] = p
+        p[0] = p[1]
     else:
         p[0] = ("name-with-args", p[1], p[3])
 
