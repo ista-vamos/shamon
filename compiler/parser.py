@@ -270,6 +270,23 @@ def p_connection_kind(p):
         p[0] = ('conn_kind', p[PCONN_KIND_NAME], p[PCONN_KIND_INT])
 # END performance layer specifications
 
+# BEGIN advanced features
+def p_buff_group_def(p):
+    '''
+    buff_group_def : BUFFER GROUP ID ':' ID
+    '''
+    p[0] = ('buff_group_def', p[3], p[5])
+
+
+def p_match_fun_def(p):
+    '''
+    match_fun_def : MATCH FUN ID '[' listids ']' '(' listids ')' '=' buffer_match_exp
+    '''
+
+    p[0] = ('match_fun_def', p[3], p[5], p[8], p[11])
+
+# END advanced features
+
 # BEGIN arbiter Specification
 def p_arbiter_definition(p):
     '''

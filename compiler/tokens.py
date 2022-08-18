@@ -31,7 +31,9 @@ reserved = {
     "most": "MOST",
     "process": "PROCESS",
     "using": "USING",
-    "dynamic": "DYNAMIC"
+    "dynamic": "DYNAMIC",
+    "buffer" : "BUFFER",
+    "group" : "GROUP"
 }
 
 # Token names.
