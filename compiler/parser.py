@@ -12,8 +12,7 @@ def p_main_program(p):
     '''
     main_program : components arbiter_definition monitor_definition
     '''
-    p[0] = ('main_program', p[PMAIN_PROGRAM_STREAM_TYPES], p[PMAIN_PROGRAM_EVENT_SOURCES], p[PMAIN_PROGRAM_ARBITER],
-            p[PMAIN_PROGRAM_MONITOR])
+    p[0] = ('main_program', p[1], p[2], p[3])
 
 def p_components(p):
     '''
@@ -35,11 +34,21 @@ def p_component(p):
               | stream_processor
               | buff_group_def
               | match_fun_def
-              | GLOBALS '{' CCODE_TOKEN '}'
-              | STARTUP '{' CCODE_TOKEN '}'
-              | CLEANUP '{' CCODE_TOKEN '}'
+              | GLOBALS '{' arbiter_rule_stmt_list '}'
+              | GLOBALS arbiter_rule_stmt_list
+              | STARTUP '{' arbiter_rule_stmt_list '}'
+              | STARTUP arbiter_rule_stmt_list
+              | CLEANUP '{' arbiter_rule_stmt_list '}'
+              | CLEANUP arbiter_rule_stmt_list
     '''
-    p[0] = p[1]
+
+    if p[1] not in ["globals", "startup", "cleanup"]:
+        p[0] = p[1]
+    else:
+        if len(p) == 3:
+            p[0] = (p[1], p[2])
+        else:
+            p[0] = (p[1], p[3])
 
 # BEGIN event streams
 
@@ -51,25 +60,36 @@ def p_stream_type(p):
                 | STREAM TYPE ID extends_node '{' event_list '}'
                 | STREAM TYPE ID '{' event_list '}'
     '''
-    TypeChecker.insert_symbol(p[PSTREAM_TYPE_NAME], STREAM_TYPE_NAME)
-    TypeChecker.insert_event_list(p[PSTREAM_TYPE_NAME], p[PSTREAM_TYPE_EVENT_LIST])
+    stream_name = p[3]
+    field_declarations = None
     if len(p) == 7:
         # STREAM TYPE ID '{' event_list '}'
         p[0] = ("stream_type", p[PSTREAM_TYPE_NAME], p[PSTREAM_TYPE_EVENT_LIST])
+        events_list = p[5]
     elif len(p) == 8:
         # STREAM TYPE ID extends_node '{' event_list '}'
         #    1     2   3      4        5      6       7
         p[0] = ("stream_type", p[PSTREAM_TYPE_NAME], p[6], p[4])
+        events_list = p[6]
     elif len(p) == 11:
         # STREAM TYPE ID '(' list_field_decl ')' extends_node '{' event_list '}'
         #   1      2   3  4         5         6       7        8      9       10
         p[0] = ("stream_type", p[PSTREAM_TYPE_NAME], p[9], p[5] , p[7])
+        events_list = p[9]
+        field_declarations = p[5]
     else:
         # STREAM TYPE ID '(' list_field_decl ')' '{' event_list '}'
         #   1      2   3  4        5          6   7      8       9
         assert(len(p) == 10)
         p[0] = ("stream_type", p[PSTREAM_TYPE_NAME], p[8], p[5])
+        events_list = p[8]
+        field_declarations = p[5]
+    params = []
+    if field_declarations is not None:
+        get_parameters_types_field_decl(field_declarations, params)
+    TypeChecker.insert_into_args_table(stream_name, STREAM_TYPE_NAME, params)
 
+    TypeChecker.insert_event_list(stream_name, events_list)
 
 
 def p_event_declaration_list(p):
@@ -117,17 +137,6 @@ def p_field_declaration(p):
 # END event streams
 
 # BEGIN performance layer specifications
-
-def p_event_source_list(p):
-    '''
-    event_source_list : event_source
-                      | event_source event_source_list
-    '''
-
-    if len(p) == 2:
-        p[0] = p[PLIST_BASE_CASE]
-    else:
-        p[0] = ('event_sources', p[PLIST_BASE_CASE], p[PLIST_TAIL])
 
 def p_stream_processor(p):
     '''
@@ -241,8 +250,8 @@ def p_performance_action(p):
 
 def p_event_source(p):
     '''
-    event_source : DYNAMIC EVENT SOURCE event_source_decl ':' ID event_source_tail
-                 | EVENT SOURCE event_source_decl ':' ID event_source_tail
+    event_source : DYNAMIC EVENT SOURCE event_source_decl ':' name_with_args  event_source_tail
+                 | EVENT SOURCE event_source_decl ':' name_with_args event_source_tail
     '''
 
     if len(p) == 7:
@@ -256,7 +265,7 @@ def p_event_source(p):
 def p_event_source_decl(p):
     '''
     event_source_decl : name_with_args
-                      | name_with_args [' INT ']
+                      | name_with_args '[' INT ']'
     '''
 
     if len(p) == 2:
@@ -289,17 +298,29 @@ def p_connection_kind(p):
 # BEGIN advanced features
 def p_buff_group_def(p):
     '''
-    buff_group_def : BUFFER GROUP ID ':' ID
+    buff_group_def : BUFFER GROUP ID ':' ID INCLUDES ID '[' ID ']'
+                   | BUFFER GROUP ID ':' ID
     '''
-    p[0] = ('buff_group_def', p[3], p[5])
+
+    if len(p) == 5:
+        p[0] = ('buff_group_def', p[3], p[5])
+    else:
+        p[0] = ('buff_group_def', p[3], p[5], ("includes", p[7], p[9]))
 
 
 def p_match_fun_def(p):
     '''
     match_fun_def : MATCH FUN ID '[' listids ']' '(' listids ')' '=' buffer_match_exp
+                  | MATCH FUN ID '[' ']' '(' listids ')' '=' buffer_match_exp
+                  | MATCH FUN ID '[' listids ']' '('  ')' '=' buffer_match_exp
     '''
-
-    p[0] = ('match_fun_def', p[3], p[5], p[8], p[11])
+    if len(p) == 12:
+        p[0] = ('match_fun_def', p[3], p[11], ('arg1', p[5]), ('arg2',p[8]))
+    elif p[5] == "]":
+        p[0] = ('match_fun_def', p[3], p[10], ('arg2', p[7]))
+    else:
+        assert(len(p) == 11)
+        p[0] = ('match_fun_def', p[3], p[10], ('arg1', p[5]))
 
 # END advanced features
 
@@ -309,7 +330,7 @@ def p_arbiter_definition(p):
     arbiter_definition : ARBITER ':' ID '{' arbiter_rule_set_list '}'
     '''
 
-    TypeChecker.assert_symbol_type(p[ARBITER_OUTPUT_TYPE], STREAM_TYPE_NAME)
+    # TypeChecker.assert_symbol_type(p[ARBITER_OUTPUT_TYPE], STREAM_TYPE_NAME)
     p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], p[ARBITER_RULE_SET_LIST])
 
 
@@ -369,6 +390,8 @@ def p_list_buff_match_exp(p):
 def p_buffer_match_exp(p):
     '''
     buffer_match_exp : ID '[' listids ']' '(' list_var_or_integer ')'
+                     | ID '[' ']' '(' list_var_or_integer ')'
+                     | ID '[' listids ']' '(' ')'
                      | CHOOSE listids FROM ID BY order_expr
                      | ID ':' NOTHING
                      | ID ':' DONE
@@ -379,8 +402,15 @@ def p_buffer_match_exp(p):
 
 
     # TypeChecker.assert_symbol_type(p[PBUFFER_MATCH_EV_NAME], EVENT_SOURCE_NAME)
-    if len(p) == 7:
-        p[0] = ('buff_match_exp', p[1], p[3], p[6])
+    if p[2] == "[":
+        if len(p) == 7:
+            p[0] = ('buff_match_exp', p[1], ('arg1',p[3]), ('arg2', p[6]))
+        else:
+            assert(len(p) == 6)
+            if p[3] == ']':
+                p[0] = ('buff_match_exp', p[1], ('arg2', p[5]))
+            else:
+                p[0] = ('buff_match_exp', p[1], ('arg1', p[3]))
     elif p[1] == "choose":
         p[0] = ('buff_match_exp-choose', p[2], p[4], p[6])
     elif len(p) == 4:
@@ -394,14 +424,18 @@ def p_buffer_match_exp(p):
 def p_order_expr(p):
     '''
     order_expr : ROUND ROBIN
+               | '$' FIELD_ACCESS ';'
+               | '$' ID ';'
                | ID
+               | FIELD_ACCESS
     '''
-
     if len(p) == 3:
         p[0] = ('order_expr', 'round-robin')
+    if p[1] == "$":
+        p[0] = ('order_expr', p[2])
     else:
         assert(len(p) == 2)
-        p[0] = p('order_expr', p[1])
+        p[0] = ('order_expr', p[1])
 
 def p_list_event_calls(p):
     '''
@@ -471,13 +505,13 @@ def p_arbiter_rule_stmt(p):
     if len(p) == 6:
         assert(p[1] == "yield")
         p[0] = ("yield", p[PARB_RULE_STMT_YIELD_EVENT], p[PARB_RULE_STMT_YIELD_EXPRS])
-        TypeChecker.assert_symbol_type(p[PARB_RULE_STMT_YIELD_EVENT], EVENT_NAME)
-        count_expr_list = get_count_list_expr(p[PARB_RULE_STMT_YIELD_EXPRS])
-        TypeChecker.assert_num_args_match(p[PARB_RULE_STMT_YIELD_EVENT], count_expr_list)
+        # TypeChecker.assert_symbol_type(p[PARB_RULE_STMT_YIELD_EVENT], EVENT_NAME)
+        # count_expr_list = get_count_list_expr(p[PARB_RULE_STMT_YIELD_EXPRS])
+        # TypeChecker.assert_num_args_match(p[PARB_RULE_STMT_YIELD_EVENT], count_expr_list)
     elif len(p) == 5:
         p[0] = ("drop", p[PARB_RULE_STMT_DROP_INT], p[PARB_RULE_STMT_DROP_EV_SOURCE])
-        TypeChecker.assert_symbol_type(p[PARB_RULE_STMT_DROP_EV_SOURCE], EVENT_SOURCE_NAME)
-    elif len(p) == 1:
+        # TypeChecker.assert_symbol_type(p[PARB_RULE_STMT_DROP_EV_SOURCE], EVENT_SOURCE_NAME)
+    elif len(p) == 2:
         p[0] = p[1]
     else:
         assert(p[1] == "switch")
@@ -584,13 +618,6 @@ def p_expression(p):
         # assert(len(p) == 4)
         # p[0] = ('binop', p[2], p[1], p[3])
 
-def p_arithmetic_op(p):
-    '''
-    arithmetic_op : OP
-                  | '-'
-    '''
-    p[0] = p[1]
-
 def p_listids(p):
     '''
     listids : ID
@@ -600,6 +627,8 @@ def p_listids(p):
         p[0] = ("ID",p[PLIST_BASE_CASE])
     elif len(p) == 4:
         p[0] = ("listids", p[PLIST_BASE_CASE], p[PLIST_TAIL_WITH_SEP])
+    elif len(p) == 1:
+        p[0] = ('empty')
     else:
         assert(False)
 
@@ -622,6 +651,15 @@ def p_var_or_integer(p):
                    | INT
     '''
     p[0] = p[1]
+
+
+def p_field_access(p):
+    '''
+    FIELD_ACCESS : ID '.' ID
+                 | ID
+    '''
+
+    p[0] = ('field_access', p[1], p[3])
 
 
 # public interface

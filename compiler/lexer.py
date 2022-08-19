@@ -2,7 +2,7 @@ import ply.lex as lex
 
 
 class MyLexer(object):
-    literals = ['[', ']', '{', '}', '(', ')', ':', ';', '=', ',', '>', '-', '|']
+    literals = ['[', ']', '{', '}', '(', ')', ':', ';', '=', ',', '>', '-', '|', '$', '.']
 
     # Declare the state
     states = (
@@ -145,7 +145,9 @@ class MyLexer(object):
         "remove": "REMOVE",
         "globals" : "GLOBALS",
         "startup": "STARTUP",
-        "cleanup": "CLEANUP"
+        "cleanup": "CLEANUP",
+        "processor" : "PROCESSOR",
+        "includes": "INCLUDES"
 
     }
 
@@ -153,17 +155,11 @@ class MyLexer(object):
     tokens = [
         # data types
         "BOOL", "INT", "ID",
-        # operators
-        "OP", "BOOL_OP",
         # ccode
         "CCODE_TOKEN", # matches everything except $
-        "FIELD_ACCESS"
     ] + list(reserved.values())
 
     # Regular expression rules for simple tokens
-    # Maybe this is enough?
-    t_OP = r"(\+|\*|\/|\^)"  # arithmetic operators
-    t_BOOL_OP = r"(and|or)"  # boolean operators
 
     # A regular expression rule with some action code
     # Note addition of self parameter since we're in a class
@@ -178,9 +174,6 @@ class MyLexer(object):
         t.type = self.reserved.get(t.value, 'ID')  # Check for reserved words
         return t
 
-    def t_FIELD_ACCESS(self, t):
-        r'[a-zA-Z_][a-zA-Z_0-9]*\.[a-zA-Z_][a-zA-Z_0-9]*'
-        return t
 
     # Define a rule so we can track line numbers
     def t_newline(self, t):

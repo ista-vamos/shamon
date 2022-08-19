@@ -41,16 +41,15 @@ reserved = {
     "remove": "REMOVE",
     "globals" : "GLOBALS",
     "startup": "STARTUP",
-    "cleanup": "CLEANUP"
+    "cleanup": "CLEANUP",
+    "processor" : "PROCESSOR",
+    "includes" : "INCLUDES"
 }
 
 # Token names.
 tokens = [
     # data types
      "BOOL", "INT", "ID",
-     # operators
-     "OP", "BOOL_OP",
      # ccode
-     "CCODE_TOKEN",
-     "FIELD_ACCESS"
+     "CCODE_TOKEN"
  ] + list(reserved.values())
