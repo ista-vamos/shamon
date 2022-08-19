@@ -2,6 +2,27 @@
 from typing import List, Tuple
 from parser_indices import *
 
+def get_name_with_args(tree):
+    if tree[0] == "name-with-args":
+        args = []
+        if tree[2][0] == 'listids':
+            get_list_ids(tree[2], args)
+        else:
+            get_expressions(tree[2], args)
+        return tree[1], args
+    else:
+        return tree, None
+
+def get_name_args_count(tree):
+    if tree[0] == "name-with-args":
+        args = []
+        if tree[2][0] == 'listids':
+            get_list_ids(tree[2], args)
+        else:
+            get_expressions(tree[2], args)
+        return tree[1], len(args)
+    else:
+        return tree, 0
 
 def get_count_list_ids(tree):
     if tree[0] == 'listids':

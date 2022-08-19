@@ -10,6 +10,9 @@ EVENT_NAME = "event_name"
 STREAM_TYPE_NAME = "stream_type_name"
 EVENT_SOURCE_NAME = "event_source_name"
 ARBITER_RULE_SET = "arbiter_rule_set"
+STREAM_PROCESSOR_NAME = "stream_processor_name"
+BUFFER_GROUP_NAME = "buffer_group_name"
+MATCH_FUN_NAME = "match_fun_name"
 
 '''
 TODO: 
@@ -29,6 +32,7 @@ class TypeChecker:
     event_sources_types: Dict[str, Tuple[str, str]] = dict() # ev_source_name -> (input type, output type)
     stream_types_to_events: Dict[str, Set[str]] = dict() # maps a stream name to the name of events that can happen
     arbiter_output_type: Optional[str] = None
+    logical_copies: Dict[str, int] = dict()
     # in this stream
 
     @staticmethod

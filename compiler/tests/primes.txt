@@ -1,0 +1,65 @@
+stream type Primes(pos : int)
+{
+    Prime(n : int, p : int);
+}
+
+stream type NumberPairs
+{
+    NumberPair(i : int, n : int, m : int);
+}
+
+event source P[2] : Primes(0) process using FORWARD to autodrop(8)
+
+buffer group Ps : Primes includes P[all]
+
+match fun Prio[F,S]() = choose F,S from Ps by $pos;
+
+arbiter : NumberPairs
+{
+    rule set rs
+    {
+        on Left : | Prime(ln, lp) , Right : | Prime(rn, rp) where $$ true $$
+        $$
+            if(ln == rn)
+            {
+                $yield NumberPair(ln, lp, rp);
+                $drop 1 from Left;
+                $drop 1 from Right;
+                intmap_clear(&buf);
+            }
+            else if($Left.pos;<$Right.pos;)
+            {
+                $Left.pos; = process(ln, lp, $Left.pos;, $Right.pos;);
+                $drop 1 from Left;
+            }
+            else
+            {
+                $Right.pos; = process(rn, rp, posns[1], $Left.pos;);
+                $drop 1 from Right;
+            }
+        $$
+        on Prio[F,S](), F : hole(n) | where $$ true $$
+        $$
+            if($F.pos; < $S.pos;)
+            {
+                count -= intmap_remove_upto(&buf, $F.pos;+n;);
+            }
+            $F.pos; += n;
+        $$
+        on Prio[F,S](), F: Prime(n, p) | where $$ true $$
+        $$
+            $F.pos; = process(n, p, $F.pos;, $S.pos;);
+        $$
+    }
+}
+
+monitor
+{
+    on NumberPair(i, n, m) where $$ true $$
+    $$
+        if(n!=m)
+        {
+          printf("Error at index %i: %i is not equal to %i\n", i, n, m);
+        }
+    $$
+}
