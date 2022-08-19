@@ -35,7 +35,13 @@ reserved = {
     "buffer" : "BUFFER",
     "group" : "GROUP",
     "match": "MATCH",
-    "fun": "FUN"
+    "fun": "FUN",
+    "choose": "CHOOSE",
+    "by": "BY",
+    "remove": "REMOVE",
+    "globals" : "GLOBALS",
+    "startup": "STARTUP",
+    "cleanup": "CLEANUP"
 }
 
 # Token names.
@@ -45,5 +51,6 @@ tokens = [
      # operators
      "OP", "BOOL_OP",
      # ccode
-     "CCODE_TOKEN"
+     "CCODE_TOKEN",
+     "FIELD_ACCESS"
  ] + list(reserved.values())

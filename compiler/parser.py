@@ -10,22 +10,38 @@ from parser_indices import *
 # this is the entry point
 def p_main_program(p):
     '''
-    main_program : stream_type_list event_source_list arbiter_definition monitor_definition
+    main_program : components arbiter_definition monitor_definition
     '''
     p[0] = ('main_program', p[PMAIN_PROGRAM_STREAM_TYPES], p[PMAIN_PROGRAM_EVENT_SOURCES], p[PMAIN_PROGRAM_ARBITER],
             p[PMAIN_PROGRAM_MONITOR])
 
+def p_components(p):
+    '''
+    components : component components
+               | component
+    '''
+
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        assert(len(p) == 3)
+        p[0] = ("components", p[1], p[2])
+
+
+def p_component(p):
+    '''
+    component : stream_type
+              | event_source
+              | stream_processor
+              | buff_group_def
+              | match_fun_def
+              | GLOBALS '{' CCODE_TOKEN '}'
+              | STARTUP '{' CCODE_TOKEN '}'
+              | CLEANUP '{' CCODE_TOKEN '}'
+    '''
+    p[0] = p[1]
 
 # BEGIN event streams
-def p_stream_type_list(p):
-    '''
-    stream_type_list : stream_type
-                     | stream_type stream_type_list
-    '''
-    if len(p) == 2:
-        p[0] = p[PLIST_BASE_CASE]
-    else:
-        p[0] = ('stream_types', p[PLIST_BASE_CASE], p[PLIST_TAIL])
 
 
 def p_stream_type(p):
@@ -352,7 +368,8 @@ def p_list_buff_match_exp(p):
 
 def p_buffer_match_exp(p):
     '''
-    buffer_match_exp : ID ':' INT
+    buffer_match_exp : ID '[' listids ']' '(' list_var_or_integer ')'
+                     | CHOOSE listids FROM ID BY order_expr
                      | ID ':' NOTHING
                      | ID ':' DONE
                      | ID ':' '|' list_event_calls
@@ -360,14 +377,31 @@ def p_buffer_match_exp(p):
                      | ID ':' list_event_calls '|' list_event_calls
     '''
 
-    TypeChecker.assert_symbol_type(p[PBUFFER_MATCH_EV_NAME], EVENT_SOURCE_NAME)
-    if len(p) == 4:
+
+    # TypeChecker.assert_symbol_type(p[PBUFFER_MATCH_EV_NAME], EVENT_SOURCE_NAME)
+    if len(p) == 7:
+        p[0] = ('buff_match_exp', p[1], p[3], p[6])
+    elif p[1] == "choose":
+        p[0] = ('buff_match_exp-choose', p[2], p[4], p[6])
+    elif len(p) == 4:
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1])
     elif len(p) == 5:
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1], p[PBUFFER_MATCH_ARG2])
     else:
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1], p[PBUFFER_MATCH_ARG3])
 
+
+def p_order_expr(p):
+    '''
+    order_expr : ROUND ROBIN
+               | ID
+    '''
+
+    if len(p) == 3:
+        p[0] = ('order_expr', 'round-robin')
+    else:
+        assert(len(p) == 2)
+        p[0] = p('order_expr', p[1])
 
 def p_list_event_calls(p):
     '''
@@ -430,6 +464,8 @@ def p_arbiter_rule_stmt(p):
     arbiter_rule_stmt : YIELD ID '(' expression_list ')'
                       | SWITCH TO arbiter_rule
                       | DROP INT FROM ID
+                      | REMOVE ID FROM ID
+                      | FIELD_ACCESS
     '''
 
     if len(p) == 6:
@@ -441,6 +477,8 @@ def p_arbiter_rule_stmt(p):
     elif len(p) == 5:
         p[0] = ("drop", p[PARB_RULE_STMT_DROP_INT], p[PARB_RULE_STMT_DROP_EV_SOURCE])
         TypeChecker.assert_symbol_type(p[PARB_RULE_STMT_DROP_EV_SOURCE], EVENT_SOURCE_NAME)
+    elif len(p) == 1:
+        p[0] = p[1]
     else:
         assert(p[1] == "switch")
         p[0] = ("switch", p[PARB_RULE_STMT_SWITCH_ARB_RULE])
@@ -564,6 +602,26 @@ def p_listids(p):
         p[0] = ("listids", p[PLIST_BASE_CASE], p[PLIST_TAIL_WITH_SEP])
     else:
         assert(False)
+
+
+def p_list_var_or_integer(p):
+    '''
+    list_var_or_integer : var_or_integer list_var_or_integer
+                        | var_or_integer
+    '''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        assert(len(p) == 3)
+        p[0] = ("list_var_or_integer", p[1], p[2])
+
+
+def p_var_or_integer(p):
+    '''
+    var_or_integer : ID
+                   | INT
+    '''
+    p[0] = p[1]
 
 
 # public interface

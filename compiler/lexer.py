@@ -139,7 +139,14 @@ class MyLexer(object):
         "buffer": "BUFFER",
         "group": "GROUP",
         "match": "MATCH",
-        "fun" : "FUN"
+        "fun" : "FUN",
+        "choose": "CHOOSE",
+        "by" : "BY",
+        "remove": "REMOVE",
+        "globals" : "GLOBALS",
+        "startup": "STARTUP",
+        "cleanup": "CLEANUP"
+
     }
 
     # Token names.
@@ -150,6 +157,7 @@ class MyLexer(object):
         "OP", "BOOL_OP",
         # ccode
         "CCODE_TOKEN", # matches everything except $
+        "FIELD_ACCESS"
     ] + list(reserved.values())
 
     # Regular expression rules for simple tokens
@@ -170,7 +178,9 @@ class MyLexer(object):
         t.type = self.reserved.get(t.value, 'ID')  # Check for reserved words
         return t
 
-
+    def t_FIELD_ACCESS(self, t):
+        r'[a-zA-Z_][a-zA-Z_0-9]*\.[a-zA-Z_][a-zA-Z_0-9]*'
+        return t
 
     # Define a rule so we can track line numbers
     def t_newline(self, t):
