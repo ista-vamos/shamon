@@ -1,9 +1,9 @@
 from lexer import MyLexer
 import ply.lex as lex
 from ply.yacc import yacc
-from tokens import *
 from type_checker import *
 from utils import *
+from tokens import *
 from parser_indices import *
 
 
@@ -51,8 +51,6 @@ def p_component(p):
             p[0] = (p[1], p[3])
 
 # BEGIN event streams
-
-
 def p_stream_type(p):
     '''
     stream_type : STREAM TYPE ID '(' list_field_decl ')' extends_node '{' event_list '}'
@@ -63,7 +61,6 @@ def p_stream_type(p):
     stream_name = p[3]
     field_declarations = None
     extends_node = None
-    events_list = None
     if len(p) == 7:
         # STREAM TYPE ID '{' event_list '}'
         events_list = p[5]
@@ -207,14 +204,11 @@ def p_performance_layer_rule(p):
     '''
 
     on_event = p[2]
-    performance_match = None
     creates_at_most = None
     process_using = None
-    connection_kind = None
-    stream_name = None
     if len(p) == 4:
         # ON name_with_args performance_match
-        assert(False)
+        assert False
     elif p[4] == "at":
         if len(p) == 11:
             # ON name_with_args CREATES AT MOST INT ID TO connection_kind performance_match
@@ -319,7 +313,8 @@ def p_event_source_decl(p):
     '''
     event = p[1]
     arg = None
-    if len(p) == 3:
+
+    if len(p) == 5:
         arg = p[3]
     else:
         assert(len(p) == 2)
@@ -346,8 +341,9 @@ def p_event_source_tail(p):
 
     if process_using is not None:
         name, c_args = get_name_args_count(process_using)
-        TypeChecker.assert_symbol_type(name, STREAM_PROCESSOR_NAME)
-        TypeChecker.assert_num_args_match(name, c_args)
+        if name.lower() != "forward":
+            TypeChecker.assert_symbol_type(name, STREAM_PROCESSOR_NAME)
+            TypeChecker.assert_num_args_match(name, c_args)
 
 def p_connection_kind(p):
     '''
@@ -382,6 +378,8 @@ def p_buff_group_def(p):
     TypeChecker.assert_symbol_type(includes, EVENT_SOURCE_NAME)
     if arg_includes is None:
         arg_includes = 0
+    elif arg_includes == "all":
+        arg_includes = -1
     TypeChecker.logical_copies[buffer_group_name] = int(arg_includes)
 
 
@@ -422,6 +420,8 @@ def p_match_fun_def(p):
         ids = []
         get_list_ids(arg1, ids)
         TypeChecker.logical_copies[match_fun_name] = ids # TODO: maybe this should be in a diff. data structure
+        for id in ids:
+            TypeChecker.insert_symbol(id, EVENT_SOURCE_NAME)
 
 # END advanced features
 
@@ -494,11 +494,11 @@ def p_buffer_match_exp(p):
                      | ID '[' ']' '(' list_var_or_integer ')'
                      | ID '[' listids ']' '(' ')'
                      | CHOOSE listids FROM ID BY order_expr
-                     | ID ':' NOTHING
-                     | ID ':' DONE
-                     | ID ':' '|' list_event_calls
-                     | ID ':' list_event_calls '|'
-                     | ID ':' list_event_calls '|' list_event_calls
+                     | event_src_ref ':' NOTHING
+                     | event_src_ref ':' DONE
+                     | event_src_ref ':' '|' list_event_calls
+                     | event_src_ref ':' list_event_calls '|'
+                     | event_src_ref ':' list_event_calls '|' list_event_calls
     '''
 
     if p[2] == "[":
@@ -515,15 +515,26 @@ def p_buffer_match_exp(p):
         p[0] = ('buff_match_exp-choose', p[2], p[4], p[6])
         TypeChecker.assert_symbol_type(p[4], BUFFER_GROUP_NAME)
     elif len(p) == 4:
-        TypeChecker.assert_symbol_type(p[1], EVENT_SOURCE_NAME)
+        TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1])
     elif len(p) == 5:
-        TypeChecker.assert_symbol_type(p[1], EVENT_SOURCE_NAME)
+        TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1], p[PBUFFER_MATCH_ARG2])
     else:
-        TypeChecker.assert_symbol_type(p[1], EVENT_SOURCE_NAME)
+        TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1], p[PBUFFER_MATCH_ARG3])
 
+def p_event_src_ref(p):
+    '''
+    event_src_ref : ID
+                  | ID '[' INT ']'
+    '''
+
+    event = p[1]
+    param = None
+    if len(p) > 2:
+        param = p[3]
+    p[0] = ('event_src_ref', event, param)
 
 def p_order_expr(p):
     '''
@@ -768,8 +779,8 @@ def p_field_access(p):
 
 # public interface
 def parse_program(s: str):
-    L = MyLexer()
-    lexer = lex.lex(object=L)
+    l = MyLexer()
+    lexer = lex.lex(object=l)
     parser = yacc(debug=None)
 
     # Parse an expression

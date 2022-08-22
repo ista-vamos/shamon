@@ -1,6 +1,19 @@
 # general utils
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 from parser_indices import *
+
+
+def get_components_dict(tree, answer):
+    if tree[0] == "components":
+        get_components_dict(tree[1], answer)
+        get_components_dict(tree[2], answer)
+    else:
+        name = tree[0]
+        if name not in answer.keys():
+            answer[name] = []
+
+        answer[name].append(tree)
+    return answer
 
 def get_name_with_args(tree):
     if tree[0] == "name-with-args":
@@ -107,14 +120,13 @@ def get_events_data(tree, events_data) -> None:
         events_data.append(data)
 
 
-def get_stream_to_events_mapping(tree, mapping) -> None:
-    if tree[0] == "stream_types":
-        get_stream_to_events_mapping(tree[PLIST_BASE_CASE], mapping)
-        get_stream_to_events_mapping(tree[PLIST_TAIL], mapping)
-    else:
+def get_stream_to_events_mapping(stream_types) -> Dict[str, Any]:
+    mapping = dict()
+    for tree in stream_types:
         assert(tree[0] == "stream_type")
+        assert(len(tree) == 5)
         events_data = []
-        get_events_data(tree[PPSTREAM_TYPE_EVENT_LIST], events_data)
+        get_events_data(tree[-1], events_data)
         assert(tree[PPSTREAM_TYPE_NAME] not in mapping.keys())
         mapping_events = {}
         for (index, data) in enumerate(events_data):
@@ -122,15 +134,26 @@ def get_stream_to_events_mapping(tree, mapping) -> None:
             mapping_events[data['name']] = data
         mapping_events['hole'] = {'index': 1, 'args':[('n', 'int')]}
         mapping[tree[PPSTREAM_TYPE_NAME]] = mapping_events
+    return mapping
 
-def get_stream_types(tree, mapping) -> None:
-    if tree[0] == "event_sources":
-        get_stream_types(tree[PLIST_BASE_CASE], mapping)
-        get_stream_types(tree[PLIST_TAIL], mapping)
-    else:
+def get_stream_types(event_sources) -> Dict[str, Any]:
+    mapping = dict()
+    for tree in event_sources:
         assert(tree[0] == "event_source")
+        assert(len(tree) == 5)
         assert(tree[PPEVENT_SOURCE_NAME] not in mapping.keys())
-        mapping[tree[PPEVENT_SOURCE_NAME]] = (tree[PPEVENT_SOURCE_INPUT_TYPE], tree[PPEVENT_SOURCE_OUTPUT_TYPE])
+        event_source_tail = tree[-1]
+        input_type, _ = get_name_with_args(tree[-2])
+        assert(event_source_tail[0] == 'ev-source-tail')
+        if event_source_tail[1] == None:
+            output_type = input_type
+        else:
+            output_type, _ = get_name_with_args(event_source_tail[1])
+            if output_type.lower() == "forward":
+                output_type = input_type
+        mapping[tree[PPEVENT_SOURCE_NAME]] = (input_type, output_type)
+    return mapping
+
 
 
 def get_parameters_types_field_decl(tree, params):

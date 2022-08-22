@@ -18,7 +18,7 @@ arbiter : NumberPairs
 {
     rule set rs
     {
-        on Left : | Prime(ln, lp) , Right : | Prime(rn, rp) where $$ true $$
+        on P[0] : | Prime(ln, lp) , P[1] : | Prime(rn, rp) where $$ true $$
         $$
             if(ln == rn)
             {

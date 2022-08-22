@@ -16,23 +16,23 @@ TypeChecker.add_reserved_keywords()
 # Parser
 ast = parse_program(file)
 assert(ast[0] == "main_program")
-
+components = dict()
+get_components_dict(ast[1], components)
 # # Type checker again
 # TypeChecker.get_stream_events(ast[PMAIN_PROGRAM_STREAM_TYPES])
 # TypeChecker.check_event_sources_types(ast[PMAIN_PROGRAM_EVENT_SOURCES])
 # TypeChecker.check_arbiter(ast[PMAIN_PROGRAM_ARBITER])
 # TypeChecker.check_monitor(ast[PMAIN_PROGRAM_MONITOR])
 #
-# # Produce C file
-# output_file = open(output_path, "w")
+# Produce C file
+output_file = open(output_path, "w")
 #
-# streams_to_events_map = dict()
-# get_stream_to_events_mapping(ast[PMAIN_PROGRAM_STREAM_TYPES], streams_to_events_map )
-# stream_types : Dict[str, Tuple[str, str]] = dict() # maps an event source to (input_stream_type, output_stream_type)
-# get_stream_types(ast[PMAIN_PROGRAM_EVENT_SOURCES], stream_types)
-#
-# arbiter_event_source = get_arbiter_event_source(ast[PMAIN_PROGRAM_ARBITER])
-#
+streams_to_events_map = get_stream_to_events_mapping(components["stream_type"])
+
+stream_types : Dict[str, Tuple[str, str]] = get_stream_types(components["event_source"])
+
+arbiter_event_source = get_arbiter_event_source(ast[2])
+
 #
 # program = f'''#include "shamon.h"
 # #include "mmlib.h"
