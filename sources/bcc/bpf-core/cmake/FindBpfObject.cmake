@@ -111,9 +111,12 @@ elseif(BPFOBJECT_BPFTOOL_EXE)
   if(${VMLINUX_result} EQUAL 0)
     set(VMLINUX ${BPFOBJECT_VMLINUX_H})
   else()
+    message(INFO ${BPFOBJECT_BPFTOOL_EXE})
     message(FATAL_ERROR "Failed to dump vmlinux.h from BTF: ${VMLINUX_error}")
   endif()
 endif()
+
+get_filename_component(LIBBPF_TOOLS_DIR ${GENERATED_VMLINUX_DIR} DIRECTORY)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(BpfObject
@@ -163,7 +166,8 @@ macro(bpf_object name input)
   # Build BPF object file
   add_custom_command(OUTPUT ${BPF_O_FILE}
     COMMAND ${BPFOBJECT_CLANG_EXE} -g -O2 -target bpf -D__TARGET_ARCH_${ARCH}
-            ${CLANG_SYSTEM_INCLUDES} -I${GENERATED_VMLINUX_DIR}
+            ${CLANG_SYSTEM_INCLUDES}
+	    -I${GENERATED_VMLINUX_DIR} -I${LIBBPF_TOOLS_DIR}
             -isystem ${LIBBPF_INCLUDE_DIRS} -c ${BPF_C_FILE} -o ${BPF_O_FILE}
     VERBATIM
     DEPENDS ${BPF_C_FILE}
