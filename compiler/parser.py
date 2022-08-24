@@ -358,8 +358,8 @@ def p_connection_kind(p):
 # BEGIN advanced features
 def p_buff_group_def(p):
     '''
-    buff_group_def : BUFFER GROUP ID ':' ID INCLUDES ID '[' ID ']' ORDER BY order_expr
-                   | BUFFER GROUP ID ':' ID INCLUDES ID '[' ID ']'
+    buff_group_def : BUFFER GROUP ID ':' ID INCLUDES ID '[' int_or_all ']' ORDER BY order_expr
+                   | BUFFER GROUP ID ':' ID INCLUDES ID '[' int_or_all ']'
                    | BUFFER GROUP ID ':' ID ORDER BY order_expr
                    | BUFFER GROUP ID ':' ID
     '''
@@ -382,35 +382,37 @@ def p_buff_group_def(p):
     TypeChecker.insert_symbol(buffer_group_name, BUFFER_GROUP_NAME)
     TypeChecker.assert_symbol_type(stream_type, STREAM_TYPE_NAME)
     TypeChecker.assert_symbol_type(includes, EVENT_SOURCE_NAME)
-    if arg_includes is None:
-        arg_includes = 0
-    elif arg_includes == "all":
-        arg_includes = -1
-    # TypeChecker.logical_copies[buffer_group_name] = int(arg_includes)
+    TypeChecker.add_buffer_group_data(p[0])
 
+def p_int_or_all(p):
+    '''
+    int_or_all : INT
+               | ALL
+    '''
+    p[0] = p[1]
 
 def p_match_fun_def(p):
     '''
-    match_fun_def : MATCH FUN ID '[' listids ']' '(' listids ')' '=' buffer_match_exp
-                  | MATCH FUN ID '[' ']' '(' listids ')' '=' buffer_match_exp
-                  | MATCH FUN ID '[' listids ']' '('  ')' '=' buffer_match_exp
+    match_fun_def : MATCH FUN ID '[' listids ']' '(' listids ')' '=' list_buff_match_exp
+                  | MATCH FUN ID '[' ']' '(' listids ')' '=' list_buff_match_exp
+                  | MATCH FUN ID '[' listids ']' '('  ')' '=' list_buff_match_exp
     '''
 
     match_fun_name = p[3]
     arg1 = None
     arg2 = None
     if len(p) == 12:
-        #  MATCH FUN ID '[' listids ']' '(' listids ')' '=' buffer_match_exp
+        #  MATCH FUN ID '[' listids ']' '(' listids ')' '=' list_buff_match_exp
         arg1 = p[5]
         arg2 = p[8]
         buffer_match_expr = p[11]
     elif p[5] == "]":
-        # MATCH FUN ID '[' ']' '(' listids ')' '=' buffer_match_exp
+        # MATCH FUN ID '[' ']' '(' listids ')' '=' list_buff_match_exp
         arg2 = p[7]
         buffer_match_expr = p[10]
     else:
         assert(len(p) == 11)
-        # MATCH FUN ID '[' listids ']' '('  ')' '=' buffer_match_exp
+        # MATCH FUN ID '[' listids ']' '('  ')' '=' list_buff_match_exp
         arg1 = p[5]
         buffer_match_expr = p[10]
     p[0] = ('match_fun_def', match_fun_name, arg1, arg2, buffer_match_expr)
@@ -798,10 +800,18 @@ def p_var_or_integer(p):
 def p_field_access(p):
     '''
     FIELD_ACCESS : ID '.' ID
-                 | ID
+                 | ID '[' INT ']' '.' ID
     '''
 
-    p[0] = ('field_access', p[1], p[3])
+    stream = p[1]
+    index = None
+    field = p[-1]
+    if len(p) > 4:
+        assert(len(p) == 7)
+        index = p[3]
+    else:
+        assert(len(p) == 4)
+    p[0] = ('field_access', stream, index, field)
 
 
 # public interface

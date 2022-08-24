@@ -121,13 +121,12 @@ shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t 
 {"}"}
 {declare_rule_sets(ast[2])}
 
-
+{build_rule_set_functions(ast[2], streams_to_events_map, stream_types)}
 '''
 
 
 # TODO: remember that I removed flags for event sources to know when they finish, instead update the counter (count_event_streams)
 
-# {build_rule_set_functions(ast[2], streams_to_events_map, stream_types)}
 # {arbiter_code(ast[PMAIN_PROGRAM_ARBITER])}
 # int main(int argc, char **argv) {"{"}
 #     initialize_events(); // Always call this first

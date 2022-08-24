@@ -504,7 +504,7 @@ def construct_arb_rule_outevent(mapping, output_ev_source, output_event, raw_arg
         answer+= f"((STREAM_{output_ev_source}_out *) arbiter_outevent)->cases.{output_event}.{outarg[0]} = {arg};\n"
     return answer
 
-def process_arb_rule_stmt(tree, mapping, binded_args, stream_types, output_ev_source) -> str:
+def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
 
     if tree[0] == "switch":
         switch_rule_name = tree[PPARB_RULE_STMT_SWITCH_ARB_RULE]
@@ -519,8 +519,10 @@ def process_arb_rule_stmt(tree, mapping, binded_args, stream_types, output_ev_so
     if tree[0] == "drop":
 
         return f"\tshm_arbiter_buffer_drop(BUFFER_{tree[PPARB_RULE_STMT_DROP_EV_SOURCE]}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
-
     assert(tree[0] == "field_access")
+    target_stream, index, field = tree[1], tree[2], tree[3]
+    return f"{target_stream}_{index}_ARGS->{field};\n"
+
 
 
 
@@ -533,16 +535,16 @@ def process_code_stmt_list(tree, mapping, binded_args, stream_types, output_ev_s
 
     if len(tree) == 3:
         assert(tree[PCODE_STMT_LIST_TOKEN2] == ";")
-        return process_arb_rule_stmt(tree[PCODE_STMT_LIST_TOKEN1], mapping, binded_args, stream_types, output_ev_source)
+        return process_arb_rule_stmt(tree[PCODE_STMT_LIST_TOKEN1], mapping, output_ev_source)
 
     assert(len(tree) == 4)
 
     if tree[PCODE_STMT_LIST_TOKEN3] == ";":
         return tree[PCODE_STMT_LIST_TOKEN1] + "\n" + process_arb_rule_stmt(tree[PCODE_STMT_LIST_TOKEN2], mapping,
-                                                                           binded_args, stream_types, output_ev_source)
+                                                                            output_ev_source)
     else:
         assert(tree[PCODE_STMT_LIST_TOKEN2] == ";")
-        return process_arb_rule_stmt(tree[PCODE_STMT_LIST_TOKEN1], mapping, binded_args, stream_types, output_ev_source) \
+        return process_arb_rule_stmt(tree[PCODE_STMT_LIST_TOKEN1], mapping, output_ev_source) \
                + "\n" + tree[PCODE_STMT_LIST_TOKEN3]
 
 

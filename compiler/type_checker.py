@@ -35,6 +35,8 @@ class TypeChecker:
     arbiter_output_type: Optional[str] = None
     event_sources_data: Dict[str, Dict[str, Any]] = dict()
     stream_processors_data: Dict[str, Dict[str, Any]] = dict()
+    buffer_group_data: Dict[str, Dict[str, Any]] = dict()
+    match_fun_data: Dict[str, Dict[str, Any]] = dict()
 
     @staticmethod
     def clean_checker():
@@ -331,3 +333,41 @@ class TypeChecker:
         }
         assert(name not in TypeChecker.event_sources_data.keys())
         TypeChecker.event_sources_data[name] = data
+
+    @staticmethod
+    def add_buffer_group_data(tree):
+        assert(tree[0] == "buff_group_def")
+        buffer_name, input_stream, includes, arg_includes, order_by = tree[1], tree[2], tree[3], tree[4], tree[5]
+
+        if arg_includes is not None:
+            if arg_includes == "all":
+                arg_includes = TypeChecker.event_sources_data[includes]['copies']
+            arg_includes = int(arg_includes)
+
+        if order_by is not None:
+            assert (order_by[0] == "order_expr")
+            order = order_by[1]
+        else:
+            order = None
+        data = {
+            'in_stream': input_stream,
+            'includes' : includes,
+            'arg_includes': arg_includes,
+            'order': order
+        }
+        assert(buffer_name not in TypeChecker.buffer_group_data.keys())
+        TypeChecker.buffer_group_data[buffer_name] = data
+        print(data)
+
+    @staticmethod
+    def add_match_fun_data(tree):
+        assert(tree[0] == "match_fun_def")
+
+        match_name, output_args, input_args, buffer_match_expr = tree[1], tree[2], tree[3], tree[4]
+        data = {
+            'out_args': output_args,
+            'in_args': input_args,
+            'buffer_match_expr': buffer_match_expr
+        }
+        assert(match_name not in TypeChecker.match_fun_data.keys())
+        TypeChecker.match_fun_data[match_name] = data

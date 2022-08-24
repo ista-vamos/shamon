@@ -46,7 +46,8 @@ reserved = {
     "includes" : "INCLUDES",
     "first": "FIRST",
     "last": "LAST",
-    "order": "ORDER"
+    "order": "ORDER",
+    "all": "ALL"
 }
 
 # Token names.
