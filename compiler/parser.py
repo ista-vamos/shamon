@@ -358,19 +358,27 @@ def p_connection_kind(p):
 # BEGIN advanced features
 def p_buff_group_def(p):
     '''
-    buff_group_def : BUFFER GROUP ID ':' ID INCLUDES ID '[' ID ']'
+    buff_group_def : BUFFER GROUP ID ':' ID INCLUDES ID '[' ID ']' ORDER BY order_expr
+                   | BUFFER GROUP ID ':' ID INCLUDES ID '[' ID ']'
+                   | BUFFER GROUP ID ':' ID ORDER BY order_expr
                    | BUFFER GROUP ID ':' ID
     '''
     buffer_group_name = p[3]
     stream_type = p[5]
     includes = None
     arg_includes = None
-    if len(p) == 11:
-        includes = p[7]
-        arg_includes = p[9]
-    else:
-        assert(len(p) == 6)
-    p[0] = ('buff_group_def', buffer_group_name, stream_type, includes, arg_includes)
+    order_by = None
+    if len(p) > 6:
+        if p[6] == "includes":
+            includes = p[7]
+            arg_includes = p[9]
+            if len(p) > 11:
+                order_by = p[13]
+        else:
+            assert(p[6] == "order")
+            order_by = p[8]
+
+    p[0] = ('buff_group_def', buffer_group_name, stream_type, includes, arg_includes, order_by)
     TypeChecker.insert_symbol(buffer_group_name, BUFFER_GROUP_NAME)
     TypeChecker.assert_symbol_type(stream_type, STREAM_TYPE_NAME)
     TypeChecker.assert_symbol_type(includes, EVENT_SOURCE_NAME)
@@ -705,6 +713,7 @@ def p_name_with_args(p):
     name_with_args : ID '(' expression_list ')'
                    | ID '(' listids ')'
                    | ID
+                   | FORWARD
     '''
 
     if len(p) == 2:

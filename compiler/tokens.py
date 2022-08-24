@@ -45,7 +45,8 @@ reserved = {
     "processor" : "PROCESSOR",
     "includes" : "INCLUDES",
     "first": "FIRST",
-    "last": "LAST"
+    "last": "LAST",
+    "order": "ORDER"
 }
 
 # Token names.

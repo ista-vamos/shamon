@@ -149,8 +149,8 @@ class MyLexer(object):
         "processor" : "PROCESSOR",
         "includes": "INCLUDES",
         "first" : "FIRST",
-        "last": "LAST"
-
+        "last": "LAST",
+        "order": "ORDER"
     }
 
     # Token names.
@@ -173,7 +173,7 @@ class MyLexer(object):
     def t_ID(self, t):
         r'[a-zA-Z_][a-zA-Z_0-9]*'
         # for variable names and keywords
-        t.type = self.reserved.get(t.value, 'ID')  # Check for reserved words
+        t.type = self.reserved.get(t.value.lower(), 'ID')  # Check for reserved words
         return t
 
 
