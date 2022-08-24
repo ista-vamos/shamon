@@ -48,6 +48,7 @@ typedef struct _EVENT_hole EVENT_hole;
 
 // globals code
 {get_globals_code(components["globals"], streams_to_events_map, stream_types)}
+{stream_arg_structs(components["stream_type"])}
 {event_stream_structs(components["stream_type"])}
 
 {build_should_keep_funcs(components["event_source"], streams_to_events_map)}

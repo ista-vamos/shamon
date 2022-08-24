@@ -23,7 +23,30 @@ def get_globals_code(globals, mapping, stream_types) -> str:
         answer += get_arb_rule_stmt_list_code(tree[1], mapping, {}, stream_types, TypeChecker.arbiter_output_type)
     return answer
 
+def get_stream_struct_fields(field_declarations):
+    if field_declarations is None:
+        return ""
+    fields = []
+    get_parameters_types_field_decl(field_declarations, fields)
+    struct_fields = ""
+    for field in fields:
+        struct_fields += f"\t{field['type']} {field['name']};\n"
+    return struct_fields
 
+def stream_arg_structs(stream_types) -> str:
+    answer = ""
+    for tree in stream_types:
+        assert(tree[0] == "stream_type")
+        if tree[2] is not None:
+            struct_fields = get_stream_struct_fields(tree[2])
+            answer += f'''
+// args for stream type {tree[1]}
+struct _{tree[1]}_ARGS {"{"}
+{struct_fields}
+{"}"}
+typedef struct  _{tree[1]}_ARGS  {tree[1]}_ARGS;
+            '''
+    return answer
 def events_declaration_structs(tree) -> str:
     if tree[0] == "event_list":
         return events_declaration_structs(tree[PLIST_BASE_CASE]) + "\n"+ events_declaration_structs(tree[PLIST_TAIL])
@@ -54,6 +77,7 @@ def event_stream_structs(stream_types) -> str:
         union_events = ""
         for name in TypeChecker.stream_types_to_events[stream_name]:
             union_events += f"EVENT_{name} {name};"
+        stream_arg_fields = get_stream_struct_fields(tree[2])
         value = f'''// event declarations for stream type {stream_name}
 {events_declaration_structs(tree[-1])}
 
@@ -63,6 +87,7 @@ struct _STREAM_{stream_name}_in {"{"}
     union {"{"}
         {union_events}
     {"}"}cases;
+{stream_arg_fields}
 {"}"};
 typedef struct _STREAM_{stream_name}_in STREAM_{stream_name}_in;
 
@@ -73,6 +98,7 @@ struct _STREAM_{stream_name}_out {"{"}
         EVENT_hole hole;
         {union_events}
     {"}"}cases;
+{stream_arg_fields}
 {"}"};
 typedef struct _STREAM_{stream_name}_out STREAM_{stream_name}_out;
         '''
@@ -326,7 +352,7 @@ def event_sources_thread_funcs(event_sources, mapping) -> str:
     for tree in event_sources:
         assert(tree[0] == "event_source")
         stream_name = get_event_src_name(tree[2])
-        stream_in_name, _ = get_name_with_args(tree[3])
+        stream_in_name, args_in = get_name_with_args(tree[3])
         stream_tail = tree[-1]
         if stream_tail[1] is not None:
             processor_name, _ = get_name_with_args(stream_tail[1])
@@ -348,7 +374,6 @@ def event_sources_thread_funcs(event_sources, mapping) -> str:
             perf_layer_code = f"memcpy(outevent, inevent, sizeof(STREAM_{stream_out_name}_out));"
         answer+= f'''int PERF_LAYER_{stream_name} (shm_arbiter_buffer *buffer) {"{"}
     shm_stream *stream = shm_arbiter_buffer_stream(buffer);   
-
     STREAM_{stream_in_name}_in *inevent;
     STREAM_{stream_out_name}_out *outevent;   
 

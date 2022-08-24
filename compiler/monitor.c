@@ -42,6 +42,14 @@ STREAM_NumberPairs_out *arbiter_outevent;
          return n+1;
      }
  
+
+// args for stream type Primes
+struct _Primes_ARGS {
+	int pos;
+
+}
+typedef struct  _Primes_ARGS  Primes_ARGS;
+            
 // event declarations for stream type Primes
 struct _EVENT_Prime {
 	int n;
@@ -56,6 +64,8 @@ struct _STREAM_Primes_in {
     union {
         EVENT_Prime Prime;
     }cases;
+	int pos;
+
 };
 typedef struct _STREAM_Primes_in STREAM_Primes_in;
 
@@ -66,6 +76,8 @@ struct _STREAM_Primes_out {
         EVENT_hole hole;
         EVENT_Prime Prime;
     }cases;
+	int pos;
+
 };
 typedef struct _STREAM_Primes_out STREAM_Primes_out;
         // event declarations for stream type NumberPairs
@@ -83,6 +95,7 @@ struct _STREAM_NumberPairs_in {
     union {
         EVENT_NumberPair NumberPair;
     }cases;
+
 };
 typedef struct _STREAM_NumberPairs_in STREAM_NumberPairs_in;
 
@@ -93,6 +106,7 @@ struct _STREAM_NumberPairs_out {
         EVENT_hole hole;
         EVENT_NumberPair NumberPair;
     }cases;
+
 };
 typedef struct _STREAM_NumberPairs_out STREAM_NumberPairs_out;
         
@@ -127,7 +141,6 @@ shm_monitor_buffer *monitor_buffer;
 
 int PERF_LAYER_P (shm_arbiter_buffer *buffer) {
     shm_stream *stream = shm_arbiter_buffer_stream(buffer);   
-
     STREAM_Primes_in *inevent;
     STREAM_Primes_out *outevent;   
 
