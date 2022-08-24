@@ -1,6 +1,7 @@
 from typing import Dict, Set, Optional
 from tokens import reserved
 from utils import *
+from copy import deepcopy
 
 # define some types:
 VARIABLE = "variable"
@@ -32,8 +33,8 @@ class TypeChecker:
     event_sources_types: Dict[str, Tuple[str, str]] = dict() # ev_source_name -> (input type, output type)
     stream_types_to_events: Dict[str, Set[str]] = dict() # maps a stream name to the name of events that can happen
     arbiter_output_type: Optional[str] = None
-    logical_copies: Dict[str, int] = dict()
-    # in this stream
+    event_sources_data: Dict[str, Dict[str, Any]] = dict()
+    stream_processors_data: Dict[str, Dict[str, Any]] = dict()
 
     @staticmethod
     def clean_checker():
@@ -41,16 +42,22 @@ class TypeChecker:
         TypeChecker.args_table = dict()
 
     @staticmethod
-    def get_stream_events(ast):
-        if ast[0] == "stream_types":
-            TypeChecker.get_stream_events(ast[PLIST_BASE_CASE])
-            TypeChecker.get_stream_events(ast[PLIST_TAIL])
-        else:
+    def get_stream_events(stream_types):
+        for ast in stream_types:
             assert(ast[0] == "stream_type")
+            assert(len(ast) == 5)
             stream_name = ast[PPSTREAM_TYPE_NAME]
             assert( stream_name in TypeChecker.symbol_table.keys())
-            names = []
-            get_events_names(ast[PPSTREAM_TYPE_EVENT_LIST], names)
+
+            extends_node = ast[3]
+            if extends_node is not None:
+                assert(extends_node[0] == "extends-node")
+                mother_stream = extends_node[1]
+                assert(mother_stream in TypeChecker.symbol_table.keys())
+                names = deepcopy(TypeChecker.stream_types_to_events[mother_stream])
+            else:
+                names = []
+            get_events_names(ast[-1], names)
             assert(stream_name not in TypeChecker.stream_types_to_events.keys())
             TypeChecker.stream_types_to_events[stream_name] = set(names)
 
@@ -255,3 +262,72 @@ class TypeChecker:
     def check_monitor(ast):
         assert(ast[0] == "monitor_def")
         TypeChecker.check_monitor_rule_list(ast[PPMONITOR_RULE_LIST])
+
+    @staticmethod
+    def get_stream_processors_data(stream_processors):
+
+        for tree in stream_processors:
+            assert(tree[0] == "stream_processor")
+            stream_processor_name, _ = get_name_with_args(tree[1])
+            input_type, input_args = get_name_with_args(tree[2])
+            output_type, output_args = get_name_with_args(tree[3])
+            extends_node = tree[4]
+            if extends_node is None:
+                binded_mother_args = {}
+                perf_layer_rule_list = tree[5]
+            else:
+                mother_stream, mother_args = get_name_with_args(extends_node[1])
+                assert(mother_stream in TypeChecker.stream_processors_data.keys())
+                binded_mother_args = {}
+                binded_mother_args[mother_stream] = {}
+                raw_args = TypeChecker.args_table[mother_stream]
+                assert(len(raw_args) == len(mother_args))
+                for (raw_arg, mother_arg) in zip(raw_args, mother_args):
+                    binded_mother_args[mother_stream]['raw_arg'] = mother_arg
+
+                binded_mother_args.update(TypeChecker.stream_processors_data[mother_stream]['mother_args'])
+
+                perf_layer_rule_list = ("perf_layer_list", TypeChecker.stream_processors_data[mother_stream]["perf_layer_rule_list"], tree[5])
+
+            TypeChecker.stream_processors_data[stream_processor_name] = {
+                'input_type': input_type,
+                'input_args': input_args,
+                'output_type': output_type,
+                'output_args': output_args,
+                'mother_args': binded_mother_args,
+                'perf_layer_rule_list': perf_layer_rule_list
+            }
+
+    @staticmethod
+    def insert_event_source_data(tree):
+        assert(tree[0] == 'event_source')
+        is_dynamic, event_src_declaration, name_arg_input_type, event_src_tail = tree[1], tree[2], tree[3], tree[4]
+
+        # processing event_source_decl
+        assert(event_src_declaration[0] == "event-decl")
+        name, args = get_name_with_args(event_src_declaration[1])
+        copies = event_src_declaration[2]
+
+        # processing input type
+        stream_type_name, stream_args = get_name_with_args(name_arg_input_type)
+
+        # processing tail
+
+        connection_kind = event_src_tail[2]
+        if event_src_tail[1] == None:
+            processor_name = "forward"
+            processor_args = []
+        else:
+            processor_name, processor_args = get_name_with_args(event_src_tail[1])
+
+        data = {
+            'copies': copies,
+            'args': args,
+            'input_stream_type': stream_type_name,
+            'input_stream_args': stream_args,
+            'procesor_name' : processor_name,
+            'processor_args' : processor_args,
+            'connection_kind': connection_kind
+        }
+        assert(name not in TypeChecker.event_sources_data.keys())
+        TypeChecker.event_sources_data[name] = data

@@ -77,7 +77,7 @@ def is_primitive_type(type_ : str):
     answer = answer or type_ == "double"
     return answer
 
-def is_type_primitive(tree):
+def is_type_primitive(tree) -> bool:
     if tree[0] == 'type':
         return is_primitive_type(tree[PTYPE_DATA])
     else:
@@ -86,6 +86,7 @@ def is_type_primitive(tree):
 
 
 # event streams utils
+
 
 def get_events_names(tree, names) -> None:
     if tree[0] == "event_list":
@@ -141,7 +142,10 @@ def get_stream_types(event_sources) -> Dict[str, Any]:
     for tree in event_sources:
         assert(tree[0] == "event_source")
         assert(len(tree) == 5)
-        assert(tree[PPEVENT_SOURCE_NAME] not in mapping.keys())
+        event_decl = tree[2]
+        assert(event_decl[0] == "event-decl")
+        event_source_name = event_decl[1]
+        assert(event_source_name not in mapping.keys())
         event_source_tail = tree[-1]
         input_type, _ = get_name_with_args(tree[-2])
         assert(event_source_tail[0] == 'ev-source-tail')
@@ -151,7 +155,7 @@ def get_stream_types(event_sources) -> Dict[str, Any]:
             output_type, _ = get_name_with_args(event_source_tail[1])
             if output_type.lower() == "forward":
                 output_type = input_type
-        mapping[tree[PPEVENT_SOURCE_NAME]] = (input_type, output_type)
+        mapping[event_source_name] = (input_type, output_type)
     return mapping
 
 
@@ -163,7 +167,7 @@ def get_parameters_types_field_decl(tree, params):
         get_parameters_types_field_decl(tree[PLIST_TAIL], params)
     else:
         assert (tree[0] == 'field_decl')
-        params.append(tree[PPFIELD_TYPE])
+        params.append({"name": tree[1], "type": tree[PPFIELD_TYPE][1], "is_primitive" : is_type_primitive(tree[PPFIELD_TYPE])})
 
 
 def get_parameters_names_field_decl(tree, params):
@@ -175,6 +179,10 @@ def get_parameters_names_field_decl(tree, params):
         assert (tree[0] == 'field_decl')
         params.append(tree[PPFIELD_NAME])
 
+def get_event_src_name(tree):
+    assert(tree[0] == "event-decl")
+    name, _ = get_name_with_args(tree[1])
+    return name
 
 def are_all_events_decl_primitive(tree):
     if tree[0] == 'event_list':
@@ -184,19 +192,32 @@ def are_all_events_decl_primitive(tree):
         params = []
         get_parameters_types_field_decl(tree[PPEVENT_PARAMS_LIST], params)
         for param in params:
-            if not is_type_primitive(param):
+            if not param["is_primitive"]:
                 return False
         return True
 
 
 # Performance Layer utils
-def get_event_sources_names(tree, names) -> None:
-    if tree[0] == 'event_sources':
-        get_event_sources_names(tree[PLIST_BASE_CASE], names)
-        get_event_sources_names(tree[PLIST_TAIL], names)
-    else:
+def get_event_sources_names(event_sources, names) -> None:
+    for tree in event_sources:
         assert(tree[0] == 'event_source')
-        names.append(tree[PPEVENT_SOURCE_NAME])
+        event_src_declaration = tree[2]
+        assert(event_src_declaration[0] == "event-decl")
+        name, _ = get_name_with_args(event_src_declaration[1])
+        names.append(name)
+
+def get_event_sources_copies(event_sources):
+    result = []
+    for tree in event_sources:
+        assert (tree[0] == 'event_source')
+        event_src_declaration = tree[2]
+        copies = 0
+        assert (event_src_declaration[0] == "event-decl")
+        name, _ = get_name_with_args(event_src_declaration[1])
+        if event_src_declaration[2] is not None:
+            copies = int(event_src_declaration[2])
+        result.append((name, copies))
+    return result
 
 def get_buffer_sizes(tree, buff_sizes) -> None:
     if tree[0] == 'event_sources':
@@ -267,13 +288,20 @@ def get_buff_math_binded_args(tree, stream_types, mapping, binded_args) -> None:
         get_buff_math_binded_args(tree[PLIST_BASE_CASE], stream_types, mapping, binded_args)
         get_buff_math_binded_args(tree[PLIST_TAIL], stream_types, mapping, binded_args)
     else:
-        assert(tree[0] == 'buff_match_exp')
-        event_source_name = tree[PPBUFFER_MATCH_EV_NAME]
-        stream_type = stream_types[event_source_name][1]
-        if len(tree) > 3:
-            for i in range(2, len(tree)):
-                if tree[i] != '|':
-                    get_parameters_names(tree[i], event_source_name, mapping[stream_type], binded_args)
+        if tree[0] == "buff_match_exp":
+            print("stream_types",stream_types)
+            event_src_ref = tree[PPBUFFER_MATCH_EV_NAME]
+            assert(event_src_ref[0] == "event_src_ref")
+            event_source_name =  event_src_ref[1]
+            stream_type = stream_types[event_source_name][1]
+            if len(tree) > 3:
+                for i in range(2, len(tree)):
+                    if tree[i] != '|':
+                        get_parameters_names(tree[i], event_source_name, mapping[stream_type], binded_args)
+        else:
+            # raise Exception("Not implemented")
+            pass
+
 
 def get_events_count(tree):
     if tree[0] == 'list_ev_calls':
@@ -287,11 +315,14 @@ def get_num_events_to_retrieve(tree, events_to_retrieve) -> None:
         get_num_events_to_retrieve(tree[PLIST_BASE_CASE], events_to_retrieve)
         get_num_events_to_retrieve(tree[PLIST_TAIL], events_to_retrieve)
     else:
-        assert(tree[0] == 'buff_match_exp')
-        event_source_name = tree[PPBUFFER_MATCH_EV_NAME]
-        if len(tree) > 3:
-            for i in range(2, len(tree)):
-                if tree[i] != '|':
-                    count = get_events_count(tree[i])
-                    events_to_retrieve[event_source_name] = count
-
+        if tree[0] == "buff_match_exp":
+            event_src_ref = tree[PPBUFFER_MATCH_EV_NAME]
+            assert(event_src_ref[0] == "event_src_ref")
+            event_source_name = event_src_ref[1]
+            if len(tree) > 3:
+                for i in range(2, len(tree)):
+                    if tree[i] != '|':
+                        count = get_events_count(tree[i])
+                        events_to_retrieve[event_source_name] = count
+        else:
+            raise Exception("buffer match exp-[option] not implemented")

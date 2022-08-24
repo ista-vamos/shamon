@@ -2,11 +2,27 @@
 from typing import Any, Dict
 from utils import *
 from parser_indices import *
+from type_checker import TypeChecker
 
 
 class StaticCounter:
     declarations_counter = 0
     calls_counter = 0
+
+def get_pure_c_code(component) -> str:
+    answer = ""
+    for tree in component:
+        assert(tree[0] == "startup" or tree[0] == "cleanup")
+        answer += tree[1]
+    return answer
+
+def get_globals_code(globals, mapping, stream_types) -> str:
+    answer = f"STREAM_{TypeChecker.arbiter_output_type}_out *arbiter_outevent;\n"
+    for tree in globals:
+        assert(tree[0] == "globals")
+        answer += get_arb_rule_stmt_list_code(tree[1], mapping, {}, stream_types, TypeChecker.arbiter_output_type)
+    return answer
+
 
 def events_declaration_structs(tree) -> str:
     if tree[0] == "event_list":
@@ -14,38 +30,32 @@ def events_declaration_structs(tree) -> str:
     else:
         assert(tree[0] == "event_decl")
         event_name = tree[PPEVENT_NAME]
-        names = []
-        get_parameters_names_field_decl(tree[PPEVENT_PARAMS_LIST], names)
-        field_types = []
-        get_parameters_types_field_decl(tree[PPEVENT_PARAMS_LIST], field_types)
+        fields = []
+        get_parameters_types_field_decl(tree[PPEVENT_PARAMS_LIST], fields)
         struct_fields = ""
-
-        for (index, (name, f_type)) in enumerate(zip(names, field_types)):
-            is_last = index == len(names)-1
+        index = 0
+        for data in fields:
+            is_last = index == len(data)-1
             if not is_last:
-                struct_fields += f"\t{f_type[1]} {name};\n"
+                struct_fields += f"\t{data['type']} {data['name']};\n"
             else:
-                struct_fields += f"\t{f_type[1]} {name};"
+                struct_fields += f"\t{data['type']} {data['name']};"
 
         return f'''struct _EVENT_{event_name} {"{"}
 {struct_fields}
 {"}"};
 typedef struct _EVENT_{event_name} EVENT_{event_name};'''
 
-def event_stream_structs(tree) -> str:
-    if tree[0] == "stream_types":
-        return event_stream_structs(tree[PLIST_BASE_CASE]) +"\n" + event_stream_structs(tree[PLIST_TAIL])
-    else:
+def event_stream_structs(stream_types) -> str:
+    answer = ""
+    for tree in stream_types:
         assert(tree[0] == "stream_type")
         stream_name = tree[PPSTREAM_TYPE_NAME]
-
-        events_names = []
-        get_events_names(tree[PPSTREAM_TYPE_EVENT_LIST], events_names)
         union_events = ""
-        for name in events_names:
+        for name in TypeChecker.stream_types_to_events[stream_name]:
             union_events += f"EVENT_{name} {name};"
         value = f'''// event declarations for stream type {stream_name}
-{events_declaration_structs(tree[PPSTREAM_TYPE_EVENT_LIST])}
+{events_declaration_structs(tree[-1])}
 
 // input stream for stream type {stream_name}
 struct _STREAM_{stream_name}_in {"{"}
@@ -66,12 +76,12 @@ struct _STREAM_{stream_name}_out {"{"}
 {"}"};
 typedef struct _STREAM_{stream_name}_out STREAM_{stream_name}_out;
         '''
-        return value
+        answer += value
+    return answer
 
-def declare_event_sources(ast):
-    assert(ast[0] == "main_program")
+def declare_event_sources(event_sources):
     event_srcs_names = []
-    get_event_sources_names(ast[PMAIN_PROGRAM_EVENT_SOURCES], event_srcs_names)
+    get_event_sources_names(event_sources, event_srcs_names)
     answer = ""
     for name in event_srcs_names:
         answer += f"shm_stream *EV_SOURCE_{name};\n"
@@ -86,11 +96,11 @@ def declare_event_sources_flags(ast):
         answer += f"bool is_{name}_done;\n"
     return answer
 
-def get_count_events_sources(ast):
-    assert (ast[0] == "main_program")
-    event_srcs_names = []
-    get_event_sources_names(ast[PMAIN_PROGRAM_EVENT_SOURCES], event_srcs_names)
-    return len(event_srcs_names)
+def get_count_events_sources():
+    total_count = 0
+    for (event_source, data) in TypeChecker.event_sources_data.items():
+        total_count += data['copies']
+    return total_count
 
 def event_sources_conn_code(ast) -> str:
     assert (ast[0] == "main_program")
@@ -111,10 +121,9 @@ def event_sources_conn_code(ast) -> str:
 
     return answer
 
-def declare_evt_srcs_threads(ast) -> str:
-    assert (ast[0] == "main_program")
+def declare_evt_srcs_threads(event_sources) -> str:
     event_srcs_names = []
-    get_event_sources_names(ast[PMAIN_PROGRAM_EVENT_SOURCES], event_srcs_names)
+    get_event_sources_names(event_sources, event_srcs_names)
 
     answer = ""
     for name in event_srcs_names:
@@ -123,16 +132,19 @@ def declare_evt_srcs_threads(ast) -> str:
     return answer
 
 
-def declare_arbiter_buffers(ast) -> str:
+def declare_arbiter_buffers(components, ast) -> str:
     assert (ast[0] == "main_program")
-    event_srcs_names = []
-    get_event_sources_names(ast[PMAIN_PROGRAM_EVENT_SOURCES], event_srcs_names)
+    event_srcs_names = get_event_sources_copies(components["event_source"])
 
     answer = ""
-    for name in event_srcs_names:
-        answer += f"// Arbiter buffer for event source {name}\n"
-        answer += f"shm_arbiter_buffer *BUFFER_{name};\n\n"
-
+    for (name, copies) in event_srcs_names:
+        if copies == 0:
+            answer += f"// Arbiter buffer for event source {name}\n"
+            answer += f"shm_arbiter_buffer *BUFFER_{name};\n\n"
+        else:
+            for i in range(copies):
+                answer += f"// Arbiter buffer for event source {name} ({i})\n"
+                answer += f"shm_arbiter_buffer *BUFFER_{name}{i};\n\n"
     return answer
 
 def activate_threads(ast) -> str:
@@ -207,25 +219,45 @@ def build_drop_funcs_conds(tree, stream_name, mapping) -> str:
                + build_drop_funcs_conds(tree[PLIST_TAIL], stream_name, mapping)
     else:
         assert(tree[0] == "perf_layer_rule")
-        return f'''if (e->kind == {mapping[tree[PPPERF_LAYER_EVENT]]["index"]}) {"{"}
-        {process_performance_match(tree[PPPERF_LAYER_PERF_MATCH])}
+        event_name, _ = get_name_with_args(tree[1])
+        creates_at_most = tree[2]
+        if creates_at_most is not None:
+            raise Exception("creates at most not implemented in stream processors")
+        # TODO implement process using
+        return f'''if (e->kind == {mapping[tree[event_name]]["index"]}) {"{"}
+        {process_performance_match(tree[-1])}
     {"}"}
         '''
 
 
-def build_should_keep_funcs(tree, mapping) -> str:
-    if tree[0] == 'event_sources':
-        return build_should_keep_funcs(tree[PLIST_BASE_CASE], mapping) + build_should_keep_funcs(tree[PLIST_TAIL], mapping)
-    else:
+def build_should_keep_funcs(event_sources, mapping) -> str:
+    answer = ""
+    for tree in event_sources:
         assert(tree[0] == 'event_source')
-        ev_src_name = tree[PPEVENT_SOURCE_NAME]
-        stream_type = tree[PPEVENT_SOURCE_INPUT_TYPE]
-        performance_layer_rule_list = tree[PPEVENT_SOURCE_PERF_LAYER_LIST]
-        return f'''bool SHOULD_KEEP_{ev_src_name}(shm_stream * s, shm_event * e) {"{"}
+        ev_src_name = get_event_src_name(tree[2])
+        stream_type, _ = get_name_with_args(tree[3])
+
+        event_src_tail = tree[4]
+        process_using = event_src_tail[1]
+        if process_using is not None:
+            name, _ = get_name_with_args(process_using)
+
+        else:
+            name = "forward"
+
+        if name.lower() == "forward":
+            answer += f'''bool SHOULD_KEEP_{ev_src_name}(shm_stream * s, shm_event * e) {"{"}
+    return true;
+{"}"}
+            '''
+        else:
+            performance_layer_rule_list = TypeChecker.stream_processors_data[name]["perf_layer_rule_list"]
+            answer += f'''bool SHOULD_KEEP_{ev_src_name}(shm_stream * s, shm_event * e) {"{"}
     {build_drop_funcs_conds(performance_layer_rule_list, stream_type, mapping[stream_type])}
     return false;
 {"}"}
-'''
+                        '''
+    return answer
 
 
 def assign_args(event_name, args, list_expressions, level) -> str:
@@ -286,20 +318,35 @@ def get_stream_switch_cases(ast, mapping_in, mapping_out, level) -> str:
         assert(ast[0] == 'perf_layer_rule')
         return f'''
 {tabs}case {mapping_in[ast[PPPERF_LAYER_EVENT]]["index"]}:
-{build_switch_performance_match(ast[PPPERF_LAYER_PERF_MATCH], mapping_in, mapping_out, level=level+1)}
+{build_switch_performance_match(ast[-1], mapping_in, mapping_out, level=level+1)}
 {tabs_plus1}break;'''
 
-def event_sources_thread_funcs(tree, mapping) -> str:
-    if tree[0] == "event_sources":
-        return event_sources_thread_funcs(tree[PLIST_BASE_CASE], mapping) +"\n" \
-               + event_sources_thread_funcs(tree[PLIST_TAIL], mapping)
-    else:
+def event_sources_thread_funcs(event_sources, mapping) -> str:
+    answer = ""
+    for tree in event_sources:
         assert(tree[0] == "event_source")
-        stream_name = tree[PPEVENT_SOURCE_NAME]
-        stream_in_name = tree[PPEVENT_SOURCE_INPUT_TYPE]
-        stream_out_name = tree[PPEVENT_SOURCE_OUTPUT_TYPE]
-        value = f'''int PERF_LAYER_{stream_name} (void *arg) {"{"}
-    shm_arbiter_buffer *buffer = BUFFER_{stream_name};
+        stream_name = get_event_src_name(tree[2])
+        stream_in_name, _ = get_name_with_args(tree[3])
+        stream_tail = tree[-1]
+        if stream_tail[1] is not None:
+            processor_name, _ = get_name_with_args(stream_tail[1])
+        else:
+            processor_name = None
+        if processor_name is not None and processor_name.lower() != "forward":
+            stream_out_name = TypeChecker.stream_processors_data[processor_name]["output_type"]
+            perf_layer_list = TypeChecker.stream_processors_data[processor_name]["perf_layer_rule_list"]
+            perf_layer_code = f'''
+                        switch ((inevent->head).kind) {"{"}
+            {get_stream_switch_cases(perf_layer_list, mapping[stream_in_name], mapping[stream_out_name], level=3)}
+                        default:
+                            printf("Default case executed in thread for event source {stream_name}. Exiting thread...");
+                            return 1;
+                    {"}"}
+                        '''
+        else:
+            stream_out_name = stream_in_name
+            perf_layer_code = f"memcpy(outevent, inevent, sizeof(STREAM_{stream_out_name}_out));"
+        answer+= f'''int PERF_LAYER_{stream_name} (shm_arbiter_buffer *buffer) {"{"}
     shm_stream *stream = shm_arbiter_buffer_stream(buffer);   
 
     STREAM_{stream_in_name}_in *inevent;
@@ -309,30 +356,23 @@ def event_sources_thread_funcs(tree, mapping) -> str:
     while ((!shm_arbiter_buffer_active(buffer))){"{"}
         sleep_ns(10);
     {"}"}
-    
-    is_{stream_name}_done = 0;
     while(true) {"{"}
         inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_{stream_name});
         
         if (inevent == NULL) {"{"}
             // no more events
-            is_{stream_name}_done = 1;
             break;
         {"}"}
         outevent = shm_arbiter_buffer_write_ptr(buffer);
         
-        switch ((inevent->head).kind) {"{"}
-{get_stream_switch_cases(tree[PPEVENT_SOURCE_PERF_LAYER_LIST], mapping[stream_in_name], mapping[stream_out_name], level=3)}
-            default:
-                printf("Default case executed in thread for event source {stream_name}. Exiting thread...");
-                return 1;
-        {"}"}
+        {perf_layer_code}
         shm_arbiter_buffer_write_finish(buffer);
         shm_stream_consume(stream, 1);
-    {"}"}     
+    {"}"}  
+    atomic_fetch_add(&count_event_streams, -1);   
 {"}"}
 '''
-        return value
+    return answer
 
 
 # BEGIN CORRECTNESS LAYER
@@ -346,17 +386,9 @@ def declare_rule_sets(tree):
         rule_set_declarations += f"int RULE_SET_{name}(int *);\n"
     return rule_set_declarations
 
-def exists_open_streams(tree):
-    assert (tree[0] == "main_program")
-    event_srcs_names = []
-    get_event_sources_names(tree[PMAIN_PROGRAM_EVENT_SOURCES], event_srcs_names)
-    code = ""
-    for name in event_srcs_names:
-        code += f"\tc += is_{name}_done;\n"
-
+def exists_open_streams():
     return f'''bool exists_open_streams() {"{"}
-    int c = 0;
-{code}\treturn c < count_event_streams;
+    return count_event_streams > 0;
 {"}"}
     '''
 def arbiter_code(tree):
@@ -389,7 +421,9 @@ def rule_set_streams_condition(tree, mapping, stream_types, is_scan=False):
                    + rule_set_streams_condition(tree[PLIST_TAIL], mapping, stream_types, is_scan)
     else:
         assert(tree[0] == 'buff_match_exp')
-        stream_name = tree[PPBUFFER_MATCH_EV_NAME]
+        event_src_ref = tree[1]
+        assert(event_src_ref[0] == 'event_src_ref')
+        stream_name = event_src_ref[1]
         if len(tree) == 3:
             if not is_scan:
                 if tree[PPBUFFER_MATCH_ARG1] == "nothing":
@@ -433,16 +467,16 @@ def buffer_peeks(binded_args, events_to_retrieve):
     return answer
 
 
-def construct_arb_rule_outevent(mapping, binded_args, stream_types, output_ev_source, output_event, raw_args) -> str:
+def construct_arb_rule_outevent(mapping, output_ev_source, output_event, raw_args) -> str:
     local_args = []
 
     get_expressions(raw_args, local_args)
 
-    answer = f'''outevent->head.kind = {mapping[output_ev_source][output_event]["index"]};
-    outevent->head.id = (*arbiter_counter)++;
+    answer = f'''arbiter_outevent->head.kind = {mapping[output_ev_source][output_event]["index"]};
+    arbiter_outevent->head.id = (*arbiter_counter)++;
     '''
     for (arg, outarg) in zip(local_args, mapping[output_ev_source][output_event]["args"]):
-        answer+= f"((STREAM_{output_ev_source}_out *) outevent)->cases.{output_event}.{outarg[0]} = {arg};\n"
+        answer+= f"((STREAM_{output_ev_source}_out *) arbiter_outevent)->cases.{output_event}.{outarg[0]} = {arg};\n"
     return answer
 
 def process_arb_rule_stmt(tree, mapping, binded_args, stream_types, output_ev_source) -> str:
@@ -452,16 +486,20 @@ def process_arb_rule_stmt(tree, mapping, binded_args, stream_types, output_ev_so
         return f"RULE_SET_{switch_rule_name}(arbiter_counter);\n"
     if tree[0] == "yield":
         return f'''
-        outevent = shm_monitor_buffer_write_ptr(monitor_buffer);
-         {construct_arb_rule_outevent(mapping, binded_args, stream_types, output_ev_source, 
+        arbiter_outevent = shm_monitor_buffer_write_ptr(monitor_buffer);
+         {construct_arb_rule_outevent(mapping, output_ev_source, 
                                       tree[PPARB_RULE_STMT_YIELD_EVENT], tree[PPARB_RULE_STMT_YIELD_EXPRS])}
          shm_monitor_buffer_write_finish(monitor_buffer);
         '''
-    assert(tree[0] == "drop")
-    return f"\tshm_arbiter_buffer_drop(BUFFER_{tree[PPARB_RULE_STMT_DROP_EV_SOURCE]}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
+    if tree[0] == "drop":
+
+        return f"\tshm_arbiter_buffer_drop(BUFFER_{tree[PPARB_RULE_STMT_DROP_EV_SOURCE]}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
+
+    assert(tree[0] == "field_access")
 
 
-def process_code_stmt_list(tree, mapping, binded_args, stream_types, output_ev_source, events_to_retrieve) -> str:
+
+def process_code_stmt_list(tree, mapping, binded_args, stream_types, output_ev_source) -> str:
     assert (tree[0] == "ccode_statement_l")
     if len(tree) == 2:
         return tree[PCODE_STMT_LIST_TOKEN1]
@@ -483,16 +521,14 @@ def process_code_stmt_list(tree, mapping, binded_args, stream_types, output_ev_s
                + "\n" + tree[PCODE_STMT_LIST_TOKEN3]
 
 
-def get_arb_rule_stmt_list_code(tree, mapping, binded_args, stream_types, output_ev_source, events_to_retrieve) -> str:
+def get_arb_rule_stmt_list_code(tree, mapping, binded_args, stream_types, output_ev_source) -> str:
     if tree[0] == 'arb_rule_stmt_l':
-        return process_code_stmt_list(tree[PLIST_BASE_CASE], mapping, binded_args, stream_types, output_ev_source,
-                                      events_to_retrieve) + get_arb_rule_stmt_list_code(tree[PLIST_TAIL], mapping,
+        return process_code_stmt_list(tree[PLIST_BASE_CASE], mapping, binded_args, stream_types, output_ev_source) + get_arb_rule_stmt_list_code(tree[PLIST_TAIL], mapping,
                                                                                         binded_args, stream_types,
-                                                                                        output_ev_source,
-                                                                                        events_to_retrieve)
+                                                                                        output_ev_source)
     else:
         assert(tree[0] == "ccode_statement_l")
-        return process_code_stmt_list(tree, mapping, binded_args, stream_types, output_ev_source, events_to_retrieve)
+        return process_code_stmt_list(tree, mapping, binded_args, stream_types, output_ev_source)
 
 def define_binded_args(binded_args, stream_types):
     answer = ""
@@ -523,23 +559,26 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
         return arbiter_rule_code(tree[PLIST_BASE_CASE], mapping, stream_types, output_ev_source) + \
                arbiter_rule_code(tree[PLIST_TAIL], mapping, stream_types, output_ev_source)
     else:
-        assert(tree[0] == "arbiter_rule")
-        binded_args = dict()
-        get_buff_math_binded_args(tree[PPARB_RULE_LIST_BUFF_EXPR], stream_types, mapping, binded_args)
-        events_to_retrieve = dict()
-        get_num_events_to_retrieve(tree[PPARB_RULE_LIST_BUFF_EXPR], events_to_retrieve)
-        scanned_conditions = rule_set_streams_condition(tree[PPARB_RULE_LIST_BUFF_EXPR], mapping, stream_types, True)
-        return f'''
-        {declare_arrays(scanned_conditions)}
-    if ({rule_set_streams_condition(tree[PPARB_RULE_LIST_BUFF_EXPR], mapping, stream_types)}) {"{"}
-        if({tree[PPARB_RULE_CONDITION_CODE]}) {"{"}
-            {buffer_peeks(binded_args, events_to_retrieve)}
-            {define_binded_args(binded_args, stream_types)}
-            {get_arb_rule_stmt_list_code(tree[PPARB_RULE_STMT_LIST], mapping, binded_args, stream_types, 
-                                         output_ev_source, events_to_retrieve)}
+        assert(tree[0] == "arbiter_rule1" or tree[0] == "arbiter_rule2")
+        if tree[0] == "arbiter_rule1":
+            binded_args = dict()
+            get_buff_math_binded_args(tree[PPARB_RULE_LIST_BUFF_EXPR], stream_types, mapping, binded_args)
+            events_to_retrieve = dict()
+            get_num_events_to_retrieve(tree[PPARB_RULE_LIST_BUFF_EXPR], events_to_retrieve)
+            scanned_conditions = rule_set_streams_condition(tree[PPARB_RULE_LIST_BUFF_EXPR], mapping, stream_types, True)
+            return f'''
+            {declare_arrays(scanned_conditions)}
+        if ({rule_set_streams_condition(tree[PPARB_RULE_LIST_BUFF_EXPR], mapping, stream_types)}) {"{"}
+            if({tree[PPARB_RULE_CONDITION_CODE]}) {"{"}
+                {buffer_peeks(binded_args, events_to_retrieve)}
+                {define_binded_args(binded_args, stream_types)}
+                {get_arb_rule_stmt_list_code(tree[PPARB_RULE_STMT_LIST], mapping, binded_args, stream_types, 
+                                             output_ev_source)}
+            {"}"}
         {"}"}
-    {"}"}
-        '''
+            '''
+        else:
+            raise Exception("arbiter rule 2 not implemented")
 
 
 def get_code_rule_sets(tree, mapping, stream_types, output_ev_source) -> str:

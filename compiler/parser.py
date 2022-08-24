@@ -36,10 +36,10 @@ def p_component(p):
               | match_fun_def
               | GLOBALS '{' arbiter_rule_stmt_list '}'
               | GLOBALS arbiter_rule_stmt_list
-              | STARTUP '{' arbiter_rule_stmt_list '}'
-              | STARTUP arbiter_rule_stmt_list
-              | CLEANUP '{' arbiter_rule_stmt_list '}'
-              | CLEANUP arbiter_rule_stmt_list
+              | STARTUP '{' CCODE_TOKEN '}'
+              | STARTUP CCODE_TOKEN
+              | CLEANUP '{' CCODE_TOKEN '}'
+              | CLEANUP CCODE_TOKEN
     '''
 
     if p[1] not in ["globals", "startup", "cleanup"]:
@@ -287,7 +287,6 @@ def p_event_source(p):
 
     is_dynamic = False
     if len(p) == 7:
-        p[0] = ('event_source', '', p[3], p[5], p[6])
         event_src_declaration = p[3]
         stream = p[5]
         event_src_tail = p[6]
@@ -302,6 +301,7 @@ def p_event_source(p):
     stream, c_stream_args = get_name_args_count(stream)
     TypeChecker.assert_num_args_match(stream, c_stream_args)
     # TODO: check type of stream type?
+    TypeChecker.insert_event_source_data(p[0])
 
 
 
@@ -321,9 +321,7 @@ def p_event_source_decl(p):
     p[0] = ('event-decl', event, arg)
     name, args = get_name_with_args(event)
     TypeChecker.insert_into_args_table(name, EVENT_SOURCE_NAME, args)
-    if arg is None:
-        arg = 1
-    TypeChecker.logical_copies[name] = int(arg)
+
 
 def p_event_source_tail(p):
     '''
@@ -380,7 +378,7 @@ def p_buff_group_def(p):
         arg_includes = 0
     elif arg_includes == "all":
         arg_includes = -1
-    TypeChecker.logical_copies[buffer_group_name] = int(arg_includes)
+    # TypeChecker.logical_copies[buffer_group_name] = int(arg_includes)
 
 
 def p_match_fun_def(p):
@@ -419,7 +417,7 @@ def p_match_fun_def(p):
     if arg1 is not None:
         ids = []
         get_list_ids(arg1, ids)
-        TypeChecker.logical_copies[match_fun_name] = ids # TODO: maybe this should be in a diff. data structure
+        # TypeChecker.logical_copies[match_fun_name] = ids # TODO: maybe this should be in a diff. data structure
         for id in ids:
             TypeChecker.insert_symbol(id, EVENT_SOURCE_NAME)
 
@@ -469,11 +467,32 @@ def p_arbiter_rule_list(p):
 def p_arbiter_rule(p):
     '''
     arbiter_rule : ON list_buff_match_exp WHERE expression arbiter_rule_stmt_list
+                 | CHOOSE choose_order listids FROM ID WHERE expression '{' arbiter_rule_list '}'
+    '''
+    if len(p) == 6:
+        # ON list_buff_match_exp WHERE pure_foreign_code arbiter_rule_stmt_list
+        # 1           2            3           4                    5
+        p[0] = ("arbiter_rule1", p[PARB_RULE_LIST_BUFF_EXPR], p[PARB_RULE_CONDITION_CODE], p[PARB_RULE_STMT_LIST])
+    else:
+        # CHOOSE choose_order listids FROM ID WHERE expression '{' arbiter_rule_list '}'
+        #    1        2          3      4  5    6        7      8         9           10
+        p[0] = ("arbiter_rule2", p[2], p[3], p[5], p[7], p[9])
+
+def p_arbiter_choose_order(p):
+    '''
+    choose_order : FIRST INT
+                 | LAST INT
+                 | FIRST
+                 | LAST
     '''
 
-    # ON list_buff_match_exp WHERE pure_foreign_code arbiter_rule_stmt_list
-    # 1           2            3           4                    5
-    p[0] = ("arbiter_rule", p[PARB_RULE_LIST_BUFF_EXPR], p[PARB_RULE_CONDITION_CODE], p[PARB_RULE_STMT_LIST])
+    arg1 = p[1]
+    arg2 = None
+
+    if len(p) > 2:
+        arg2 = p[2]
+
+    p[0] = ('choose-order', arg1, arg2)
 
 
 def p_list_buff_match_exp(p):
@@ -677,8 +696,7 @@ def p_extends_node(p):
     if len(p) == 3:
         p[0] = ("extends-node", p[2])
     else:
-        assert(len(p) == 6)
-        p[0] = ("extends-node", p[2], p[4])
+        assert False
 
 
 
