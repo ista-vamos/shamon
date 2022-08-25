@@ -37,6 +37,7 @@ class TypeChecker:
     stream_processors_data: Dict[str, Dict[str, Any]] = dict()
     buffer_group_data: Dict[str, Dict[str, Any]] = dict()
     match_fun_data: Dict[str, Dict[str, Any]] = dict()
+    match_expr_funcs: List[Any] = []
 
     @staticmethod
     def clean_checker():
@@ -370,3 +371,4 @@ class TypeChecker:
         }
         assert(match_name not in TypeChecker.match_fun_data.keys())
         TypeChecker.match_fun_data[match_name] = data
+

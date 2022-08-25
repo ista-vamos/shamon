@@ -191,15 +191,17 @@ shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t 
 		return (shm_event *) (e2 + (element_index*size_event));
 	}
 }
-int RULE_SET_rs(int *);
-
 
 int main(int argc, char **argv) {
 	// init buffer groups
+	initialize_events(); // Always call this first
+	
 	BG_Ps->head = NULL;
     BG_Ps->tail = NULL;
 	bg_insert(BG_Ps, EV_SOURCE_P_0, Ps_ORDER_EXP);
 	bg_insert(BG_Ps, EV_SOURCE_P_1, Ps_ORDER_EXP);
         
 
+	
+	
 }

@@ -484,7 +484,7 @@ def p_arbiter_rule(p):
         # 1           2            3           4                    5
         p[0] = ("arbiter_rule1", p[PARB_RULE_LIST_BUFF_EXPR], p[PARB_RULE_CONDITION_CODE], p[PARB_RULE_STMT_LIST])
     else:
-        # CHOOSE choose_order listids FROM ID WHERE expression '{' arbiter_rule_list '}'
+        # CHOOSE choose_order listids FROM ID WHERE pure_foreign_code '{' arbiter_rule_list '}'
         #    1        2          3      4  5    6        7      8         9           10
         p[0] = ("arbiter_rule2", p[2], p[3], p[5], p[7], p[9])
 
@@ -497,10 +497,11 @@ def p_arbiter_choose_order(p):
     '''
 
     arg1 = p[1]
-    arg2 = None
 
     if len(p) > 2:
         arg2 = p[2]
+    else:
+        arg2 = 1
 
     p[0] = ('choose-order', arg1, arg2)
 
@@ -522,7 +523,7 @@ def p_buffer_match_exp(p):
     buffer_match_exp : ID '[' listids ']' '(' list_var_or_integer ')'
                      | ID '[' ']' '(' list_var_or_integer ')'
                      | ID '[' listids ']' '(' ')'
-                     | CHOOSE listids FROM ID BY order_expr
+                     | CHOOSE choose_order listids FROM ID
                      | event_src_ref ':' NOTHING
                      | event_src_ref ':' DONE
                      | event_src_ref ':' '|' list_event_calls
@@ -541,7 +542,9 @@ def p_buffer_match_exp(p):
             else:
                 p[0] = ('buff_match_exp-args', p[1], ('arg1', p[3]))
     elif p[1] == "choose":
-        p[0] = ('buff_match_exp-choose', p[2], p[4], p[6])
+        # CHOOSE choose_order listids FROM ID
+        #   1           2         3     4   5
+        p[0] = ('buff_match_exp-choose', p[2], p[3], p[5])
         TypeChecker.assert_symbol_type(p[4], BUFFER_GROUP_NAME)
     elif len(p) == 4:
         TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
