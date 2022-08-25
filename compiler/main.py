@@ -37,6 +37,7 @@ TypeChecker.arbiter_output_type = arbiter_event_source
 program = f'''#include "shamon.h"
 #include "mmlib.h"
 #include "monitor.h"
+#include "compiler_utils.h"
 #include <threads.h>
 #include <stdio.h>
 
@@ -47,8 +48,7 @@ struct _EVENT_hole
 typedef struct _EVENT_hole EVENT_hole;
 
 // globals code
-{get_globals_code(components["globals"], streams_to_events_map, stream_types)}
-{stream_arg_structs(components["stream_type"])}
+{get_globals_code(components, streams_to_events_map, stream_types)}
 {event_stream_structs(components["stream_type"])}
 
 {build_should_keep_funcs(components["event_source"], streams_to_events_map)}
@@ -67,6 +67,10 @@ thrd_t ARBITER_THREAD;
 {declare_arbiter_buffers(components, ast)}
 // monitor buffer
 shm_monitor_buffer *monitor_buffer;
+
+// buffer groups
+{declare_order_expressions()}
+{declare_buffer_groups()}
 
 {event_sources_thread_funcs(components["event_source"], streams_to_events_map)}
 
@@ -121,12 +125,16 @@ shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t 
 {"}"}
 {declare_rule_sets(ast[2])}
 
-{build_rule_set_functions(ast[2], streams_to_events_map, stream_types)}
+int main(int argc, char **argv) {"{"}
+	// init buffer groups
+	{init_buffer_groups()}
+{"}"}
 '''
 
 
 # TODO: remember that I removed flags for event sources to know when they finish, instead update the counter (count_event_streams)
 
+# {build_rule_set_functions(ast[2], streams_to_events_map, stream_types)}
 # {arbiter_code(ast[PMAIN_PROGRAM_ARBITER])}
 # int main(int argc, char **argv) {"{"}
 #     initialize_events(); // Always call this first

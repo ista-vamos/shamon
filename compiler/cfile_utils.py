@@ -16,11 +16,51 @@ def get_pure_c_code(component) -> str:
         answer += tree[1]
     return answer
 
-def get_globals_code(globals, mapping, stream_types) -> str:
-    answer = f"STREAM_{TypeChecker.arbiter_output_type}_out *arbiter_outevent;\n"
-    for tree in globals:
-        assert(tree[0] == "globals")
-        answer += get_arb_rule_stmt_list_code(tree[1], mapping, {}, stream_types, TypeChecker.arbiter_output_type)
+def get_globals_code(components, mapping, stream_types) -> str:
+    answer = ""
+    if "globals" in components.keys():
+        globals = components["globals"]
+        answer = f"STREAM_{TypeChecker.arbiter_output_type}_out *arbiter_outevent;\n"
+        for tree in globals:
+            assert(tree[0] == "globals")
+            answer += get_arb_rule_stmt_list_code(tree[1], mapping, {}, stream_types, TypeChecker.arbiter_output_type)
+    return answer
+
+def declare_order_expressions():
+    answer = ""
+
+    for (buff_name, data) in TypeChecker.buffer_group_data.items():
+        if data["order"] == "round-robin":
+            code = "return false;"
+        else:
+            code = f"return ((STREAM_{data['in_stream']}_in *) ev1)->{data['order']} > ((STREAM_{data['in_stream']}_in *) ev1)->{data['order']};"
+        answer += f'''
+bool {buff_name}_ORDER_EXP (shm_stream *ev1, shm_stream *ev2) {"{"}
+    {code}
+{"}"}        
+'''
+    return answer
+
+def declare_buffer_groups():
+    answer = ""
+
+    for (buff_name, data) in TypeChecker.buffer_group_data.items():
+        answer += f'''
+buffer_group BG_{buff_name};
+        '''
+    return answer
+
+def init_buffer_groups():
+    answer = ""
+
+    for (buff_name, data) in TypeChecker.buffer_group_data.items():
+        includes_str = ""
+        for i in range(data["arg_includes"]):
+            includes_str += f"\tbg_insert(BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, {buff_name}_ORDER_EXP);\n"
+        answer += f'''BG_{buff_name}->head = NULL;
+    BG_{buff_name}->tail = NULL;
+{includes_str}        
+'''
     return answer
 
 def get_stream_struct_fields(field_declarations):
@@ -110,7 +150,8 @@ def declare_event_sources(event_sources):
     get_event_sources_names(event_sources, event_srcs_names)
     answer = ""
     for name in event_srcs_names:
-        answer += f"shm_stream *EV_SOURCE_{name};\n"
+        for  i in range(TypeChecker.event_sources_data[name]["copies"]):
+            answer += f"shm_stream *EV_SOURCE_{name}_{i};\n"
     return answer
 
 def declare_event_sources_flags(ast):
@@ -674,4 +715,6 @@ def monitor_code(tree, possible_events, arbiter_event_source) -> str:
         shm_monitor_buffer_consume(monitor_buffer, 1);
     {"}"}
     '''
+
+# buffer groups
 

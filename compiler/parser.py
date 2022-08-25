@@ -393,8 +393,8 @@ def p_int_or_all(p):
 
 def p_match_fun_def(p):
     '''
-    match_fun_def : MATCH FUN ID '[' listids ']' '(' listids ')' '=' list_buff_match_exp
-                  | MATCH FUN ID '[' ']' '(' listids ')' '=' list_buff_match_exp
+    match_fun_def : MATCH FUN ID '[' listids ']' '(' list_field_decl ')' '=' list_buff_match_exp
+                  | MATCH FUN ID '[' ']' '(' list_field_decl ')' '=' list_buff_match_exp
                   | MATCH FUN ID '[' listids ']' '('  ')' '=' list_buff_match_exp
     '''
 

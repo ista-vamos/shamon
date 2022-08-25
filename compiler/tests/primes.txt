@@ -12,33 +12,6 @@ event source P[2] : Primes(0) process using FORWARD to autodrop(8)
 
 buffer group Ps : Primes includes P[all]
 
-globals
-
-$$
-
-    #include "intmap.h"
-
-    intmap buf;
-
-    void process(n, p, pos, opos){
-
-        if(pos < opos) {
-            int oval=0;
-            if(intmap_get(&buf, n, &oval)){
-                $yield NumberPair(n, oval, p);
-            }
-            count -= intmap_remove_upto(&buf, n);
-        } else {
-            if(count<10) {
-                intmap_insert(&buf, n, p);
-                count++;
-            }
-        }
-        return n+1;
-    }
-$$
-
-
 match fun Prio[F,S]() = choose F,S from Ps by $pos;
 
 arbiter : NumberPairs

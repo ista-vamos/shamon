@@ -348,7 +348,7 @@ class TypeChecker:
             assert (order_by[0] == "order_expr")
             order = order_by[1]
         else:
-            order = None
+            order = "round-robin"
         data = {
             'in_stream': input_stream,
             'includes' : includes,
@@ -357,7 +357,6 @@ class TypeChecker:
         }
         assert(buffer_name not in TypeChecker.buffer_group_data.keys())
         TypeChecker.buffer_group_data[buffer_name] = data
-        print(data)
 
     @staticmethod
     def add_match_fun_data(tree):
