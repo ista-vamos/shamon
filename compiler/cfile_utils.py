@@ -479,12 +479,12 @@ def arbiter_code(tree):
 {"}"}
     '''
 
-def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_scan=False):
+def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_scan=False, context=None):
     # output_stream should be the output type of the event source
     if tree[0] == 'l_buff_match_exp':
         if not is_scan:
-            code_tail = rule_set_streams_condition(tree[PLIST_TAIL], mapping, stream_types, inner_code, is_scan)
-            code_base = rule_set_streams_condition(tree[PLIST_BASE_CASE], mapping, stream_types, code_tail, is_scan)
+            code_tail = rule_set_streams_condition(tree[PLIST_TAIL], mapping, stream_types, inner_code, is_scan, context)
+            code_base = rule_set_streams_condition(tree[PLIST_BASE_CASE], mapping, stream_types, code_tail, is_scan, context)
             return code_base
         else:
             return rule_set_streams_condition(tree[PLIST_BASE_CASE], mapping, stream_types, inner_code, is_scan) \
@@ -495,6 +495,9 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         stream_name = event_src_ref[1]
         if event_src_ref[2] is not None:
             stream_name += f"_{str(event_src_ref[2])}"
+        if context is not None:
+            if stream_name in context.keys():
+                stream_name = context[stream_name]
         if len(tree) == 3:
             if not is_scan:
                 if tree[PPBUFFER_MATCH_ARG1] == "nothing":
@@ -533,29 +536,69 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         choose_order = tree[1]
         assert (choose_order[0] == "choose-order")
         count_choose = choose_order[2]
+        if context is not None:
+            if count_choose in context.keys():
+                count_choose = context[count_choose]
         buffer_name = tree[3]
+        if context is not None:
+            if buffer_name in context.keys():
+                raise Exception("buffer name is in context created in match fun")
         assert buffer_name in TypeChecker.buffer_group_data.keys()
-        choose_statement = f"shm_stream *chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
+        if choose_order[1] == "first":
+            choose_statement = f"shm_stream *chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
+        else:
+            assert choose_order[1] == "last"
+            choose_statement = f"shm_stream *chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
+        temp_binded_streams = []
+        get_list_ids(tree[2], temp_binded_streams)
         binded_streams = []
-        get_list_ids(tree[2], binded_streams)
+        if context is not None:
+            for bs in temp_binded_streams:
+                if bs in context.keys():
+                    binded_streams.append(context[bs])
+        else:
+            binded_streams = temp_binded_streams
+
+        assert len(binded_streams) == len(temp_binded_streams)
+        for s in binded_streams:
+            stream_types[s] = (TypeChecker.buffer_group_data[buffer_name]["input_stream_type"], TypeChecker.buffer_group_data[buffer_name]["input_stream_type"])
         declared_streams = ""
         for name in binded_streams:
             declared_streams += "chosen_streams--;\n"
             declared_streams += f"shm_stream *{name} = chosen_streams;\n"
 
         answer = f'''
-        void buff_match_exp_{StaticCounter.match_expr_counter}() {"{"}
+        
             {choose_statement}
             if (chosen_streams == NULL) return;
             {declared_streams}
             {inner_code}
-        {"}"}
                     '''
         StaticCounter.match_expr_counter += 1
         return answer
     else:
         assert(tree[0] == "buff_match_exp-args")
-        raise Exception("implement this!!")
+        match_fun_name, arg1, arg2 = tree[1], tree[2], tree[3]
+        assert match_fun_name in TypeChecker.match_fun_data.keys()
+        if context is None:
+            context = {}
+
+        if arg1 is not None:
+            fun_bind_args = []
+            get_list_ids(arg1, fun_bind_args)
+            for (original_name, new_name) in zip(TypeChecker.match_fun_data[match_fun_name]["out_args"], fun_bind_args):
+                context[original_name] = new_name
+
+        if arg2 is not None:
+            new_args = []
+            get_list_var_or_int(arg2, new_args)
+            for(original_arg, new_arg) in zip(TypeChecker.match_fun_data[match_fun_name]["in_args"], new_args):
+                if new_arg in context.keys():
+                    context[original_arg] = context[new_arg]
+                else:
+                    context[original_arg] = new_arg
+
+        return rule_set_streams_condition(TypeChecker.match_fun_data[match_fun_name]["buffer_match_expr"], mapping, stream_types, inner_code, is_scan, context)
 
 
 def buffer_peeks(binded_args, events_to_retrieve):
@@ -771,7 +814,11 @@ def build_arbiter_rule(local_tree, mapping, stream_types) -> str:
         count_choose = choose_order[2]
         buffer_name = local_tree[3]
         assert buffer_name in TypeChecker.buffer_group_data.keys()
-        choose_statement = f"shm_stream *chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
+        if choose_order[1] == "first":
+            choose_statement = f"shm_stream *chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
+        else:
+            assert(choose_order[1] == "last")
+            choose_statement = f"shm_stream *chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
         binded_streams = []
         get_list_ids(local_tree[2], binded_streams)
         declared_streams = ""
@@ -793,8 +840,6 @@ if ({local_tree[4]}) {"{"}
     return answer
 
 def build_fun_match_functions(tree, mapping, stream_types):
-
-
 
     def local_explore_rule_list(local_tree) -> str:
         if local_tree[0] == "arb_rule_list":

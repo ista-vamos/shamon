@@ -363,7 +363,15 @@ class TypeChecker:
     def add_match_fun_data(tree):
         assert(tree[0] == "match_fun_def")
 
-        match_name, output_args, input_args, buffer_match_expr = tree[1], tree[2], tree[3], tree[4]
+        match_name, temp_output_args, temp_input_args, buffer_match_expr = tree[1], tree[2], tree[3], tree[4]
+
+        output_args = []
+        if temp_output_args is not None:
+            get_list_ids(temp_output_args, output_args)
+        input_args = []
+        if temp_input_args is not None:
+            get_list_var_or_int(temp_input_args, input_args)
+
         data = {
             'out_args': output_args,
             'in_args': input_args,

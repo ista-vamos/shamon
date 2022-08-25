@@ -55,6 +55,13 @@ def get_list_ids(tree, ids):
             assert(tree[0] == 'ID')
             ids.append(tree[PLIST_DATA])
 
+def get_list_var_or_int(tree, result):
+    if tree[0] == "list_var_or_integer":
+        get_list_ids(tree[1], result)
+        get_list_ids(tree[2], result)
+    else:
+        result.append(tree)
+
 def get_count_list_expr(tree):
     if tree[0] == 'expr_list':
         return 1 + get_count_list_expr(tree[PLIST_TAIL])

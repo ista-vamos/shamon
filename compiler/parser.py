@@ -533,14 +533,18 @@ def p_buffer_match_exp(p):
 
     if p[2] == "[":
         TypeChecker.assert_symbol_type(p[1], MATCH_FUN_NAME)
+        arg1 = None
+        arg2 = None
         if len(p) == 7:
-            p[0] = ('buff_match_exp-args', p[1], ('arg1',p[3]), ('arg2', p[6]))
+            arg1 = p[3]
+            arg2 = p[6]
         else:
             assert(len(p) == 6)
             if p[3] == ']':
-                p[0] = ('buff_match_exp-args', p[1], ('arg2', p[5]))
+                arg2 = p[5]
             else:
-                p[0] = ('buff_match_exp-args', p[1], ('arg1', p[3]))
+                arg1 = p[3]
+        p[0] = ('buff_match_exp-args', p[1], arg1, arg2)
     elif p[1] == "choose":
         # CHOOSE choose_order listids FROM ID
         #   1           2         3     4   5
