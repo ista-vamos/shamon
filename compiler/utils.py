@@ -290,10 +290,10 @@ def get_parameters_names(tree, stream_name, mapping, binded_args, index=0):
 
 
 
-def get_buff_math_binded_args(tree, stream_types, mapping, binded_args) -> None:
+def get_buff_math_binded_args(tree, stream_types, mapping, binded_args, buffer_group_data, match_fun_data) -> None:
     if tree[0] == 'l_buff_match_exp':
-        get_buff_math_binded_args(tree[PLIST_BASE_CASE], stream_types, mapping, binded_args)
-        get_buff_math_binded_args(tree[PLIST_TAIL], stream_types, mapping, binded_args)
+        get_buff_math_binded_args(tree[PLIST_BASE_CASE], stream_types, mapping, binded_args, buffer_group_data, match_fun_data)
+        get_buff_math_binded_args(tree[PLIST_TAIL], stream_types, mapping, binded_args, buffer_group_data, match_fun_data)
     else:
         if tree[0] == "buff_match_exp":
             print("stream_types",stream_types)
@@ -305,9 +305,23 @@ def get_buff_math_binded_args(tree, stream_types, mapping, binded_args) -> None:
                 for i in range(2, len(tree)):
                     if tree[i] != '|':
                         get_parameters_names(tree[i], event_source_name, mapping[stream_type], binded_args)
+        elif tree[0] == "buff_match_exp-choose":
+            buffer_name = tree[3]
+            binded_streams = []
+            get_list_ids(tree[2], binded_streams)
+            for s in binded_streams:
+                stream_types[s] = (buffer_group_data[buffer_name]["input_stream_type"],
+                                   buffer_group_data[buffer_name]["input_stream_type"])
         else:
-            # raise Exception("Not implemented")
-            pass
+            assert(tree[0] == "buff_match_exp-args")
+            match_fun_name, arg1, arg2 = tree[1], tree[2], tree[3]
+            print(match_fun_data)
+            assert match_fun_name in match_fun_data.keys()
+            if arg1 is not None:
+                fun_bind_args = []
+                get_list_ids(arg1, fun_bind_args)
+                for (arg, t) in zip(fun_bind_args, match_fun_data[match_fun_name]["stream_types"]):
+                    stream_types[arg] = (t, t)
 
 
 def get_events_count(tree):

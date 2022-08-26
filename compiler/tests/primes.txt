@@ -12,7 +12,7 @@ event source P[2] : Primes(0) process using FORWARD to autodrop(8)
 
 buffer group Ps : Primes includes P[all]
 
-match fun Prio[F,S]() = choose F,S from Ps by $pos;
+match fun Prio[F,S]() = choose F,S from Ps
 
 arbiter : NumberPairs
 {

@@ -361,6 +361,18 @@ class TypeChecker:
 
     @staticmethod
     def add_match_fun_data(tree):
+        def local_get_stream_types(local_tree, local_result):
+            if local_tree[0] == "l_buff_match_exp":
+                local_get_stream_types(local_tree[1], local_result)
+                local_get_stream_types(local_tree[2], local_result)
+            else:
+                assert local_tree[0] in ["buff_match_exp-choose", "buff_match_exp-args", "buff_match_exp"]
+                if local_tree[0] == "buff_match_exp-choose":
+                    buffer_name = local_tree[-1]
+                    binded_args = []
+                    get_list_ids(local_tree[2], binded_args)
+                    for ba in binded_args:
+                        local_result[ba] = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
         assert(tree[0] == "match_fun_def")
 
         match_name, temp_output_args, temp_input_args, buffer_match_expr = tree[1], tree[2], tree[3], tree[4]
@@ -372,10 +384,17 @@ class TypeChecker:
         if temp_input_args is not None:
             get_list_var_or_int(temp_input_args, input_args)
 
+        stream_types = dict()
+        local_get_stream_types(buffer_match_expr, stream_types)
+        arr_stream_types = []
+        for a in output_args:
+            arr_stream_types.append(stream_types[a])
+        assert(len(arr_stream_types) == len(output_args))
         data = {
             'out_args': output_args,
             'in_args': input_args,
-            'buffer_match_expr': buffer_match_expr
+            'buffer_match_expr': buffer_match_expr,
+            'stream_types': arr_stream_types
         }
         assert(match_name not in TypeChecker.match_fun_data.keys())
         TypeChecker.match_fun_data[match_name] = data

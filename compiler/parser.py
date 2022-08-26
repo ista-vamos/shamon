@@ -417,7 +417,7 @@ def p_match_fun_def(p):
         buffer_match_expr = p[10]
     p[0] = ('match_fun_def', match_fun_name, arg1, arg2, buffer_match_expr)
 
-
+    TypeChecker.add_match_fun_data(p[0])
     if arg2 is not None:
         ids = []
         get_list_ids(arg2, ids)
@@ -524,6 +524,7 @@ def p_buffer_match_exp(p):
                      | ID '[' ']' '(' list_var_or_integer ')'
                      | ID '[' listids ']' '(' ')'
                      | CHOOSE choose_order listids FROM ID
+                     | CHOOSE listids FROM ID
                      | event_src_ref ':' NOTHING
                      | event_src_ref ':' DONE
                      | event_src_ref ':' '|' list_event_calls
@@ -546,9 +547,18 @@ def p_buffer_match_exp(p):
                 arg1 = p[3]
         p[0] = ('buff_match_exp-args', p[1], arg1, arg2)
     elif p[1] == "choose":
-        # CHOOSE choose_order listids FROM ID
-        #   1           2         3     4   5
-        p[0] = ('buff_match_exp-choose', p[2], p[3], p[5])
+        choose_order = None
+
+        if len(p) == 6:
+            # CHOOSE choose_order listids FROM ID
+            #   1           2         3     4   5
+            choose_order = p[2]
+            args = p[3]
+            buffer_name = p[5]
+        else:
+            args = p[2]
+            buffer_name = p[4]
+        p[0] = ('buff_match_exp-choose', choose_order, args, buffer_name)
         TypeChecker.assert_symbol_type(p[4], BUFFER_GROUP_NAME)
     elif len(p) == 4:
         TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)

@@ -493,6 +493,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         event_src_ref = tree[1]
         assert(event_src_ref[0] == 'event_src_ref')
         stream_name = event_src_ref[1]
+        out_type = stream_types[stream_name][1]
         if event_src_ref[2] is not None:
             stream_name += f"_{str(event_src_ref[2])}"
         if context is not None:
@@ -519,7 +520,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         else:
             assert(len(tree) == 4)
             event_kinds = []
-            out_type = stream_types[stream_name][1]
+
             if tree[PPBUFFER_MATCH_ARG1] != "|":
                 get_event_kinds(tree[PPBUFFER_MATCH_ARG1], event_kinds, mapping[out_type])
 
@@ -534,23 +535,31 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                 return [event_kinds]
     elif tree[0] == "buff_match_exp-choose":
         choose_order = tree[1]
-        assert (choose_order[0] == "choose-order")
-        count_choose = choose_order[2]
-        if context is not None:
-            if count_choose in context.keys():
-                count_choose = context[count_choose]
+
         buffer_name = tree[3]
         if context is not None:
             if buffer_name in context.keys():
                 raise Exception("buffer name is in context created in match fun")
         assert buffer_name in TypeChecker.buffer_group_data.keys()
-        if choose_order[1] == "first":
-            choose_statement = f"shm_stream *chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
-        else:
-            assert choose_order[1] == "last"
-            choose_statement = f"shm_stream *chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
+
         temp_binded_streams = []
         get_list_ids(tree[2], temp_binded_streams)
+
+        order = "first"
+        if choose_order is not None:
+            assert (choose_order[0] == "choose-order")
+            order = choose_order[1]
+            count_choose = choose_order[2]
+            if context is not None:
+                if count_choose in context.keys():
+                    count_choose = context[count_choose]
+        else:
+            count_choose = len(temp_binded_streams)
+        if order == "first":
+            choose_statement = f"shm_stream *chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
+        else:
+            choose_statement = f"shm_stream *chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
+
         binded_streams = []
         if context is not None:
             for bs in temp_binded_streams:
@@ -574,7 +583,6 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             {declared_streams}
             {inner_code}
                     '''
-        StaticCounter.match_expr_counter += 1
         return answer
     else:
         assert(tree[0] == "buff_match_exp-args")
@@ -597,7 +605,6 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                     context[original_arg] = context[new_arg]
                 else:
                     context[original_arg] = new_arg
-
         return rule_set_streams_condition(TypeChecker.match_fun_data[match_fun_name]["buffer_match_expr"], mapping, stream_types, inner_code, is_scan, context)
 
 
@@ -714,7 +721,7 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
         assert(tree[0] == "arbiter_rule1" or tree[0] == "arbiter_rule2")
         if tree[0] == "arbiter_rule1":
             binded_args = dict()
-            get_buff_math_binded_args(tree[PPARB_RULE_LIST_BUFF_EXPR], stream_types, mapping, binded_args)
+            get_buff_math_binded_args(tree[PPARB_RULE_LIST_BUFF_EXPR], stream_types, mapping, binded_args, TypeChecker.buffer_group_data, TypeChecker.match_fun_data)
             events_to_retrieve = dict()
             get_num_events_to_retrieve(tree[PPARB_RULE_LIST_BUFF_EXPR], events_to_retrieve)
             scanned_conditions = rule_set_streams_condition(tree[PPARB_RULE_LIST_BUFF_EXPR], mapping, stream_types, is_scan=True)
