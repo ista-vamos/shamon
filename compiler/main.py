@@ -125,9 +125,9 @@ shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t 
 {"}"}
 {declare_rule_sets(ast[2])}
 
-{build_fun_match_functions(ast[2], streams_to_events_map, stream_types)}
 
 
+{build_rule_set_functions(ast[2], streams_to_events_map, stream_types)}
 int main(int argc, char **argv) {"{"}
 	// init buffer groups
 	initialize_events(); // Always call this first
@@ -137,7 +137,7 @@ int main(int argc, char **argv) {"{"}
 	{get_pure_c_code(components, 'cleanup')}
 {"}"}
 '''
-# {build_rule_set_functions(ast[2], streams_to_events_map, stream_types)}
+
 # {arbiter_code(ast[PMAIN_PROGRAM_ARBITER])}
 # int main(int argc, char **argv) {"{"}
 #

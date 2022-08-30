@@ -763,12 +763,6 @@ def get_code_rule_sets(tree, mapping, stream_types, output_ev_source) -> str:
 {"}"}
 '''
 
-def build_rule_set_functions(tree, mapping, stream_types):
-    assert(tree[0] == "arbiter_def")
-    output_stream = tree[PPARBITER_OUTPUT_TYPE]
-
-    return get_code_rule_sets(tree[PPARBITER_RULE_SET_LIST], mapping, stream_types, output_stream)
-
 # monitor code
 
 def declare_monitor_args(tree, event_name, event_data, count_tabs) -> str:
@@ -856,7 +850,7 @@ if ({local_tree[4]}) {"{"}
     StaticCounter.match_expr_counter += 1
     return answer
 
-def build_fun_match_functions(tree, mapping, stream_types):
+def build_rule_set_functions(tree, mapping, stream_types):
 
     def local_explore_rule_list(local_tree) -> str:
         if local_tree[0] == "arb_rule_list":
@@ -872,7 +866,7 @@ def build_fun_match_functions(tree, mapping, stream_types):
             assert (local_tree[0] == "arbiter_rule_set")
             rule_set_name = local_tree[1]
             return f"int RULE_SET_{rule_set_name}(int *arbiter_counter) {'{'}" \
-                   f"shm_stream *chosen_streams;" \
+                   f"shm_stream *chosen_streams; // used for match fun" \
                    f"{local_explore_rule_list(local_tree[2])}" \
                    f"{'}'}"
 
