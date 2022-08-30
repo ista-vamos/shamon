@@ -657,9 +657,9 @@ def p_ccode_statement_list(p):
 def p_arbiter_rule_stmt(p):
     '''
     arbiter_rule_stmt : YIELD ID '(' expression_list ')'
-                      | SWITCH TO arbiter_rule
-                      | DROP INT FROM ID
-                      | REMOVE ID FROM ID
+                      | SWITCH TO ID
+                      | DROP INT FROM event_src_ref
+                      | REMOVE ID FROM event_src_ref
                       | FIELD_ACCESS
     '''
 
@@ -671,12 +671,15 @@ def p_arbiter_rule_stmt(p):
         # TypeChecker.assert_num_args_match(p[PARB_RULE_STMT_YIELD_EVENT], count_expr_list)
     elif len(p) == 5:
         p[0] = ("drop", p[PARB_RULE_STMT_DROP_INT], p[PARB_RULE_STMT_DROP_EV_SOURCE])
-        # TypeChecker.assert_symbol_type(p[PARB_RULE_STMT_DROP_EV_SOURCE], EVENT_SOURCE_NAME)
+        event_source_name = p[PARB_RULE_STMT_DROP_EV_SOURCE][1]
+        print(event_source_name)
+        TypeChecker.assert_symbol_type(event_source_name, EVENT_SOURCE_NAME)
     elif len(p) == 2:
         p[0] = p[1]
     else:
         assert(p[1] == "switch")
         p[0] = ("switch", p[PARB_RULE_STMT_SWITCH_ARB_RULE])
+        TypeChecker.assert_symbol_type(p[2], ARBITER_RULE_SET)
 
 
 # END arbiter Specification
@@ -822,13 +825,16 @@ def p_field_access(p):
 
     stream = p[1]
     index = None
-    field = p[-1]
+    field = None
     if len(p) > 4:
         assert(len(p) == 7)
         index = p[3]
+        field = p[6]
     else:
         assert(len(p) == 4)
+        field = p[3]
     p[0] = ('field_access', stream, index, field)
+
 
 
 # public interface
