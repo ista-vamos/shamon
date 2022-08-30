@@ -331,10 +331,10 @@ def get_events_count(tree):
         assert(tree[0] == 'ev_call')
         return 1
 
-def get_num_events_to_retrieve(tree, events_to_retrieve) -> None:
+def get_num_events_to_retrieve(tree, events_to_retrieve, match_fun_data) -> None:
     if tree[0] == 'l_buff_match_exp':
-        get_num_events_to_retrieve(tree[PLIST_BASE_CASE], events_to_retrieve)
-        get_num_events_to_retrieve(tree[PLIST_TAIL], events_to_retrieve)
+        get_num_events_to_retrieve(tree[PLIST_BASE_CASE], events_to_retrieve, match_fun_data)
+        get_num_events_to_retrieve(tree[PLIST_TAIL], events_to_retrieve, match_fun_data)
     else:
         if tree[0] == "buff_match_exp":
             event_src_ref = tree[PPBUFFER_MATCH_EV_NAME]
@@ -346,6 +346,10 @@ def get_num_events_to_retrieve(tree, events_to_retrieve) -> None:
                         count = get_events_count(tree[i])
                         events_to_retrieve[event_source_name] = count
         else:
-            raise Exception("buffer match exp-[option] not implemented")
+            if tree[0] == "buff_match_exp-args":
+                match_fun_name = tree[1]
+                get_num_events_to_retrieve(match_fun_data[match_fun_name]["buffer_match_expr"], events_to_retrieve,
+                                           match_fun_data)
+
 
 

@@ -22,6 +22,6 @@ void bg_remove_first_n(buffer_group *bg, int n, bool (*order_exp)(shm_stream *ev
 
 void bg_remove_last_n(buffer_group *bg, int n, bool (*order_exp)(shm_stream *ev1, shm_stream *ev2));
 
-shm_event *bg_get_first_n(buffer_group *bg, int n, bool (*order_exp)(shm_stream *ev1, shm_event *ev2));
+shm_event *bg_get_first_n(buffer_group *bg, int n);
 
-shm_event *bg_get_last_n(buffer_group *bg, int n, bool (*order_exp)(shm_stream *ev1, shm_stream *ev2));
+shm_event *bg_get_last_n(buffer_group *bg, int n);

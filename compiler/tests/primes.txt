@@ -23,26 +23,26 @@ arbiter : NumberPairs
             if(ln == rn)
             {
                 $yield NumberPair(ln, lp, rp);
-                $drop 1 from Left;
-                $drop 1 from Right;
+                $drop 1 from P[0];
+                $drop 1 from P[1];
                 intmap_clear(&buf);
             }
-            else if($Left.pos;<$Right.pos;)
+            else if($P[0].pos;<$P[1].pos;)
             {
-                $Left.pos; = process(ln, lp, $Left.pos;, $Right.pos;);
-                $drop 1 from Left;
+                $P[0].pos; = process(ln, lp, $P[0].pos;, $P[1].pos;);
+                $drop 1 from P[0];
             }
             else
             {
-                $Right.pos; = process(rn, rp, posns[1], $Left.pos;);
-                $drop 1 from Right;
+                $P[1].pos; = process(rn, rp, posns[1], $P[0].pos;);
+                $drop 1 from P[1];
             }
         $$
         on Prio[F,S](), F : hole(n) | where $$ true $$
         $$
             if($F.pos; < $S.pos;)
             {
-                count -= intmap_remove_upto(&buf, $F.pos;+n;);
+                count -= intmap_remove_upto(&buf, $F.pos;+n);
             }
             $F.pos; += n;
         $$

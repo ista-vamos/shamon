@@ -534,6 +534,8 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             else:
                 return [event_kinds]
     elif tree[0] == "buff_match_exp-choose":
+        if is_scan:
+            return []
         choose_order = tree[1]
 
         buffer_name = tree[3]
@@ -570,7 +572,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
 
         assert len(binded_streams) == len(temp_binded_streams)
         for s in binded_streams:
-            stream_types[s] = (TypeChecker.buffer_group_data[buffer_name]["input_stream_type"], TypeChecker.buffer_group_data[buffer_name]["input_stream_type"])
+            stream_types[s] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"], TypeChecker.buffer_group_data[buffer_name]["in_stream"])
         declared_streams = ""
         for name in binded_streams:
             declared_streams += "chosen_streams--;\n"
@@ -649,11 +651,18 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
          shm_monitor_buffer_write_finish(monitor_buffer);
         '''
     if tree[0] == "drop":
-
-        return f"\tshm_arbiter_buffer_drop(BUFFER_{tree[PPARB_RULE_STMT_DROP_EV_SOURCE]}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
+        event_source_ref = tree[PPARB_RULE_STMT_DROP_EV_SOURCE]
+        assert(event_source_ref[0] == "event_src_ref")
+        event_source_name = event_source_ref[1]
+        if event_source_ref[2] is not None:
+            event_source_name += f"_{event_source_ref[2]}"
+        return f"\tshm_arbiter_buffer_drop(BUFFER_{event_source_name}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
     assert(tree[0] == "field_access")
     target_stream, index, field = tree[1], tree[2], tree[3]
-    return f"{target_stream}_{index}_ARGS->{field};\n"
+    stream_name = target_stream
+    if index is not None:
+        stream_name += f"_{index}"
+    return f"{stream_name}->{field}"
 
 
 
@@ -723,7 +732,7 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
             binded_args = dict()
             get_buff_math_binded_args(tree[PPARB_RULE_LIST_BUFF_EXPR], stream_types, mapping, binded_args, TypeChecker.buffer_group_data, TypeChecker.match_fun_data)
             events_to_retrieve = dict()
-            get_num_events_to_retrieve(tree[PPARB_RULE_LIST_BUFF_EXPR], events_to_retrieve)
+            get_num_events_to_retrieve(tree[PPARB_RULE_LIST_BUFF_EXPR], events_to_retrieve, TypeChecker.match_fun_data)
             scanned_conditions = rule_set_streams_condition(tree[PPARB_RULE_LIST_BUFF_EXPR], mapping, stream_types, is_scan=True)
             inner_code = f'''
             if({tree[PPARB_RULE_CONDITION_CODE]}) {"{"}
@@ -825,7 +834,7 @@ def build_arbiter_rule(local_tree, mapping, stream_types) -> str:
             choose_statement = f"shm_stream *chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
         else:
             assert(choose_order[1] == "last")
-            choose_statement = f"shm_stream *chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
+            choose_statement = f"chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
         binded_streams = []
         get_list_ids(local_tree[2], binded_streams)
         declared_streams = ""
@@ -836,12 +845,13 @@ def build_arbiter_rule(local_tree, mapping, stream_types) -> str:
         answer = f'''
 void buff_match_exp_{StaticCounter.match_expr_counter}() {"{"}
 {choose_statement}
-if (chosen_streams == NULL) return;
+if (chosen_streams != NULL) {'{'}
 {declared_streams}
 if ({local_tree[4]}) {"{"}
     {build_arbiter_rule(local_tree[5], mapping, stream_types)}
 {"}"}
 {"}"}
+{'}'}
         '''
     StaticCounter.match_expr_counter += 1
     return answer
@@ -860,12 +870,13 @@ def build_fun_match_functions(tree, mapping, stream_types):
             return local_explore_arb_rule_set_list(local_tree[1]) + local_explore_arb_rule_set_list(local_tree[2])
         else:
             assert (local_tree[0] == "arbiter_rule_set")
-            return local_explore_rule_list(local_tree[2])
+            rule_set_name = local_tree[1]
+            return f"int RULE_SET_{rule_set_name}(int *arbiter_counter) {'{'}" \
+                   f"shm_stream *chosen_streams;" \
+                   f"{local_explore_rule_list(local_tree[2])}" \
+                   f"{'}'}"
 
     assert (tree[0] == 'arbiter_def')
 
     arbiter_rule_set_list = tree[2]
-    local_explore_arb_rule_set_list(arbiter_rule_set_list)
-
-
-
+    return local_explore_arb_rule_set_list(arbiter_rule_set_list)
