@@ -296,7 +296,6 @@ def get_buff_math_binded_args(tree, stream_types, mapping, binded_args, buffer_g
         get_buff_math_binded_args(tree[PLIST_TAIL], stream_types, mapping, binded_args, buffer_group_data, match_fun_data)
     else:
         if tree[0] == "buff_match_exp":
-            print("stream_types",stream_types)
             event_src_ref = tree[PPBUFFER_MATCH_EV_NAME]
             assert(event_src_ref[0] == "event_src_ref")
             event_source_name =  event_src_ref[1]
@@ -315,7 +314,6 @@ def get_buff_math_binded_args(tree, stream_types, mapping, binded_args, buffer_g
         else:
             assert(tree[0] == "buff_match_exp-args")
             match_fun_name, arg1, arg2 = tree[1], tree[2], tree[3]
-            print(match_fun_data)
             assert match_fun_name in match_fun_data.keys()
             if arg1 is not None:
                 fun_bind_args = []

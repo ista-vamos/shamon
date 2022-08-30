@@ -672,7 +672,6 @@ def p_arbiter_rule_stmt(p):
     elif len(p) == 5:
         p[0] = ("drop", p[PARB_RULE_STMT_DROP_INT], p[PARB_RULE_STMT_DROP_EV_SOURCE])
         event_source_name = p[PARB_RULE_STMT_DROP_EV_SOURCE][1]
-        print(event_source_name)
         TypeChecker.assert_symbol_type(event_source_name, EVENT_SOURCE_NAME)
     elif len(p) == 2:
         p[0] = p[1]

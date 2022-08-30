@@ -59,7 +59,7 @@ atomic_int count_event_streams = {get_count_events_sources()};
 {declare_event_sources(components["event_source"])}
 
 // event sources threads
-{declare_evt_srcs_threads(components["event_source"])}
+{declare_evt_srcs_threads()}
 
 // declare arbiter thread
 thrd_t ARBITER_THREAD;
@@ -125,43 +125,35 @@ shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t 
 {"}"}
 {declare_rule_sets(ast[2])}
 
-
-
 {build_rule_set_functions(ast[2], streams_to_events_map, stream_types)}
+{arbiter_code(ast[2])}
 int main(int argc, char **argv) {"{"}
 	// init buffer groups
 	initialize_events(); // Always call this first
 	{get_pure_c_code(components, 'startup')}
 	{init_buffer_groups()}
+{event_sources_conn_code(components['event_source'])}
+     // activate buffers
+{activate_buffers()}
+ 	monitor_buffer = shm_monitor_buffer_create(sizeof(STREAM_{arbiter_event_source}_out), 64);
+ 	
+     // create source-events threads
+{activate_threads()}
+
+     // create arbiter thread
+     thrd_create(&ARBITER_THREAD, arbiter, 0);
+     
+ {monitor_code(ast[3], streams_to_events_map[arbiter_event_source], arbiter_event_source)}
+ 
+	// destroy event sources
+{destroy_streams()}
+
+	// destroy arbiter buffers
+{destroy_buffers()}
 	
 	{get_pure_c_code(components, 'cleanup')}
 {"}"}
 '''
-
-# {arbiter_code(ast[PMAIN_PROGRAM_ARBITER])}
-# int main(int argc, char **argv) {"{"}
-#
-# {event_sources_conn_code(ast)}
-#     // activate buffers
-# {activate_buffers(ast)}
-# 	monitor_buffer = shm_monitor_buffer_create(sizeof(STREAM_{arbiter_event_source}_out), 64);
-#
-#     // create source-events threads
-# {activate_threads(ast)}
-#
-#     // create arbiter thread
-#     thrd_create(&ARBITER_THREAD, arbiter, 0);
-#
-#
-# {monitor_code(ast[PMAIN_PROGRAM_MONITOR], streams_to_events_map[arbiter_event_source], arbiter_event_source)}
-#
-#     // destroy event sources
-# {destroy_streams(ast)}
-#     // destroy arbiter buffers
-# {destroy_buffers(ast)}
-
-# {"}"}
-
 
 
 output_file.write(program)

@@ -172,32 +172,41 @@ def get_count_events_sources():
         total_count += data['copies']
     return total_count
 
-def event_sources_conn_code(ast) -> str:
-    assert (ast[0] == "main_program")
-    event_srcs_names = []
-    get_event_sources_names(ast[PMAIN_PROGRAM_EVENT_SOURCES], event_srcs_names)
+def event_sources_conn_code(event_sources) -> str:
 
-    buffer_sizes = []
-    get_buffer_sizes(ast[PMAIN_PROGRAM_EVENT_SOURCES], buffer_sizes)
-
-    out_names = []
-    get_out_names(ast[PMAIN_PROGRAM_EVENT_SOURCES], out_names)
 
     answer = ""
-    for (name, buff_size, out_name) in zip(event_srcs_names, buffer_sizes, out_names):
-        answer += f"\t// connect to event source {name}\n"
-        answer += f"\tEV_SOURCE_{name} = shm_stream_create(\"{name}\", argc, argv);\n"
-        answer += f"\tBUFFER_{name} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
+    for event_source in event_sources:
+        assert(event_source[0] == "event_source")
+        event_src_declaration = event_source[2]
+        assert(event_src_declaration[0] == 'event-decl')
+        stream_name, args = get_name_with_args(event_src_declaration[1])
+        copies = TypeChecker.event_sources_data[stream_name]["copies"]
+        
+        processor_name = TypeChecker.event_sources_data[stream_name]["processor_name"]
+
+        if processor_name == "forward":
+            out_name = TypeChecker.event_sources_data[stream_name]["input_stream_type"]
+        else:
+            out_name = TypeChecker.stream_processors_data[processor_name]["output_type"]
+
+        connection_kind = TypeChecker.event_sources_data[stream_name]["connection_kind"]
+        assert(connection_kind[0] == "conn_kind")
+        buff_size = connection_kind[2]
+        for i in range(copies):
+            name = f"{stream_name}_{i}"
+            answer += f"\t// connect to event source {name}\n"
+            answer += f"\tEV_SOURCE_{name} = shm_stream_create(\"{name}\", argc, argv);\n"
+            answer += f"\tBUFFER_{name} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
 
     return answer
 
-def declare_evt_srcs_threads(event_sources) -> str:
-    event_srcs_names = []
-    get_event_sources_names(event_sources, event_srcs_names)
-
+def declare_evt_srcs_threads() -> str:
     answer = ""
-    for name in event_srcs_names:
-        answer += f"thrd_t THREAD_{name};\n"
+    for (event_source, data) in TypeChecker.event_sources_data.items():
+        for i in range(data["copies"]):
+            name = f"{event_source}_{i}"
+            answer += f"thrd_t THREAD_{name};\n"
 
     return answer
 
@@ -217,49 +226,43 @@ def declare_arbiter_buffers(components, ast) -> str:
                 answer += f"shm_arbiter_buffer *BUFFER_{name}{i};\n\n"
     return answer
 
-def activate_threads(ast) -> str:
-    assert (ast[0] == "main_program")
-    event_srcs_names = []
-    get_event_sources_names(ast[PMAIN_PROGRAM_EVENT_SOURCES], event_srcs_names)
-
+def activate_threads() -> str:
     answer = ""
-    for name in event_srcs_names:
-        answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{name},0);\n"
+    for (event_source, data) in TypeChecker.event_sources_data.items():
+        copies = data["copies"]
+        for i in range(copies):
+            name = f"{event_source}_{i}"
+            answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{event_source},0);\n"
+
 
     return answer
 
 
-def activate_buffers(ast) -> str:
-    assert (ast[0] == "main_program")
-    event_srcs_names = []
-    get_event_sources_names(ast[PMAIN_PROGRAM_EVENT_SOURCES], event_srcs_names)
-
+def activate_buffers() -> str:
     answer = ""
-    for name in event_srcs_names:
-        answer += f"\tshm_arbiter_buffer_set_active(BUFFER_{name}, true);\n"
+    for (event_source, data) in TypeChecker.event_sources_data.items():
+        for i in range(data["copies"]):
+            name = f"{event_source}{i}"
+            answer += f"\tshm_arbiter_buffer_set_active(BUFFER_{name}, true);\n"
 
     return answer
 
 
-def destroy_buffers(ast) -> str:
-    assert (ast[0] == "main_program")
-    event_srcs_names = []
-    get_event_sources_names(ast[PMAIN_PROGRAM_EVENT_SOURCES], event_srcs_names)
-
+def destroy_buffers() -> str:
     answer = ""
-    for name in event_srcs_names:
-        answer += f"\tshm_arbiter_buffer_free(BUFFER_{name});\n"
+    for (event_source, data) in TypeChecker.event_sources_data.items():
+        for i in range(data["copies"]):
+            name = f"{event_source}{i}"
+            answer += f"\tshm_arbiter_buffer_free(BUFFER_{name});\n"
 
     return answer
 
-def destroy_streams(ast) -> str:
-    assert (ast[0] == "main_program")
-    event_srcs_names = []
-    get_event_sources_names(ast[PMAIN_PROGRAM_EVENT_SOURCES], event_srcs_names)
-
+def destroy_streams() -> str:
     answer = ""
-    for name in event_srcs_names:
-        answer += f"\tshm_stream_destroy(EV_SOURCE_{name});\n"
+    for (event_source, data) in TypeChecker.event_sources_data.items():
+        for i in range(data["copies"]):
+            name = f"{event_source}_{i}"
+            answer += f"\tshm_stream_destroy(EV_SOURCE_{name});\n"
 
     return answer
 
