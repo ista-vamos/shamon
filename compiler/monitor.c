@@ -195,7 +195,8 @@ shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t 
 int RULE_SET_rs(int *);
 
 
-int RULE_SET_rs(int *arbiter_counter) {shm_stream *chosen_streams; // used for match fun
+int RULE_SET_rs(int *arbiter_counter) {
+shm_stream *chosen_streams; // used for match fun
             int TEMPARR0[] = {2};
 int TEMPARR1[] = {2};
 
@@ -267,14 +268,14 @@ intmap_clear(&buf);
 
             
         
-            shm_stream *chosen_streams = bg_get_first_n(&BG_Ps, 2);
-            if (chosen_streams == NULL) return;
-            chosen_streams--;
+            chosen_streams = bg_get_first_n(&BG_Ps, 2);
+            if (chosen_streams != NULL) {
+                chosen_streams--;
 shm_stream *F = chosen_streams;
 chosen_streams--;
 shm_stream *S = chosen_streams;
 
-            if (are_events_in_head(BUFFER_F, sizeof(STREAM_Primes_out), TEMPARR2, 1)) {
+                if (are_events_in_head(BUFFER_F, sizeof(STREAM_Primes_out), TEMPARR2, 1)) {
                     
             if(true ) {
                 
@@ -299,20 +300,21 @@ F->pos+= n;
             }
             
                 }
+            }
                     
             
             int TEMPARR3[] = {2};
 
             
         
-            shm_stream *chosen_streams = bg_get_first_n(&BG_Ps, 2);
-            if (chosen_streams == NULL) return;
-            chosen_streams--;
+            chosen_streams = bg_get_first_n(&BG_Ps, 2);
+            if (chosen_streams != NULL) {
+                chosen_streams--;
 shm_stream *F = chosen_streams;
 chosen_streams--;
 shm_stream *S = chosen_streams;
 
-            if (are_events_in_head(BUFFER_F, sizeof(STREAM_Primes_out), TEMPARR3, 1)) {
+                if (are_events_in_head(BUFFER_F, sizeof(STREAM_Primes_out), TEMPARR3, 1)) {
                     
             if(true ) {
                 
@@ -335,6 +337,7 @@ int p = event_for_p->cases.Prime.p;
             }
             
                 }
+            }
                     
             }
 int arbiter() {
@@ -346,11 +349,10 @@ int arbiter() {
 }
     
 int main(int argc, char **argv) {
-	// init buffer groups
 	initialize_events(); // Always call this first
 	
-	BG_Ps->head = NULL;
-    BG_Ps->tail = NULL;
+	// init buffer groups
+	init_buffer_group(&BG_Ps);
 	bg_insert(BG_Ps, EV_SOURCE_P_0, Ps_ORDER_EXP);
 	bg_insert(BG_Ps, EV_SOURCE_P_1, Ps_ORDER_EXP);
         
@@ -404,7 +406,9 @@ int main(int argc, char **argv) {
         shm_monitor_buffer_consume(monitor_buffer, 1);
     }
     
- 
+ 	
+	destroy_buffer_group(&BG_Ps);
+
 	// destroy event sources
 	shm_stream_destroy(EV_SOURCE_P_0);
 	shm_stream_destroy(EV_SOURCE_P_1);

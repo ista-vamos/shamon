@@ -128,9 +128,9 @@ shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t 
 {build_rule_set_functions(ast[2], streams_to_events_map, stream_types)}
 {arbiter_code(ast[2])}
 int main(int argc, char **argv) {"{"}
-	// init buffer groups
 	initialize_events(); // Always call this first
 	{get_pure_c_code(components, 'startup')}
+	// init buffer groups
 	{init_buffer_groups()}
 {event_sources_conn_code(components['event_source'])}
      // activate buffers
@@ -144,7 +144,8 @@ int main(int argc, char **argv) {"{"}
      thrd_create(&ARBITER_THREAD, arbiter, 0);
      
  {monitor_code(ast[3], streams_to_events_map[arbiter_event_source], arbiter_event_source)}
- 
+ 	
+{destroy_buffer_groups()}
 	// destroy event sources
 {destroy_streams()}
 

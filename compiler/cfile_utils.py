@@ -60,8 +60,7 @@ def init_buffer_groups():
         includes_str = ""
         for i in range(data["arg_includes"]):
             includes_str += f"\tbg_insert(BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, {buff_name}_ORDER_EXP);\n"
-        answer += f'''BG_{buff_name}->head = NULL;
-    BG_{buff_name}->tail = NULL;
+        answer += f'''init_buffer_group(&BG_{buff_name});
 {includes_str}        
 '''
     return answer
@@ -561,9 +560,9 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         else:
             count_choose = len(temp_binded_streams)
         if order == "first":
-            choose_statement = f"shm_stream *chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
+            choose_statement = f"chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
         else:
-            choose_statement = f"shm_stream *chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
+            choose_statement = f"chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
 
         binded_streams = []
         if context is not None:
@@ -584,9 +583,10 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         answer = f'''
         
             {choose_statement}
-            if (chosen_streams == NULL) return;
-            {declared_streams}
-            {inner_code}
+            if (chosen_streams != NULL) {'{'}
+                {declared_streams}
+                {inner_code}
+            {'}'}
                     '''
         return answer
     else:
@@ -868,7 +868,7 @@ def build_rule_set_functions(tree, mapping, stream_types):
         else:
             assert (local_tree[0] == "arbiter_rule_set")
             rule_set_name = local_tree[1]
-            return f"int RULE_SET_{rule_set_name}(int *arbiter_counter) {'{'}" \
+            return f"int RULE_SET_{rule_set_name}(int *arbiter_counter) {'{'}\n" \
                    f"shm_stream *chosen_streams; // used for match fun" \
                    f"{local_explore_rule_list(local_tree[2])}" \
                    f"{'}'}"
@@ -877,3 +877,9 @@ def build_rule_set_functions(tree, mapping, stream_types):
 
     arbiter_rule_set_list = tree[2]
     return local_explore_arb_rule_set_list(arbiter_rule_set_list)
+
+def destroy_buffer_groups():
+    answer = ""
+    for buffer_group in TypeChecker.buffer_group_data.keys():
+        answer +=f"\tdestroy_buffer_group(&BG_{buffer_group});\n"
+    return answer
