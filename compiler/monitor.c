@@ -277,10 +277,14 @@ intmap_clear(&buf);
             chosen_streams = bg_get_first_n(&BG_Ps, 2);
             if (chosen_streams != NULL) {
                 chosen_streams--;
-                shm_stream *F = chosen_streams->stream;
-                shm_arbiter_buffer * buffer_F = chosen_streams->buffer;chosen_streams--;
-                shm_stream *S = chosen_streams->stream;
-                shm_arbiter_buffer * buffer_S = chosen_streams->buffer;
+shm_stream *F = chosen_streams->stream;
+shm_arbiter_buffer *buffer_F = chosen_streams->buffer;
+STREAM_Primes_ARGS stream_args_F = (*(STREAM_Primes_ARGS *)chosen_streams->args);
+chosen_streams--;
+shm_stream *S = chosen_streams->stream;
+shm_arbiter_buffer *buffer_S = chosen_streams->buffer;
+STREAM_Primes_ARGS stream_args_S = (*(STREAM_Primes_ARGS *)chosen_streams->args);
+
                 if (are_events_in_head(BUFFER_F, sizeof(STREAM_Primes_out), TEMPARR2, 1)) {
                     
             if(true ) {
@@ -316,9 +320,13 @@ stream_args_F.pos+= n;
             if (chosen_streams != NULL) {
                 chosen_streams--;
 shm_stream *F = chosen_streams->stream;
-shm_arbiter_buffer * buffer_F = chosen_streams->buffer;chosen_streams--;
+shm_arbiter_buffer *buffer_F = chosen_streams->buffer;
+STREAM_Primes_ARGS stream_args_F = (*(STREAM_Primes_ARGS *)chosen_streams->args);
+chosen_streams--;
 shm_stream *S = chosen_streams->stream;
-shm_arbiter_buffer * buffer_S = chosen_streams->buffer;
+shm_arbiter_buffer *buffer_S = chosen_streams->buffer;
+STREAM_Primes_ARGS stream_args_S = (*(STREAM_Primes_ARGS *)chosen_streams->args);
+
                 if (are_events_in_head(BUFFER_F, sizeof(STREAM_Primes_out), TEMPARR3, 1)) {
                     
             if(true ) {
@@ -361,8 +369,8 @@ int main(int argc, char **argv) {
 
 	// init buffer groups
 	init_buffer_group(&BG_Ps);
-	bg_insert(&BG_Ps, EV_SOURCE_P_0, BUFFER_P0, Ps_ORDER_EXP);
-	bg_insert(&BG_Ps, EV_SOURCE_P_1, BUFFER_P1, Ps_ORDER_EXP);
+	bg_insert(&BG_Ps, EV_SOURCE_P_0, BUFFER_P0,&stream_args_P_0,Ps_ORDER_EXP);
+	bg_insert(&BG_Ps, EV_SOURCE_P_1, BUFFER_P1,&stream_args_P_1,Ps_ORDER_EXP);
         
 
 	// connect to event source P_0

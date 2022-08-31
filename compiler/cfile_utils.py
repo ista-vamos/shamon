@@ -60,7 +60,7 @@ def init_buffer_groups():
     for (buff_name, data) in TypeChecker.buffer_group_data.items():
         includes_str = ""
         for i in range(data["arg_includes"]):
-            includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, BUFFER_{data['includes']}{i}, {buff_name}_ORDER_EXP);\n"
+            includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, BUFFER_{data['includes']}{i},&stream_args_{data['includes']}_{i},{buff_name}_ORDER_EXP);\n"
         answer += f'''init_buffer_group(&BG_{buff_name});
 {includes_str}        
 '''
@@ -611,10 +611,12 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         for s in binded_streams:
             stream_types[s] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"], TypeChecker.buffer_group_data[buffer_name]["in_stream"])
         declared_streams = ""
+        stream_type = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
         for name in binded_streams:
             declared_streams += "chosen_streams--;\n"
             declared_streams += f"shm_stream *{name} = chosen_streams->stream;\n"
-            declared_streams += f"shm_arbiter_buffer * BUFFER_{name} = chosen_streams->buffer;\n"
+            declared_streams += f"shm_arbiter_buffer *buffer_{name} = chosen_streams->buffer;\n"
+            declared_streams += f"STREAM_{stream_type}_ARGS stream_args_{name} = (*(STREAM_{stream_type}_ARGS *)chosen_streams->args);\n"
 
         answer = f'''
             {choose_statement}
