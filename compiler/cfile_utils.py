@@ -615,7 +615,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         for name in binded_streams:
             declared_streams += "chosen_streams--;\n"
             declared_streams += f"shm_stream *{name} = chosen_streams->stream;\n"
-            declared_streams += f"shm_arbiter_buffer *buffer_{name} = chosen_streams->buffer;\n"
+            declared_streams += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams->buffer;\n"
             declared_streams += f"STREAM_{stream_type}_ARGS stream_args_{name} = (*(STREAM_{stream_type}_ARGS *)chosen_streams->args);\n"
 
         answer = f'''
