@@ -2,8 +2,8 @@
 #include "../../gen/mmlib.h"
 
 typedef struct _dll_node {
-    dll_node *next;
-    dll_node *prev;
+    struct _dll_node *next;
+    struct _dll_node *prev;
     shm_stream *stream;
 } dll_node;
 
@@ -29,6 +29,6 @@ void bg_remove_first_n(buffer_group *bg, int n);
 
 void bg_remove_last_n(buffer_group *bg, int n);
 
-shm_event *bg_get_first_n(buffer_group *bg, int n);
+shm_stream *bg_get_first_n(buffer_group *bg, int n);
 
-shm_event *bg_get_last_n(buffer_group *bg, int n);
+shm_stream *bg_get_last_n(buffer_group *bg, int n);

@@ -24,7 +24,7 @@ def get_name_with_args(tree):
             get_expressions(tree[2], args)
         return tree[1], args
     else:
-        return tree, None
+        return tree, []
 
 def get_name_args_count(tree):
     if tree[0] == "name-with-args":
@@ -272,13 +272,13 @@ def get_arbiter_event_source(tree) -> str:
     assert(tree[0] == 'arbiter_def')
     return tree[PPARBITER_OUTPUT_TYPE]
 
-def get_parameters_names(tree, stream_name, mapping, binded_args, index=0):
+def get_parameters_names(tree, stream_name, mapping, binded_args, index=0, stream_index=None):
     if tree[0] == 'list_ev_calls':
         ids = []
         get_list_ids(tree[PPLIST_EV_CALL_EV_PARAMS], ids)
         assert(len(ids) == len(mapping[tree[PPLIST_EV_CALL_EV_NAME]]['args']))
         for (arg_bind, arg) in zip(mapping[tree[PPLIST_EV_CALL_EV_NAME]]['args'], ids):
-            binded_args[arg_bind] = (stream_name, arg[0], arg[1], index)
+            binded_args[arg_bind] = (stream_name, arg[0], arg[1], index, stream_index)
         get_parameters_names(tree[PPLIST_EV_CALL_TAIL], stream_name, mapping, binded_args, index+1)
     else:
         assert(tree[0] == 'ev_call')
@@ -286,7 +286,7 @@ def get_parameters_names(tree, stream_name, mapping, binded_args, index=0):
         get_list_ids(tree[PPLIST_EV_CALL_EV_PARAMS], ids)
         assert (len(ids) == len(mapping[tree[PPLIST_EV_CALL_EV_NAME]]['args']))
         for (arg_bind, arg) in zip(mapping[tree[PPLIST_EV_CALL_EV_NAME]]['args'], ids):
-            binded_args[arg] = (stream_name, tree[PPLIST_EV_CALL_EV_NAME], arg_bind[0], arg_bind[1], index)
+            binded_args[arg] = (stream_name, tree[PPLIST_EV_CALL_EV_NAME], arg_bind[0], arg_bind[1], index, stream_index)
 
 
 
@@ -300,10 +300,11 @@ def get_buff_math_binded_args(tree, stream_types, mapping, binded_args, buffer_g
             assert(event_src_ref[0] == "event_src_ref")
             event_source_name =  event_src_ref[1]
             stream_type = stream_types[event_source_name][1]
+            stream_index = event_src_ref[2]
             if len(tree) > 3:
                 for i in range(2, len(tree)):
                     if tree[i] != '|':
-                        get_parameters_names(tree[i], event_source_name, mapping[stream_type], binded_args)
+                        get_parameters_names(tree[i], event_source_name, mapping[stream_type], binded_args, stream_index=stream_index)
         elif tree[0] == "buff_match_exp-choose":
             buffer_name = tree[3]
             binded_streams = []

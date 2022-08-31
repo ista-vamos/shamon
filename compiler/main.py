@@ -37,9 +37,10 @@ TypeChecker.arbiter_output_type = arbiter_event_source
 program = f'''#include "shamon.h"
 #include "mmlib.h"
 #include "monitor.h"
-#include "compiler_utils.h"
+#include "./compiler/cfiles/compiler_utils.h"
 #include <threads.h>
 #include <stdio.h>
+#include <stdatomic.h>
 
 struct _EVENT_hole
 {"{"}
@@ -50,7 +51,9 @@ typedef struct _EVENT_hole EVENT_hole;
 // globals code
 {get_globals_code(components, streams_to_events_map, stream_types)}
 {event_stream_structs(components["stream_type"])}
+{event_stream_args_structs(components["stream_type"])}
 
+{instantiate_stream_args()}
 {build_should_keep_funcs(components["event_source"], streams_to_events_map)}
 
 atomic_int count_event_streams = {get_count_events_sources()};
@@ -123,6 +126,9 @@ shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t 
 		return (shm_event *) (e2 + (element_index*size_event));
 	{"}"}
 {"}"}
+
+//arbiter outevent
+STREAM_{arbiter_event_source}_out *arbiter_outevent;
 {declare_rule_sets(ast[2])}
 
 {build_rule_set_functions(ast[2], streams_to_events_map, stream_types)}

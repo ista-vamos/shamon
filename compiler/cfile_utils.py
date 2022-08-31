@@ -1,4 +1,5 @@
 # all the function declared here return a string of C-code
+from typing import Type
 from utils import *
 from parser_indices import *
 from type_checker import TypeChecker
@@ -59,7 +60,7 @@ def init_buffer_groups():
     for (buff_name, data) in TypeChecker.buffer_group_data.items():
         includes_str = ""
         for i in range(data["arg_includes"]):
-            includes_str += f"\tbg_insert(BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, {buff_name}_ORDER_EXP);\n"
+            includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, {buff_name}_ORDER_EXP);\n"
         answer += f'''init_buffer_group(&BG_{buff_name});
 {includes_str}        
 '''
@@ -111,6 +112,43 @@ def events_declaration_structs(tree) -> str:
 {"}"};
 typedef struct _EVENT_{event_name} EVENT_{event_name};'''
 
+def event_stream_args_structs(stream_types) -> str:
+    answer = ""
+    for tree in stream_types:
+        assert(tree[0] == "stream_type")
+        stream_name = tree[PPSTREAM_TYPE_NAME]
+        stream_arg_fields = get_stream_struct_fields(tree[2])
+        if stream_arg_fields != "":
+            answer += f'''
+    typedef struct _{stream_name}_ARGS {'{'}
+    {stream_arg_fields}
+    {'}'} {stream_name}_ARGS;
+            '''
+    return answer
+
+def instantiate_stream_args():
+    answer = ""
+    for (stream_name, data) in TypeChecker.event_sources_data.items():
+        print(data)
+        if len(data['args']) > 0:
+            print("len data")
+            for i in range(data['copies']):
+                print("copies")
+                answer += f"{stream_name}_ARGS args_{stream_name}_{i};\n";
+    print("fdaf", answer)
+    return answer
+
+def initialize_stream_args():
+    answer = ""
+    for (stream_name, data) in TypeChecker.event_sources_data.items():
+        if len(data['args']) :
+            for i in range(data['copies']):
+                for arg in data["args"]:
+
+                    answer += f"args_{stream_name}_{i}.{arg} = ;\n";
+
+    return answer
+
 def event_stream_structs(stream_types) -> str:
     answer = ""
     for tree in stream_types:
@@ -119,7 +157,6 @@ def event_stream_structs(stream_types) -> str:
         union_events = ""
         for name in TypeChecker.stream_types_to_events[stream_name]:
             union_events += f"EVENT_{name} {name};"
-        stream_arg_fields = get_stream_struct_fields(tree[2])
         value = f'''// event declarations for stream type {stream_name}
 {events_declaration_structs(tree[-1])}
 
@@ -129,7 +166,6 @@ struct _STREAM_{stream_name}_in {"{"}
     union {"{"}
         {union_events}
     {"}"}cases;
-{stream_arg_fields}
 {"}"};
 typedef struct _STREAM_{stream_name}_in STREAM_{stream_name}_in;
 
@@ -140,7 +176,6 @@ struct _STREAM_{stream_name}_out {"{"}
         EVENT_hole hole;
         {union_events}
     {"}"}cases;
-{stream_arg_fields}
 {"}"};
 typedef struct _STREAM_{stream_name}_out STREAM_{stream_name}_out;
         '''
@@ -196,7 +231,7 @@ def event_sources_conn_code(event_sources) -> str:
             name = f"{stream_name}_{i}"
             answer += f"\t// connect to event source {name}\n"
             answer += f"\tEV_SOURCE_{name} = shm_stream_create(\"{name}\", argc, argv);\n"
-            answer += f"\tBUFFER_{name} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
+            answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
 
     return answer
 
@@ -231,7 +266,7 @@ def activate_threads() -> str:
         copies = data["copies"]
         for i in range(copies):
             name = f"{event_source}_{i}"
-            answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{event_source},0);\n"
+            answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{event_source},BUFFER_{event_source}{i});\n"
 
 
     return answer
@@ -530,7 +565,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                 get_event_kinds(tree[PPBUFFER_MATCH_ARG2], event_kinds, mapping[out_type])
             if not is_scan:
                 StaticCounter.calls_counter+=1
-                return f'''if (are_events_in_head(BUFFER_{stream_name}, sizeof(STREAM_{out_type}_out), TEMPARR{StaticCounter.calls_counter-1}, {len(event_kinds)})) {"{"}
+                return f'''if (are_events_in_head(BUFFER_{event_src_ref[1]}{event_src_ref[2]}, sizeof(STREAM_{out_type}_out), TEMPARR{StaticCounter.calls_counter-1}, {len(event_kinds)})) {"{"}
                     {inner_code}
                 {"}"}'''
             else:
@@ -581,7 +616,6 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             declared_streams += f"shm_stream *{name} = chosen_streams;\n"
 
         answer = f'''
-        
             {choose_statement}
             if (chosen_streams != NULL) {'{'}
                 {declared_streams}
@@ -620,10 +654,14 @@ def buffer_peeks(binded_args, events_to_retrieve):
 
     for (arg, data) in binded_args.items():
         if data[0] not in called_buffers:
+            assert(len(data) == 6)
+            buffer_name = data[0]
+            if data[5] is not None:
+                buffer_name += f"{data[5]}"
             answer += f'''
                 char* e1_{data[0]}; size_t i1_{data[0]};
 	            char* e2_{data[0]}; size_t i2_{data[0]};
-	            shm_arbiter_buffer_peek(BUFFER_{data[0]}, {events_to_retrieve[data[0]]}, (void**)&e1_{data[0]}, &i1_{data[0]},(void**) &e2_{data[0]}, &i2_{data[0]});
+	            shm_arbiter_buffer_peek(BUFFER_{buffer_name}, {events_to_retrieve[data[0]]}, (void**)&e1_{data[0]}, &i1_{data[0]},(void**) &e2_{data[0]}, &i2_{data[0]});
             '''
             called_buffers.add(data[0])
     return answer
@@ -648,7 +686,7 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
         return f"RULE_SET_{switch_rule_name}(arbiter_counter);\n"
     if tree[0] == "yield":
         return f'''
-        arbiter_outevent = shm_monitor_buffer_write_ptr(monitor_buffer);
+        arbiter_outevent = (STREAM_{TypeChecker.arbiter_output_type}_out *)shm_monitor_buffer_write_ptr(monitor_buffer);
          {construct_arb_rule_outevent(mapping, output_ev_source, 
                                       tree[PPARB_RULE_STMT_YIELD_EVENT], tree[PPARB_RULE_STMT_YIELD_EXPRS])}
          shm_monitor_buffer_write_finish(monitor_buffer);
@@ -658,14 +696,14 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
         assert(event_source_ref[0] == "event_src_ref")
         event_source_name = event_source_ref[1]
         if event_source_ref[2] is not None:
-            event_source_name += f"_{event_source_ref[2]}"
+            event_source_name += f"{event_source_ref[2]}"
         return f"\tshm_arbiter_buffer_drop(BUFFER_{event_source_name}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
     assert(tree[0] == "field_access")
     target_stream, index, field = tree[1], tree[2], tree[3]
     stream_name = target_stream
     if index is not None:
         stream_name += f"_{index}"
-    return f"{stream_name}->{field}"
+    return f"EV_SOURCE_{stream_name}->{field}"
 
 
 
@@ -837,7 +875,7 @@ def build_arbiter_rule(local_tree, mapping, stream_types) -> str:
         declared_streams = ""
         for name in binded_streams:
             declared_streams += "chosen_streams--;\n"
-            declared_streams += f"shm_stream *{name} = chosen_streams;\n"
+            declared_streams += f"shm_stream *EV_SOURCE_{name} = chosen_streams;\n"
 
         answer = f'''
 void buff_match_exp_{StaticCounter.match_expr_counter}() {"{"}
