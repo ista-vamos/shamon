@@ -10,13 +10,13 @@ stream type NumberPairs
 
 event source P[2] : Primes(0) process using FORWARD to autodrop(8)
 
-buffer group Ps : Primes order by $pos includes P[all]
+buffer group Ps : Primes order by pos includes P[all]
 
 globals
 $$
     #include "intmap.h"
     intmap buf;
-  
+
     void process(n, p, pos, opos)
     {
         if(pos < opos)
@@ -46,7 +46,7 @@ arbiter : NumberPairs
 {
     rule set rs
     {
-        on P[0]: | Prime(ln, lp) , P[1]: | Prime(rn, rp)
+        on P[0]: | Prime(ln, lp) , P[1]: | Prime(rn, rp) where $$ true $$
         $$
             if(ln == rn)
             {
@@ -68,7 +68,7 @@ arbiter : NumberPairs
                 $drop 1 from P[1];
             }
         $$
-        on Prio[F,S](), F : hole(n) |
+        on Prio[F,S](), F : hole(n) | where $$ true $$
         $$
             if($F.pos; < $S.pos;)
             {
@@ -76,7 +76,7 @@ arbiter : NumberPairs
             }
             $F.pos; += n;
         $$
-        on Prio[F,S](), F: Prime(n, p) |
+        on Prio[F,S](), F: Prime(n, p) | where $$ true $$
         $$
             $F.pos; = process(n, p, $F.pos;, $S.pos;);
         $$
@@ -85,7 +85,7 @@ arbiter : NumberPairs
 
 monitor
 {
-    on NumberPair(i, n, m)
+    on NumberPair(i, n, m) where $$ true $$
     $$
         if(n!=m)
         {

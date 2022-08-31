@@ -358,7 +358,7 @@ def p_connection_kind(p):
 # BEGIN advanced features
 def p_buff_group_def(p):
     '''
-    buff_group_def : BUFFER GROUP ID ':' ID INCLUDES ID '[' int_or_all ']' ORDER BY order_expr
+    buff_group_def : BUFFER GROUP ID ':' ID ORDER BY order_expr INCLUDES ID '[' int_or_all ']'
                    | BUFFER GROUP ID ':' ID INCLUDES ID '[' int_or_all ']'
                    | BUFFER GROUP ID ':' ID ORDER BY order_expr
                    | BUFFER GROUP ID ':' ID
@@ -369,14 +369,15 @@ def p_buff_group_def(p):
     arg_includes = None
     order_by = None
     if len(p) > 6:
-        if p[6] == "includes":
+        if p[6] == "order":
+            order_by = p[8]
+            if len(p) > 11:
+                includes = p[10]
+                arg_includes = p[12]
+        else:
+            assert(p[6] == "includes")
             includes = p[7]
             arg_includes = p[9]
-            if len(p) > 11:
-                order_by = p[13]
-        else:
-            assert(p[6] == "order")
-            order_by = p[8]
 
     p[0] = ('buff_group_def', buffer_group_name, stream_type, includes, arg_includes, order_by)
     TypeChecker.insert_symbol(buffer_group_name, BUFFER_GROUP_NAME)
@@ -585,10 +586,7 @@ def p_event_src_ref(p):
 def p_order_expr(p):
     '''
     order_expr : ROUND ROBIN
-               | '$' FIELD_ACCESS ';'
-               | '$' ID ';'
                | ID
-               | FIELD_ACCESS
     '''
     if len(p) == 3:
         p[0] = ('order_expr', 'round-robin')
