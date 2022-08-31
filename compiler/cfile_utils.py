@@ -60,7 +60,7 @@ def init_buffer_groups():
     for (buff_name, data) in TypeChecker.buffer_group_data.items():
         includes_str = ""
         for i in range(data["arg_includes"]):
-            includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, {buff_name}_ORDER_EXP);\n"
+            includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, BUFFER_{data['includes']}{i}, {buff_name}_ORDER_EXP);\n"
         answer += f'''init_buffer_group(&BG_{buff_name});
 {includes_str}        
 '''
@@ -112,7 +112,7 @@ def events_declaration_structs(tree) -> str:
 {"}"};
 typedef struct _EVENT_{event_name} EVENT_{event_name};'''
 
-def event_stream_args_structs(stream_types) -> str:
+def stream_type_args_structs(stream_types) -> str:
     answer = ""
     for tree in stream_types:
         assert(tree[0] == "stream_type")
@@ -120,36 +120,33 @@ def event_stream_args_structs(stream_types) -> str:
         stream_arg_fields = get_stream_struct_fields(tree[2])
         if stream_arg_fields != "":
             answer += f'''
-    typedef struct _{stream_name}_ARGS {'{'}
+    typedef struct _STREAM_{stream_name}_ARGS {'{'}
     {stream_arg_fields}
-    {'}'} {stream_name}_ARGS;
+    {'}'} STREAM_{stream_name}_ARGS;
             '''
     return answer
 
 def instantiate_stream_args():
     answer = ""
     for (stream_name, data) in TypeChecker.event_sources_data.items():
-        print(data)
-        if len(data['args']) > 0:
-            print("len data")
+        if len(data['input_stream_args']) > 0:
+            stream_type = data["input_stream_type"]
             for i in range(data['copies']):
-                print("copies")
-                answer += f"{stream_name}_ARGS args_{stream_name}_{i};\n";
-    print("fdaf", answer)
+                answer += f"STREAM_{stream_type}_ARGS stream_args_{stream_name}_{i};\n"
     return answer
 
 def initialize_stream_args():
     answer = ""
-    for (stream_name, data) in TypeChecker.event_sources_data.items():
-        if len(data['args']) :
+    for (event_source, data) in TypeChecker.event_sources_data.items():
+        stream_args = TypeChecker.args_table[data["input_stream_type"]]
+        if len(data['input_stream_args']) :
             for i in range(data['copies']):
-                for arg in data["args"]:
-
-                    answer += f"args_{stream_name}_{i}.{arg} = ;\n";
-
+                for stream_arg, arg_value in zip(stream_args, data["input_stream_args"]):
+                    arg_name = stream_arg["name"]
+                    answer += f"\tstream_args_{event_source}_{i}.{arg_name} = {arg_value};\n";
     return answer
 
-def event_stream_structs(stream_types) -> str:
+def stream_type_structs(stream_types) -> str:
     answer = ""
     for tree in stream_types:
         assert(tree[0] == "stream_type")
@@ -565,7 +562,10 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                 get_event_kinds(tree[PPBUFFER_MATCH_ARG2], event_kinds, mapping[out_type])
             if not is_scan:
                 StaticCounter.calls_counter+=1
-                return f'''if (are_events_in_head(BUFFER_{event_src_ref[1]}{event_src_ref[2]}, sizeof(STREAM_{out_type}_out), TEMPARR{StaticCounter.calls_counter-1}, {len(event_kinds)})) {"{"}
+                buffer_name = event_src_ref[1]
+                if event_src_ref[2] is not None:
+                    buffer_name += str(event_src_ref[2])
+                return f'''if (are_events_in_head(BUFFER_{buffer_name}, sizeof(STREAM_{out_type}_out), TEMPARR{StaticCounter.calls_counter-1}, {len(event_kinds)})) {"{"}
                     {inner_code}
                 {"}"}'''
             else:
@@ -613,7 +613,8 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         declared_streams = ""
         for name in binded_streams:
             declared_streams += "chosen_streams--;\n"
-            declared_streams += f"shm_stream *{name} = chosen_streams;\n"
+            declared_streams += f"shm_stream *{name} = chosen_streams->stream;\n"
+            declared_streams += f"shm_arbiter_buffer * buffer_{name} = chosen_streams->buffer;\n"
 
         answer = f'''
             {choose_statement}
@@ -703,7 +704,7 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
     stream_name = target_stream
     if index is not None:
         stream_name += f"_{index}"
-    return f"EV_SOURCE_{stream_name}->{field}"
+    return f"stream_args_{stream_name}.{field}"
 
 
 
@@ -866,16 +867,16 @@ def build_arbiter_rule(local_tree, mapping, stream_types) -> str:
         buffer_name = local_tree[3]
         assert buffer_name in TypeChecker.buffer_group_data.keys()
         if choose_order[1] == "first":
-            choose_statement = f"shm_stream *chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
+            choose_statement = f"dll_node *chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
         else:
             assert(choose_order[1] == "last")
-            choose_statement = f"chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
+            choose_statement = f"dll_node *chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
         binded_streams = []
         get_list_ids(local_tree[2], binded_streams)
         declared_streams = ""
         for name in binded_streams:
             declared_streams += "chosen_streams--;\n"
-            declared_streams += f"shm_stream *EV_SOURCE_{name} = chosen_streams;\n"
+            declared_streams += f"shm_stream *{name} = chosen_streams->stream;\n"
 
         answer = f'''
 void buff_match_exp_{StaticCounter.match_expr_counter}() {"{"}
@@ -907,7 +908,7 @@ def build_rule_set_functions(tree, mapping, stream_types):
             assert (local_tree[0] == "arbiter_rule_set")
             rule_set_name = local_tree[1]
             return f"int RULE_SET_{rule_set_name}(int *arbiter_counter) {'{'}\n" \
-                   f"shm_stream *chosen_streams; // used for match fun" \
+                   f"dll_node *chosen_streams; // used for match fun" \
                    f"{local_explore_rule_list(local_tree[2])}" \
                    f"{'}'}"
 

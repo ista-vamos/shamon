@@ -50,8 +50,8 @@ typedef struct _EVENT_hole EVENT_hole;
 
 // globals code
 {get_globals_code(components, streams_to_events_map, stream_types)}
-{event_stream_structs(components["stream_type"])}
-{event_stream_args_structs(components["stream_type"])}
+{stream_type_structs(components["stream_type"])}
+{stream_type_args_structs(components["stream_type"])}
 
 {instantiate_stream_args()}
 {build_should_keep_funcs(components["event_source"], streams_to_events_map)}
@@ -136,6 +136,7 @@ STREAM_{arbiter_event_source}_out *arbiter_outevent;
 int main(int argc, char **argv) {"{"}
 	initialize_events(); // Always call this first
 	{get_pure_c_code(components, 'startup')}
+{initialize_stream_args()}
 	// init buffer groups
 	{init_buffer_groups()}
 {event_sources_conn_code(components['event_source'])}
