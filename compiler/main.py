@@ -51,6 +51,8 @@ typedef struct _EVENT_hole EVENT_hole;
 {stream_type_args_structs(components["stream_type"])}
 
 {instantiate_stream_args()}
+int arbiter_counter = 10;
+
 // globals code
 {get_globals_code(components, streams_to_events_map, stream_types)}
 {build_should_keep_funcs(components["event_source"], streams_to_events_map)}

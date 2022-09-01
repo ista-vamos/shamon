@@ -506,7 +506,6 @@ def arbiter_code(tree):
 
 
     return f'''int arbiter() {"{"}
-    int arbiter_counter = 10;
     while (exists_open_streams()) {"{"}
     {rule_set_invocations}\t{"}"}
     shm_monitor_set_finished(monitor_buffer);
