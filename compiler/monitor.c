@@ -11,38 +11,6 @@ struct _EVENT_hole
   uint64_t n;
 };
 typedef struct _EVENT_hole EVENT_hole;
-
-// globals code
-STREAM_NumberPairs_out *arbiter_outevent;
-#include "intmap.h"
-     intmap buf;
-     void process(n, p, pos, opos){
-         if(pos < opos) {
- 
-             int oval=0;
- 
-             if(intmap_get(&buf, n, &oval)){
-                 
-
-        arbiter_outevent = (STREAM_NumberPairs_out *)shm_monitor_buffer_write_ptr(monitor_buffer);
-         arbiter_outevent->head.kind = 2;
-    arbiter_outevent->head.id = (*arbiter_counter)++;
-    ((STREAM_NumberPairs_out *) arbiter_outevent)->cases.NumberPair.i = n;
-((STREAM_NumberPairs_out *) arbiter_outevent)->cases.NumberPair.n = oval;
-((STREAM_NumberPairs_out *) arbiter_outevent)->cases.NumberPair.m = p;
-
-         shm_monitor_buffer_write_finish(monitor_buffer);
-        }
-             count -= intmap_remove_upto(&buf, n);
-         } else {
-             if(count<10) {
-                 intmap_insert(&buf, n, p);
-                 count++;
-             }
-         }
-         return n+1;
-     }
- 
 // event declarations for stream type Primes
 struct _EVENT_Prime {
 	int n;
@@ -107,6 +75,44 @@ typedef struct _STREAM_NumberPairs_out STREAM_NumberPairs_out;
 STREAM_Primes_ARGS stream_args_P_0;
 STREAM_Primes_ARGS stream_args_P_1;
 
+int arbiter_counter = 10;
+
+// globals code
+STREAM_NumberPairs_out *arbiter_outevent;
+#include "intmap.h"
+     intmap buf;
+ 
+     int process(n, p, pos, opos)
+     {
+         if(pos < opos)
+         {
+             int oval=0;
+             if(intmap_get(&buf, n, &oval))
+             {
+                 
+
+        arbiter_outevent = (STREAM_NumberPairs_out *)shm_monitor_buffer_write_ptr(monitor_buffer);
+         arbiter_outevent->head.kind = 2;
+    arbiter_outevent->head.id = (*arbiter_counter)++;
+    ((STREAM_NumberPairs_out *) arbiter_outevent)->cases.NumberPair.i = n;
+((STREAM_NumberPairs_out *) arbiter_outevent)->cases.NumberPair.n = oval;
+((STREAM_NumberPairs_out *) arbiter_outevent)->cases.NumberPair.m = p;
+
+         shm_monitor_buffer_write_finish(monitor_buffer);
+        }
+             count -= intmap_remove_upto(&buf, n);
+         }
+         else
+         {
+             if(count<10)
+             {
+                 intmap_insert(&buf, n, p);
+                 count++;
+             }
+         }
+         return n+1;
+     }
+ 
 bool SHOULD_KEEP_P(shm_stream * s, shm_event * e) {
     return true;
 }
@@ -139,8 +145,8 @@ shm_monitor_buffer *monitor_buffer;
 
 // buffer groups
 
-bool Ps_ORDER_EXP (shm_stream *ev1, shm_stream *ev2) {
-    return false;
+bool Ps_ORDER_EXP (void* *args1, void* *args2) {
+    return ((STREAM_Primes_ARGS *) args1)->pos > ((STREAM_Primes_ARGS *) args2)->pos;
 }        
 
 
@@ -274,6 +280,10 @@ int rp = event_for_rp->cases.Prime.p;
 	shm_arbiter_buffer_drop(BUFFER_P1, 1);
 
 intmap_clear(&buf);
+                 stream_args_P_0.pos
+= ln + 1;
+                 stream_args_P_1.pos
+= rn + 1;
              }
              else if(stream_args_P_0.pos
 <stream_args_P_1.pos
@@ -289,7 +299,8 @@ intmap_clear(&buf);
              else
              {
                  stream_args_P_1.pos
-= process(rn, rp, posns[1], stream_args_P_0.pos
+= process(rn, rp, stream_args_P_1.pos
+, stream_args_P_0.pos
 );
                  	shm_arbiter_buffer_drop(BUFFER_P1, 1);
 
@@ -383,7 +394,6 @@ int p = event_for_p->cases.Prime.p;
                     
             }
 int arbiter() {
-    int arbiter_counter = 10;
     while (exists_open_streams()) {
     	RULE_SET_rs(&arbiter_counter);
 	}
