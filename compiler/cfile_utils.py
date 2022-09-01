@@ -594,11 +594,11 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         else:
             count_choose = len(temp_binded_streams)
         
-        choose_statement = f"dll_node *chosen_streams = malloc(sizeof(dll_node *)*{count_choose});\n"
+
         if order == "first":
-            choose_statement += f"bg_get_first_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
+            choose_statement = f"bg_get_first_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
         else:
-            choose_statement += f"bg_get_last_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
+            choose_statement = f"bg_get_last_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
 
         binded_streams = []
         if context is not None:
@@ -620,6 +620,10 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             declared_streams += f"STREAM_{stream_type}_ARGS stream_args_{name} = (*(STREAM_{stream_type}_ARGS *)chosen_streams->args);\n"
 
         answer = f'''
+            if (chosen_streams != NULL) {"{"}
+                free(chosen_streams);
+            {"}"}
+            chosen_streams = malloc(sizeof(dll_node *)*{count_choose});
             {choose_statement}
             if (chosen_streams != NULL) {'{'}
                 {declared_streams}
@@ -803,6 +807,7 @@ def get_code_rule_sets(tree, mapping, stream_types, output_ev_source) -> str:
         assert(tree[0] == "arbiter_rule_set")
         rule_set_name = tree[PPARB_RULE_SET_NAME]
         return f'''int RULE_SET_{rule_set_name}() {"{"}
+        dll_node *chosen_streams;
     STREAM_{output_ev_source}_out *outevent;   
     {arbiter_rule_code(tree[PPARB_RULE_LIST], mapping, stream_types, output_ev_source)}
 {"}"}
