@@ -39,7 +39,7 @@ def declare_order_expressions():
         else:
             code = f"return ((STREAM_{data['in_stream']}_ARGS *) args1)->{data['order']} > ((STREAM_{data['in_stream']}_ARGS *) args2)->{data['order']};"
         answer += f'''
-bool {buff_name}_ORDER_EXP (void* *args1, void* *args2) {"{"}
+bool {buff_name}_ORDER_EXP (void *args1, void *args2) {"{"}
     {code}
 {"}"}        
 '''

@@ -32,4 +32,4 @@ LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
            $SHAMONDIR/streams/libshamon-streams.a"
 
 test -z $CC && CC=cc
-${CC} $CFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC $@ $LIBRARIES $LDFLAGS
+${CC} $CFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC ./compiler/cfiles/compiler_utils.c ./compiler/cfiles/intmap.o -lstdc++ $@ $LIBRARIES $LDFLAGS
