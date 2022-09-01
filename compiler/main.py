@@ -47,13 +47,12 @@ struct _EVENT_hole
   uint64_t n;
 {"}"};
 typedef struct _EVENT_hole EVENT_hole;
-
-// globals code
-{get_globals_code(components, streams_to_events_map, stream_types)}
 {stream_type_structs(components["stream_type"])}
 {stream_type_args_structs(components["stream_type"])}
 
 {instantiate_stream_args()}
+// globals code
+{get_globals_code(components, streams_to_events_map, stream_types)}
 {build_should_keep_funcs(components["event_source"], streams_to_events_map)}
 
 atomic_int count_event_streams = {get_count_events_sources()};
