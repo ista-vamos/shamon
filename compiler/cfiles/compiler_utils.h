@@ -19,7 +19,7 @@ void init_buffer_group(buffer_group *bg);
 
 void destroy_buffer_group(buffer_group *bg);
 
-void bg_insert(buffer_group *bg, shm_stream *stream, shm_arbiter_buffer* buffer, void *args, bool (*order_exp)(shm_stream *ev1, shm_stream *ev2));
+void bg_insert(buffer_group *bg, shm_stream *stream, shm_arbiter_buffer* buffer, void *args, bool (*order_exp)(void *args1, void *args2));
 
 // void bg_update(buffer_group *bg, dll_node *node, bool (*order_exp)(shm_stream *ev1, shm_stream *ev2));
 

@@ -18,9 +18,11 @@ void destroy_buffer_group(buffer_group *bg) {
     free(bg);
 }
 
-void bg_insert(buffer_group *bg, shm_stream *stream, bool (*order_exp)(shm_stream *ev1, shm_stream *ev2)) {
+void bg_insert(buffer_group *bg, shm_stream *stream, shm_arbiter_buffer* buffer, void *args, bool (*order_exp)(void *args1, void* *args2)) {
     dll_node *new_node =  malloc(sizeof(dll_node));
     new_node->stream = stream;
+    new_node->buffer = buffer;
+    new_node->args = args;
     if(bg->size == 0) {
         bg->head = new_node;
         bg->tail = new_node;
@@ -29,7 +31,7 @@ void bg_insert(buffer_group *bg, shm_stream *stream, bool (*order_exp)(shm_strea
         // check if it goes on the tail
         if (bg->tail->stream == stream) return;
 
-        if (order_exp(stream, bg->tail->stream)) {
+        if (order_exp(new_node->args, bg->tail->args)) {
             bg->tail->next = new_node;
             new_node->next = NULL;
             new_node->prev = bg->tail;
@@ -47,7 +49,7 @@ void bg_insert(buffer_group *bg, shm_stream *stream, bool (*order_exp)(shm_strea
 
         // new node goes somewhere in the middle
         dll_node *curr = bg->head;
-        while (order_exp(stream, curr->stream)) {
+        while (order_exp(new_node->args, curr->stream)) {
             // curr should never be NULL at this point
             curr = curr->next;
         }
