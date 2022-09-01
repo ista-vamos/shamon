@@ -51,7 +51,9 @@ typedef struct _EVENT_hole EVENT_hole;
 {stream_type_args_structs(components["stream_type"])}
 
 {instantiate_stream_args()}
-int arbiter_counter = 10;
+int *arbiter_counter;
+// monitor buffer
+shm_monitor_buffer *monitor_buffer;
 
 // globals code
 {get_globals_code(components, streams_to_events_map, stream_types)}
@@ -69,8 +71,7 @@ atomic_int count_event_streams = {get_count_events_sources()};
 thrd_t ARBITER_THREAD;
 
 {declare_arbiter_buffers(components, ast)}
-// monitor buffer
-shm_monitor_buffer *monitor_buffer;
+
 
 // buffer groups
 {declare_order_expressions()}
@@ -136,6 +137,8 @@ STREAM_{arbiter_event_source}_out *arbiter_outevent;
 {arbiter_code(ast[2])}
 int main(int argc, char **argv) {"{"}
 	initialize_events(); // Always call this first
+	arbiter_counter = malloc(sizeof(int));
+	*arbiter_counter = 10;
 	{get_pure_c_code(components, 'startup')}
 {initialize_stream_args()}
 	// init buffer groups

@@ -14,10 +14,11 @@ buffer group Ps : Primes order by pos includes P[all]
 
 globals
 $$
-    #include "intmap.h"
+    #include "./compiler/cfiles/intmap.h"
     intmap buf;
+    int count = 0;
 
-    int process(n, p, pos, opos)
+    int process(int n, int p, int pos, int opos)
     {
         if(pos < opos)
         {

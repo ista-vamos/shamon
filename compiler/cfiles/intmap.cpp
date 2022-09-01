@@ -11,8 +11,8 @@ void init_intmap(intmap *m) {
 }
 
 void destroy_intmap(intmap *m) {
-    delete m->data_structure;
-    delete m;
+    // delete m->data_structure;
+    // delete m;
 }
 
 int intmap_remove_upto(intmap* m, int key) {
@@ -39,7 +39,7 @@ void intmap_insert(intmap *m, int key, int value) {
     if (it != cpp_map.end()) {
         it->second = value;
     } else{
-        cpp_map.insert(key, value);
+        cpp_map.insert(pair<int, int>(key, value));
     }
 }
 

@@ -1,4 +1,6 @@
 #include "compiler_utils.h"
+#include "../../core/shamon.h"
+#include "../../gen/mmlib.h"
 
 void init_buffer_group(buffer_group *bg) {
     bg = malloc(sizeof(buffer_group));
@@ -18,7 +20,7 @@ void destroy_buffer_group(buffer_group *bg) {
     free(bg);
 }
 
-void bg_insert(buffer_group *bg, shm_stream *stream, shm_arbiter_buffer* buffer, void *args, bool (*order_exp)(void *args1, void* *args2)) {
+void bg_insert(buffer_group *bg, shm_stream *stream, void* buffer, void *args, bool (*order_exp)(void *args1, void *args2)) {
     dll_node *new_node =  malloc(sizeof(dll_node));
     new_node->stream = stream;
     new_node->buffer = buffer;
@@ -40,7 +42,7 @@ void bg_insert(buffer_group *bg, shm_stream *stream, shm_arbiter_buffer* buffer,
 
         if (bg->head->stream == stream) return;
         // check if it goes on head
-        if(!order_expr(stream, bg->head->stream)) {
+        if(!order_exp(stream, bg->head->stream)) {
             new_node->next = bg->head;
             new_node->prev = NULL;
             bg->head->prev = new_node;
@@ -115,31 +117,27 @@ void bg_remove_last_n(buffer_group *bg, int n) {
     }
 }
 
-shm_event *bg_get_first_n(buffer_group *bg, int n) {
+void bg_get_first_n(buffer_group *bg, int n, dll_node **result) {
     if (bg->size < n) {
-        return NULL;
+        result = NULL;
     }
-    shm_event * result[n];
 
     dll_node * curr = bg->head;
     for (int i = 0; i< n; i++){
-        result[i] = curr->stream;
+        result[i] = curr;
         curr = curr->next;
     }
-
-    return result;
 }
 
-shm_event *bg_get_last_n(buffer_group *bg, int n) {
+void bg_get_last_n(buffer_group *bg, int n, dll_node **result) {
     if (bg->size < n) {
-        return NULL;
+        result = NULL;
     }
-    shm_event * result[n];
+    
     dll_node * curr = bg->tail;
     for (int i = 0; i< n; i++){
-        result[i] = curr->stream;
+        result[i] = curr;
         curr = curr->prev;
     }
-    return result;
 }
 

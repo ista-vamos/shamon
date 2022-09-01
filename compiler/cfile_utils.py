@@ -486,7 +486,7 @@ def declare_rule_sets(tree):
 
     rule_set_declarations = ""
     for name in rule_set_names:
-        rule_set_declarations += f"int RULE_SET_{name}(int *);\n"
+        rule_set_declarations += f"int RULE_SET_{name}();\n"
     return rule_set_declarations
 
 def exists_open_streams():
@@ -502,7 +502,7 @@ def arbiter_code(tree):
 
     rule_set_invocations = ""
     for name in rule_set_names:
-        rule_set_invocations += f"\tRULE_SET_{name}(&arbiter_counter);\n"
+        rule_set_invocations += f"\tRULE_SET_{name}();\n"
 
 
     return f'''int arbiter() {"{"}
@@ -593,10 +593,12 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                     count_choose = context[count_choose]
         else:
             count_choose = len(temp_binded_streams)
+        
+        choose_statement = f"dll_node *chosen_streams = malloc(sizeof(dll_node *)*{count_choose});\n"
         if order == "first":
-            choose_statement = f"chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
+            choose_statement += f"bg_get_first_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
         else:
-            choose_statement = f"chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
+            choose_statement += f"bg_get_last_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
 
         binded_streams = []
         if context is not None:
@@ -685,7 +687,7 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
 
     if tree[0] == "switch":
         switch_rule_name = tree[PPARB_RULE_STMT_SWITCH_ARB_RULE]
-        return f"RULE_SET_{switch_rule_name}(arbiter_counter);\n"
+        return f"RULE_SET_{switch_rule_name}();\n"
     if tree[0] == "yield":
         return f'''
         arbiter_outevent = (STREAM_{TypeChecker.arbiter_output_type}_out *)shm_monitor_buffer_write_ptr(monitor_buffer);
@@ -800,7 +802,7 @@ def get_code_rule_sets(tree, mapping, stream_types, output_ev_source) -> str:
     else:
         assert(tree[0] == "arbiter_rule_set")
         rule_set_name = tree[PPARB_RULE_SET_NAME]
-        return f'''int RULE_SET_{rule_set_name}(int *arbiter_counter) {"{"}
+        return f'''int RULE_SET_{rule_set_name}() {"{"}
     STREAM_{output_ev_source}_out *outevent;   
     {arbiter_rule_code(tree[PPARB_RULE_LIST], mapping, stream_types, output_ev_source)}
 {"}"}
@@ -908,7 +910,7 @@ def build_rule_set_functions(tree, mapping, stream_types):
         else:
             assert (local_tree[0] == "arbiter_rule_set")
             rule_set_name = local_tree[1]
-            return f"int RULE_SET_{rule_set_name}(int *arbiter_counter) {'{'}\n" \
+            return f"int RULE_SET_{rule_set_name}() {'{'}\n" \
                    f"dll_node *chosen_streams; // used for match fun" \
                    f"{local_explore_rule_list(local_tree[2])}" \
                    f"{'}'}"
