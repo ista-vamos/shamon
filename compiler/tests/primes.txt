@@ -12,7 +12,7 @@ globals
 $$
     #include "intmap.h"
     intmap buf;
-    void process(n, p, pos, opos){
+    int process(n, p, pos, opos){
         if(pos < opos) {
 
             int oval=0;
