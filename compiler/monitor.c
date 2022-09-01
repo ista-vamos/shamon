@@ -16,14 +16,12 @@ typedef struct _EVENT_hole EVENT_hole;
 STREAM_NumberPairs_out *arbiter_outevent;
 #include "intmap.h"
      intmap buf;
+     void process(n, p, pos, opos){
+         if(pos < opos) {
  
-     void process(n, p, pos, opos)
-     {
-         if(pos < opos)
-         {
              int oval=0;
-             if(intmap_get(&buf, n, &oval))
-             {
+ 
+             if(intmap_get(&buf, n, &oval)){
                  
 
         arbiter_outevent = (STREAM_NumberPairs_out *)shm_monitor_buffer_write_ptr(monitor_buffer);
@@ -36,11 +34,8 @@ STREAM_NumberPairs_out *arbiter_outevent;
          shm_monitor_buffer_write_finish(monitor_buffer);
         }
              count -= intmap_remove_upto(&buf, n);
-         }
-         else
-         {
-             if(count<10)
-             {
+         } else {
+             if(count<10) {
                  intmap_insert(&buf, n, p);
                  count++;
              }
@@ -145,7 +140,7 @@ shm_monitor_buffer *monitor_buffer;
 // buffer groups
 
 bool Ps_ORDER_EXP (shm_stream *ev1, shm_stream *ev2) {
-    return ((STREAM_Primes_in *) ev1)->pos > ((STREAM_Primes_in *) ev1)->pos;
+    return false;
 }        
 
 
@@ -279,10 +274,6 @@ int rp = event_for_rp->cases.Prime.p;
 	shm_arbiter_buffer_drop(BUFFER_P1, 1);
 
 intmap_clear(&buf);
-                 stream_args_P_0.pos
-= ln + 1;
-                 stream_args_P_1.pos
-= rn + 1;
              }
              else if(stream_args_P_0.pos
 <stream_args_P_1.pos
@@ -298,8 +289,7 @@ intmap_clear(&buf);
              else
              {
                  stream_args_P_1.pos
-= process(rn, rp, stream_args_P_1.pos
-, stream_args_P_0.pos
+= process(rn, rp, posns[1], stream_args_P_0.pos
 );
                  	shm_arbiter_buffer_drop(BUFFER_P1, 1);
 

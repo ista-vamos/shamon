@@ -28,6 +28,7 @@ int intmap_remove_upto(intmap* m, int key) {
     }
 
     cpp_map.erase(cpp_map.begin(), cpp_map.lower_bound(key));
+
     return answer;
 }
 
