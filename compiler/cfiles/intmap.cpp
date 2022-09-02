@@ -56,6 +56,7 @@ int intmap_get(intmap *m, int key, int *result) {
 }
 
 void intmap_clear(intmap *m) {
+    printf("intmap clear");
     map_type & cpp_map = *static_cast<map_type*>(m->data_structure);
-    cpp_map.clear();
+    //cpp_map.erase(cpp_map.begin(), cpp_map.end());
 }

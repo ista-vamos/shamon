@@ -3,7 +3,7 @@
 #include "../../gen/mmlib.h"
 
 void init_buffer_group(buffer_group *bg) {
-    bg = malloc(sizeof(buffer_group));
+    //bg = malloc(sizeof(buffer_group));
     bg->size = 0;
     bg->head = NULL;
     bg->tail = NULL;
@@ -25,44 +25,45 @@ void bg_insert(buffer_group *bg, shm_stream *stream, void* buffer, void *args, b
     new_node->stream = stream;
     new_node->buffer = buffer;
     new_node->args = args;
+    printf("beginning : %d\n", order_exp(new_node->args, args));
     if(bg->size == 0) {
         bg->head = new_node;
         bg->tail = new_node;
+        printf("size bg is 0\n");
         
     } else {
         // check if it goes on the tail
         if (bg->tail->stream == stream) return;
-
+        if (bg->head->stream == stream) return;
         if (order_exp(new_node->args, bg->tail->args)) {
             bg->tail->next = new_node;
             new_node->next = NULL;
             new_node->prev = bg->tail;
-            bg->tail = new_node;
+            bg->tail = new_node;            
         }
-
-        if (bg->head->stream == stream) return;
         // check if it goes on head
-        if(!order_exp(stream, bg->head->stream)) {
+        
+        else if(!order_exp(args, bg->head->args)) {
             new_node->next = bg->head;
             new_node->prev = NULL;
             bg->head->prev = new_node;
             bg->head = new_node;
+        }else {
+            // new node goes somewhere in the middle
+            dll_node *curr = bg->head;
+            while (order_exp(new_node->args, curr->args)) {
+                // curr should never be NULL at this point
+                curr = curr->next;
+            }
+
+            dll_node *prev_node = curr->prev;
+            if(curr->stream == stream || prev_node->stream == stream) return;
+            new_node->prev = prev_node;
+            new_node->next = curr;
+
+            prev_node->next = new_node;
+            curr->prev = new_node;
         }
-
-        // new node goes somewhere in the middle
-        dll_node *curr = bg->head;
-        while (order_exp(new_node->args, curr->stream)) {
-            // curr should never be NULL at this point
-            curr = curr->next;
-        }
-
-        dll_node *prev_node = curr->prev;
-        if(curr->stream == stream || prev_node->stream == stream) return;
-        new_node->prev = prev_node;
-        new_node->next = curr;
-
-        prev_node->next = new_node;
-        curr->prev = new_node;
     }
 
     bg->size +=1;
@@ -124,8 +125,9 @@ void bg_get_first_n(buffer_group *bg, int n, dll_node **result) {
 
     dll_node * curr = bg->head;
     for (int i = 0; i< n; i++){
-        result[i] = curr;
+        result = curr;
         curr = curr->next;
+        result++;
     }
 }
 
