@@ -141,12 +141,14 @@ int main(int argc, char **argv) {"{"}
 	*arbiter_counter = 10;
 	{get_pure_c_code(components, 'startup')}
 {initialize_stream_args()}
-	// init buffer groups
-	{init_buffer_groups()}
+
 {event_sources_conn_code(components['event_source'])}
      // activate buffers
 {activate_buffers()}
  	monitor_buffer = shm_monitor_buffer_create(sizeof(STREAM_{arbiter_event_source}_out), 64);
+ 	
+ 		// init buffer groups
+	{init_buffer_groups()}
  	
      // create source-events threads
 {activate_threads()}
