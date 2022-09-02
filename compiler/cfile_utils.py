@@ -596,9 +596,9 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         
 
         if order == "first":
-            choose_statement = f"bg_get_first_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
+            choose_statement = f"chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});\n"
         else:
-            choose_statement = f"bg_get_last_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
+            choose_statement = f"chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});\n"
 
         binded_streams = []
         if context is not None:
@@ -613,17 +613,15 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             stream_types[s] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"], TypeChecker.buffer_group_data[buffer_name]["in_stream"])
         declared_streams = ""
         stream_type = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
-        for name in binded_streams:
-            declared_streams += "chosen_streams--;\n"
-            declared_streams += f"shm_stream *{name} = chosen_streams->stream;\n"
-            declared_streams += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams->buffer;\n"
-            declared_streams += f"STREAM_{stream_type}_ARGS stream_args_{name} = (*(STREAM_{stream_type}_ARGS *)chosen_streams->args);\n"
+        for (index, name) in enumerate(binded_streams):
+            declared_streams += f"shm_stream *{name} = chosen_streams[{index}]->stream;\n"
+            declared_streams += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams[{index}]->buffer;\n"
+            declared_streams += f"STREAM_{stream_type}_ARGS *stream_args_{name} = (STREAM_{stream_type}_ARGS *)chosen_streams[{index}]->args;\n"
 
         answer = f'''
             if (chosen_streams != NULL) {"{"}
                 free(chosen_streams);
             {"}"}
-            chosen_streams = malloc(sizeof(dll_node *)*{count_choose});
             {choose_statement}
             if (chosen_streams != NULL) {'{'}
                 {declared_streams}
@@ -875,16 +873,15 @@ def build_arbiter_rule(local_tree, mapping, stream_types) -> str:
         buffer_name = local_tree[3]
         assert buffer_name in TypeChecker.buffer_group_data.keys()
         if choose_order[1] == "first":
-            choose_statement = f"dll_node *chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
+            choose_statement = f"chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
         else:
             assert(choose_order[1] == "last")
-            choose_statement = f"dll_node *chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
+            choose_statement = f"chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
         binded_streams = []
         get_list_ids(local_tree[2], binded_streams)
         declared_streams = ""
-        for name in binded_streams:
-            declared_streams += "chosen_streams--;\n"
-            declared_streams += f"shm_stream *{name} = chosen_streams->stream;\n"
+        for (index, name) in enumerate(binded_streams):
+            declared_streams += f"shm_stream *{name} = chosen_streams[{index}]->stream;\n"
 
         answer = f'''
 void buff_match_exp_{StaticCounter.match_expr_counter}() {"{"}
@@ -916,7 +913,7 @@ def build_rule_set_functions(tree, mapping, stream_types):
             assert (local_tree[0] == "arbiter_rule_set")
             rule_set_name = local_tree[1]
             return f"int RULE_SET_{rule_set_name}() {'{'}\n" \
-                   f"dll_node *chosen_streams; // used for match fun" \
+                   f"dll_node **chosen_streams; // used for match fun" \
                    f"{local_explore_rule_list(local_tree[2])}" \
                    f"{'}'}"
 
