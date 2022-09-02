@@ -118,28 +118,30 @@ void bg_remove_last_n(buffer_group *bg, int n) {
     }
 }
 
-void bg_get_first_n(buffer_group *bg, int n, dll_node **result) {
+dll_node ** bg_get_first_n(buffer_group *bg, int n) {
     if (bg->size < n) {
-        result = NULL;
+        return NULL;
     }
-
+    dll_node **result = calloc(n, sizeof(dll_node*));
     dll_node * curr = bg->head;
-    for (int i = 0; i< n; i++){
-        result = curr;
+    for (int i = 0; i < n; i++){
+        result[i] = curr;
         curr = curr->next;
         result++;
     }
+    return result;
 }
 
-void bg_get_last_n(buffer_group *bg, int n, dll_node **result) {
+dll_node ** bg_get_last_n(buffer_group *bg, int n) {
     if (bg->size < n) {
-        result = NULL;
+        return NULL;
     }
-    
+    dll_node **result = calloc(n, sizeof(dll_node*));
     dll_node * curr = bg->tail;
     for (int i = 0; i< n; i++){
         result[i] = curr;
         curr = curr->prev;
     }
+    return result;
 }
 

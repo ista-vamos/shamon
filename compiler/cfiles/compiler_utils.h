@@ -31,6 +31,6 @@ void bg_remove_first_n(buffer_group *bg, int n);
 
 void bg_remove_last_n(buffer_group *bg, int n);
 
-void bg_get_first_n(buffer_group *bg, int n, dll_node **result);
+dll_node ** bg_get_first_n(buffer_group *bg, int n);
 
-void bg_get_last_n(buffer_group *bg, int n, dll_node **result);
+dll_node ** bg_get_last_n(buffer_group *bg, int n);
