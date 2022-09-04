@@ -554,8 +554,12 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             assert(len(tree) == 4)
             event_kinds = []
 
+            drop_events_code = ""
+            count_drop_events = 0
+
             if tree[PPBUFFER_MATCH_ARG1] != "|":
                 get_event_kinds(tree[PPBUFFER_MATCH_ARG1], event_kinds, mapping[out_type])
+                count_drop_events = get_count_events_from_list_calls(tree[PPBUFFER_MATCH_ARG1])
 
             if tree[PPBUFFER_MATCH_ARG2] != "|":
                 get_event_kinds(tree[PPBUFFER_MATCH_ARG2], event_kinds, mapping[out_type])
@@ -564,8 +568,13 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                 buffer_name = event_src_ref[1]
                 if event_src_ref[2] is not None:
                     buffer_name += str(event_src_ref[2])
+
+                if count_drop_events != 0:
+                    assert(count_drop_events > 0)
+                    drop_events_code = f"\tshm_arbiter_buffer_drop(BUFFER_{stream_name}, {count_drop_events});\n"
                 return f'''if (are_events_in_head(BUFFER_{buffer_name}, sizeof(STREAM_{out_type}_out), TEMPARR{StaticCounter.calls_counter-1}, {len(event_kinds)})) {"{"}
                     {inner_code}
+                    {drop_events_code}
                 {"}"}'''
             else:
                 return [event_kinds]

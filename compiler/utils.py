@@ -255,6 +255,14 @@ def get_rule_set_names(tree, names) -> None:
         assert(tree[0] == 'arbiter_rule_set')
         names.append(tree[PPARB_RULE_SET_NAME])
 
+def get_count_events_from_list_calls(tree) -> int:
+    assert(tree[0] != "|")
+    if tree[0] == "list_ev_calls":
+        return 1 + get_count_events_from_list_calls(tree[PPLIST_EV_CALL_TAIL])
+    else:
+        assert(tree[0] == "ev_call")
+        return 1
+
 def get_event_kinds(tree, kinds, mapping) -> None:
     assert(tree[0] != "|")
 
