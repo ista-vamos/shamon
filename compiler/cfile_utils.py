@@ -327,7 +327,6 @@ def build_drop_funcs_conds(tree, stream_name, mapping) -> str:
         creates_at_most = tree[2]
         if creates_at_most is not None:
             raise Exception("creates at most not implemented in stream processors")
-        # TODO implement process using
         return f'''if (e->kind == {mapping[tree[event_name]]["index"]}) {"{"}
         {process_performance_match(tree[-1])}
     {"}"}
@@ -817,9 +816,13 @@ def get_code_rule_sets(tree, mapping, stream_types, output_ev_source) -> str:
         dll_node *chosen_streams;
     STREAM_{output_ev_source}_out *outevent;   
     {arbiter_rule_code(tree[PPARB_RULE_LIST], mapping, stream_types, output_ev_source)}
+    if (chosen_streams != NULL) {"{"}
+        free(chosen_streams);
+    {"}"}
 {"}"}
 '''
 
+# TODO: free correctly chosen streams
 # monitor code
 
 def declare_monitor_args(tree, event_name, event_data, count_tabs) -> str:
