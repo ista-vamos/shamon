@@ -41,6 +41,11 @@ $$
     }
 $$
 
+startup 
+$$
+init_intmap(&buf);
+$$
+
 match fun Prio[F,S]() = choose F,S from Ps
 
 arbiter : NumberPairs
