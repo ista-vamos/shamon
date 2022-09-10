@@ -21,7 +21,9 @@ void destroy_buffer_group(buffer_group *bg);
 
 void bg_insert(buffer_group *bg, shm_stream *stream, void* buffer, void *args, bool (*order_exp)(void *args1, void *args2));
 
-// void bg_update(buffer_group *bg, dll_node *node, bool (*order_exp)(shm_stream *ev1, shm_stream *ev2));
+void bg_update(buffer_group *bg, bool (*order_exp)(shm_stream *ev1, shm_stream *ev2)); // checks that order is preserved
+
+void swap_dll_node(dll_node *node1, dll_node *node2);
 
 dll_node *find_stream(buffer_group *bg, shm_stream *stream);
 
