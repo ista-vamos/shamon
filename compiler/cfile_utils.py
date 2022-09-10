@@ -571,7 +571,8 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                 if count_drop_events != 0:
                     assert(count_drop_events > 0)
                     drop_events_code = f"\tshm_arbiter_buffer_drop(BUFFER_{stream_name}, {count_drop_events});\n"
-                return f'''if (are_events_in_head(BUFFER_{buffer_name}, sizeof(STREAM_{out_type}_out), TEMPARR{StaticCounter.calls_counter-1}, {len(event_kinds)})) {"{"}
+                return f'''
+                if (are_events_in_head(BUFFER_{buffer_name}, sizeof(STREAM_{out_type}_out), TEMPARR{StaticCounter.calls_counter-1}, {len(event_kinds)})) {"{"}
                     {inner_code}
                     {drop_events_code}
                 {"}"}'''
@@ -630,6 +631,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             if (chosen_streams != NULL) {"{"}
                 free(chosen_streams);
             {"}"}
+            bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
             {choose_statement}
             if (chosen_streams != NULL) {'{'}
                 {declared_streams}
