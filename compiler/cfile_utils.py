@@ -874,40 +874,40 @@ def monitor_code(tree, possible_events, arbiter_event_source) -> str:
 # match fun
 
 def build_arbiter_rule(local_tree, mapping, stream_types) -> str:
-    if local_tree[0] == "arbiter_rule1":
-        return arbiter_rule_code(local_tree, mapping, stream_types, TypeChecker.arbiter_output_type)
-    else:
-        assert(local_tree[0] == "arbiter_rule2")
-
-        choose_order = local_tree[1]
-        assert(choose_order[0] == "choose-order")
-        count_choose = choose_order[2]
-        buffer_name = local_tree[3]
-        assert buffer_name in TypeChecker.buffer_group_data.keys()
-        if choose_order[1] == "first":
-            choose_statement = f"chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
-        else:
-            assert(choose_order[1] == "last")
-            choose_statement = f"chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
-        binded_streams = []
-        get_list_ids(local_tree[2], binded_streams)
-        declared_streams = ""
-        for (index, name) in enumerate(binded_streams):
-            declared_streams += f"shm_stream *{name} = chosen_streams[{index}]->stream;\n"
-
-        answer = f'''
-void buff_match_exp_{StaticCounter.match_expr_counter}() {"{"}
-{choose_statement}
-if (chosen_streams != NULL) {'{'}
-{declared_streams}
-if ({local_tree[4]}) {"{"}
-    {build_arbiter_rule(local_tree[5], mapping, stream_types)}
-{"}"}
-{"}"}
-{'}'}
-        '''
-    StaticCounter.match_expr_counter += 1
-    return answer
+    # if local_tree[0] == "arbiter_rule1":
+    return arbiter_rule_code(local_tree, mapping, stream_types, TypeChecker.arbiter_output_type)
+#     else:
+#         assert(local_tree[0] == "arbiter_rule2")
+#
+#         choose_order = local_tree[1]
+#         assert(choose_order[0] == "choose-order")
+#         count_choose = choose_order[2]
+#         buffer_name = local_tree[3]
+#         assert buffer_name in TypeChecker.buffer_group_data.keys()
+#         if choose_order[1] == "first":
+#             choose_statement = f"chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});"
+#         else:
+#             assert(choose_order[1] == "last")
+#             choose_statement = f"chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});"
+#         binded_streams = []
+#         get_list_ids(local_tree[2], binded_streams)
+#         declared_streams = ""
+#         for (index, name) in enumerate(binded_streams):
+#             declared_streams += f"shm_stream *{name} = chosen_streams[{index}]->stream;\n"
+#
+#         answer = f'''
+# void buff_match_exp_{StaticCounter.match_expr_counter}() {"{"}
+# {choose_statement}
+# if (chosen_streams != NULL) {'{'}
+# {declared_streams}
+# if ({local_tree[4]}) {"{"}
+#     {build_arbiter_rule(local_tree[5], mapping, stream_types)}
+# {"}"}
+# {"}"}
+# {'}'}
+#         '''
+#     StaticCounter.match_expr_counter += 1
+#     return answer
 
 def build_rule_set_functions(tree, mapping, stream_types):
 
