@@ -145,3 +145,59 @@ dll_node ** bg_get_last_n(buffer_group *bg, int n) {
     return result;
 }
 
+void swap_dll_node(dll_node *node1, dll_node *node2) {
+
+    dll_node * node1_prev = node1->prev;
+    dll_node * node1_next = node1->next;
+
+    dll_node *node2_prev = node2->prev;
+    dll_node *node2_next = node2->next;
+
+    node1_prev->next = node2;
+    assert(node1_next == node2);
+    node1->prev = node2;
+    node1->next = node2_next;
+
+    assert(node2_prev == node1);
+    node2->prev = node1_prev;
+    node2->next = node1;
+    node2_next->prev = node1;
+
+}
+
+void bg_update(buffer_group *bg, bool (*order_exp)(void *args1, void *args2)) {
+
+    bool change = true;
+
+    while(change) {
+        dll_node *prev = bg->head;
+        dll_node * current;
+        dll_node * temp_after;
+
+        while(true){
+            if(prev == NULL){
+                break;
+            }
+            current = prev->next;
+            if(current == NULL){
+                break;
+            }
+            change = false;
+
+            // at this point prev and current are NOT NULL
+
+            if(!order_exp(prev, current)){
+                change = true;
+                swap_dll_node(prev, current);
+                prev = prev->next;
+            } else {
+                prev = current;
+            }
+
+        }
+
+
+    }
+
+}
+
