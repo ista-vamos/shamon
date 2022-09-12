@@ -61,7 +61,7 @@ def init_buffer_groups():
     for (buff_name, data) in TypeChecker.buffer_group_data.items():
         includes_str = ""
         for i in range(data["arg_includes"]):
-            includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, BUFFER_{data['includes']}{i},&stream_args_{data['includes']}_{i},{buff_name}_ORDER_EXP);\n"
+            includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, BUFFER_{data['includes']}{i},stream_args_{data['includes']}_{i},{buff_name}_ORDER_EXP);\n"
         answer += f'''init_buffer_group(&BG_{buff_name});
 {includes_str}        
 '''
@@ -133,18 +133,25 @@ def instantiate_stream_args():
         if len(data['input_stream_args']) > 0:
             stream_type = data["input_stream_type"]
             for i in range(data['copies']):
-                answer += f"STREAM_{stream_type}_ARGS stream_args_{stream_name}_{i};\n"
+                answer += f"STREAM_{stream_type}_ARGS *stream_args_{stream_name}_{i};\n"
     return answer
 
 def initialize_stream_args():
     answer = ""
+
+    for (stream_name, data) in TypeChecker.event_sources_data.items():
+        if len(data['input_stream_args']) > 0:
+            stream_type = data["input_stream_type"]
+            for i in range(data['copies']):
+                answer += f"stream_args_{stream_name}_{i} = malloc(sizeof(STREAM_{stream_type}_ARGS));\n"
+
     for (event_source, data) in TypeChecker.event_sources_data.items():
         stream_args = TypeChecker.args_table[data["input_stream_type"]]
         if len(data['input_stream_args']) :
             for i in range(data['copies']):
                 for stream_arg, arg_value in zip(stream_args, data["input_stream_args"]):
                     arg_name = stream_arg["name"]
-                    answer += f"\tstream_args_{event_source}_{i}.{arg_name} = {arg_value};\n";
+                    answer += f"\tstream_args_{event_source}_{i}->{arg_name} = {arg_value};\n";
     return answer
 
 def stream_type_structs(stream_types) -> str:
@@ -637,7 +644,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             for (index, name) in zip(perm, binded_streams):
                 declared_streams += f"shm_stream *{name} = chosen_streams[{index}]->stream;\n"
                 declared_streams += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams[{index}]->buffer;\n"
-                declared_streams += f"STREAM_{stream_type}_ARGS stream_args_{name} = *((STREAM_{stream_type}_ARGS *)chosen_streams[{index}]->args);\n"
+                declared_streams += f"STREAM_{stream_type}_ARGS *stream_args_{name} = (STREAM_{stream_type}_ARGS *)chosen_streams[{index}]->args;\n"
 
             permutation_streams_code += f'''
             {"{"}
@@ -708,7 +715,6 @@ def construct_arb_rule_outevent(mapping, output_ev_source, output_event, raw_arg
     return answer
 
 def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
-
     if tree[0] == "switch":
         switch_rule_name = tree[PPARB_RULE_STMT_SWITCH_ARB_RULE]
         return f"RULE_SET_{switch_rule_name}();\n"
@@ -731,7 +737,7 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
     stream_name = target_stream
     if index is not None:
         stream_name += f"_{index}"
-    return f"stream_args_{stream_name}.{field}"
+    return f"stream_args_{stream_name}->{field}"
 
 
 
