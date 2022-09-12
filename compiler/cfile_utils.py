@@ -24,7 +24,7 @@ def get_globals_code(components, mapping, stream_types) -> str:
     answer = ""
     if "globals" in components.keys():
         globals = components["globals"]
-        answer = f"STREAM_{TypeChecker.arbiter_output_type}_out *arbiter_outevent;\n"
+        answer = f"STREAM_{TypeChecker.arbiter_output_type}_out *arbiter_outevent;\n\n"
         for tree in globals:
             assert(tree[0] == "globals")
             answer += get_arb_rule_stmt_list_code(tree[1], mapping, {}, stream_types, TypeChecker.arbiter_output_type)
