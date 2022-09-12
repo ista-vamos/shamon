@@ -147,16 +147,16 @@ dll_node ** bg_get_last_n(buffer_group *bg, int n) {
 }
 
 void swap_dll_node(dll_node *node1, dll_node *node2) {
-    ("***sawap node ****");
-    printf("%lli %lli", node1, node2);
     dll_node * node1_prev = node1->prev;
     dll_node * node1_next = node1->next;
 
     dll_node *node2_prev = node2->prev;
     dll_node *node2_next = node2->next;
     //printf("%lli %lli %lli %lli", node1_prev, node1_next, node2_prev, node2_next);
+    if (node1_prev){
+        node1_prev->next = node2;
+    }
 
-    node1_prev->next = node2;
     assert(node1_next == node2);
     node1->prev = node2;
     node1->next = node2_next;
@@ -164,7 +164,10 @@ void swap_dll_node(dll_node *node1, dll_node *node2) {
     assert(node2_prev == node1);
     node2->prev = node1_prev;
     node2->next = node1;
-    node2_next->prev = node1;
+    if(node2_next){
+        node2_next->prev = node1;
+    }
+    
 
 }
 
