@@ -3,6 +3,7 @@ from typing import Type
 from utils import *
 from parser_indices import *
 from type_checker import TypeChecker
+from itertools import permutations
 
 
 class StaticCounter:
@@ -620,12 +621,8 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         assert len(binded_streams) == len(temp_binded_streams)
         for s in binded_streams:
             stream_types[s] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"], TypeChecker.buffer_group_data[buffer_name]["in_stream"])
-        declared_streams = ""
+
         stream_type = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
-        for (index, name) in enumerate(binded_streams):
-            declared_streams += f"shm_stream *{name} = chosen_streams[{index}]->stream;\n"
-            declared_streams += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams[{index}]->buffer;\n"
-            declared_streams += f"STREAM_{stream_type}_ARGS stream_args_{name} = *((STREAM_{stream_type}_ARGS *)chosen_streams[{index}]->args);\n"
 
         answer = f'''
             if (chosen_streams != NULL) {"{"}
@@ -633,9 +630,24 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             {"}"}
             bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
             {choose_statement}
-            if (chosen_streams != NULL) {'{'}
+        '''
+        permutation_streams_code = ""
+        for perm in permutations(range(0, len(binded_streams))):
+            declared_streams = ""
+            for (index, name) in zip(perm, binded_streams):
+                declared_streams += f"shm_stream *{name} = chosen_streams[{index}]->stream;\n"
+                declared_streams += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams[{index}]->buffer;\n"
+                declared_streams += f"STREAM_{stream_type}_ARGS *stream_args_{name} = (STREAM_{stream_type}_ARGS *)chosen_streams[{index}]->args;\n"
+
+            permutation_streams_code += f'''
+            {"{"}
                 {declared_streams}
                 {inner_code}
+            {"}"}
+            '''
+        answer += f'''
+            if (chosen_streams != NULL) {'{'}
+                {permutation_streams_code}
             {'}'}
                     '''
         return answer
