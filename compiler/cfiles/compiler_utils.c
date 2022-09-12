@@ -17,7 +17,7 @@ void destroy_buffer_group(buffer_group *bg) {
     //    free(curr);
     //    curr = next;
     // }
-    free(bg);
+    //free(bg);
 }
 
 void bg_insert(buffer_group *bg, shm_stream *stream, void* buffer, void *args, bool (*order_exp)(void *args1, void *args2)) {
@@ -25,7 +25,8 @@ void bg_insert(buffer_group *bg, shm_stream *stream, void* buffer, void *args, b
     new_node->stream = stream;
     new_node->buffer = buffer;
     new_node->args = args;
-    printf("beginning : %d\n", order_exp(new_node->args, args));
+    new_node->next = NULL;
+    new_node->prev = NULL;
     if(bg->size == 0) {
         bg->head = new_node;
         bg->tail = new_node;
@@ -146,12 +147,14 @@ dll_node ** bg_get_last_n(buffer_group *bg, int n) {
 }
 
 void swap_dll_node(dll_node *node1, dll_node *node2) {
-
+    ("***sawap node ****");
+    printf("%lli %lli", node1, node2);
     dll_node * node1_prev = node1->prev;
     dll_node * node1_next = node1->next;
 
     dll_node *node2_prev = node2->prev;
     dll_node *node2_next = node2->next;
+    //printf("%lli %lli %lli %lli", node1_prev, node1_next, node2_prev, node2_next);
 
     node1_prev->next = node2;
     assert(node1_next == node2);
@@ -173,21 +176,20 @@ void bg_update(buffer_group *bg, bool (*order_exp)(void *args1, void *args2)) {
         dll_node *prev = bg->head;
         dll_node * current;
         dll_node * temp_after;
-
-        while(true){
-            if(prev == NULL){
-                break;
-            }
+        change = false;
+        while(prev && prev->next){
             current = prev->next;
-            if(current == NULL){
-                break;
-            }
-            change = false;
-
             // at this point prev and current are NOT NULL
-
-            if(!order_exp(prev, current)){
+            if(order_exp(prev->args, current->args)){
+                if(prev == bg->head){
+                    bg->head = current;
+                }
+                if(current == bg->tail){
+                    bg->tail = prev;
+                }
                 change = true;
+                
+
                 swap_dll_node(prev, current);
                 prev = prev->next;
             } else {
