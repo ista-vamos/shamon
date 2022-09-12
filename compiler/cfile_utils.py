@@ -637,7 +637,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             for (index, name) in zip(perm, binded_streams):
                 declared_streams += f"shm_stream *{name} = chosen_streams[{index}]->stream;\n"
                 declared_streams += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams[{index}]->buffer;\n"
-                declared_streams += f"STREAM_{stream_type}_ARGS *stream_args_{name} = (STREAM_{stream_type}_ARGS *)chosen_streams[{index}]->args;\n"
+                declared_streams += f"STREAM_{stream_type}_ARGS stream_args_{name} = *((STREAM_{stream_type}_ARGS *)chosen_streams[{index}]->args);\n"
 
             permutation_streams_code += f'''
             {"{"}

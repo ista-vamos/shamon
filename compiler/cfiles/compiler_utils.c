@@ -12,11 +12,11 @@ void init_buffer_group(buffer_group *bg) {
 void destroy_buffer_group(buffer_group *bg) {
     dll_node * curr = bg->head;
     dll_node *next;
-    while (curr != NULL) {
-        next = curr->next;
-        free(curr);
-        curr = next;
-    }
+    // while (curr != NULL) {
+    //    next = curr->next;
+    //    free(curr);
+    //    curr = next;
+    // }
     free(bg);
 }
 
