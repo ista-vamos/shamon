@@ -23,13 +23,18 @@ event source Right : Primes -> autodrop(8) Primes
 
 globals
 {
-    #include "map.h"
+    #include "./compiler/cfiles/intmap.h"
     int lpos=1;
     int rpos=1;
     int leftAhead=1;
     int count=0;
     intmap pbuf;
 }
+
+startup 
+$$
+init_intmap(&buf);
+$$
 
 arbiter : PrimeEvents
 {
