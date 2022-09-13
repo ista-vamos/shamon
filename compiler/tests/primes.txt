@@ -35,7 +35,7 @@ arbiter : PrimeEvents
 {
     rule set EQ
     {
-        on Left : Prime(n,p) | [] where true
+        on Left : Prime(n,p) | [] where $$ true $$
         {
             if(n==lpos)
             {
@@ -54,7 +54,7 @@ arbiter : PrimeEvents
                 switch to LeftAhead;
             }
         }
-        on Right : Prime(n,p) | [] where true
+        on Right : Prime(n,p) | [] where $$ true $$
         {
             if(n==rpos)
             {
@@ -73,12 +73,12 @@ arbiter : PrimeEvents
                 switch to RightAhead;
             }
         }
-        on Left : hole(n) | [] where true
+        on Left : hole(n) | [] where $$ true $$
         {
             lpos = lpos + n;
             switch to LeftAhead;
         }
-        on Right : hole(n) | [] where true
+        on Right : hole(n) | [] where $$ true $$
         {
             rpos = rpos + n;
             switch to RightAhead;
@@ -87,7 +87,7 @@ arbiter : PrimeEvents
     
     rule set LeftAhead
     {
-        on Right : Prime(n,p) | [] where true
+        on Right : Prime(n,p) | [] where $$ true $$
         {
             if(n==rpos)
             {
@@ -116,7 +116,7 @@ arbiter : PrimeEvents
                 }
             }
         }
-        on Left : Prime(n,p) | [] where true
+        on Left : Prime(n,p) | [] where $$ true $$
         {
             if(n==lpos)
             {
@@ -133,7 +133,7 @@ arbiter : PrimeEvents
                 lpos = n + 1;
             }
         }
-        on Right : hole(n) | [] where true
+        on Right : hole(n) | [] where $$ true $$
         {
             rpos = rpos + n;
             yield RSkip(rpos-1);
@@ -146,7 +146,7 @@ arbiter : PrimeEvents
                 switch to RightAhead;
             }
         }
-        on Left : hole(n) | [] where true
+        on Left : hole(n) | [] where $$ true $$
         {
             lpos = lpos + n;
         }
@@ -154,7 +154,7 @@ arbiter : PrimeEvents
     
     rule set RightAhead
     {
-        on Left : Prime(n,p) | [] where true
+        on Left : Prime(n,p) | [] where $$ true $$
         {
             if(n==lpos)
             {
@@ -171,7 +171,7 @@ arbiter : PrimeEvents
                 lpos = n + 1;
             }
         }
-        on Right : Prime(n,p) | [] where true
+        on Right : Prime(n,p) | [] where $$ true $$
         {
             if(n==rpos)
             {
@@ -200,7 +200,7 @@ arbiter : PrimeEvents
                 }
             }
         }
-        on Left : hole(n) | [] where true
+        on Left : hole(n) | [] where $$ true $$
         {
             lpos = lpos + n;
             yield LSkip(lpos-1);
@@ -213,7 +213,7 @@ arbiter : PrimeEvents
                 switch to LeftAhead;
             }
         }
-        on Right : hole(n) | [] where true
+        on Right : hole(n) | [] where $$ true $$
         {
             rpos = rpos + n;
         }
@@ -246,7 +246,7 @@ monitor
             }
         }
     }
-    on RPrime(n,p) where true
+    on RPrime(n,p) where $$ true $$
     {
         if(count==0||!leftAhead)
         {
@@ -270,14 +270,14 @@ monitor
             }
         }
     }
-    on LSkip(n) where true
+    on LSkip(n) where $$ true $$
     {
         if(leftAhead==0)
         {
             count -= mapRemoveLeq(&pbuf, n);
         }
     }
-    on RSkip(n) where true
+    on RSkip(n) where $$ true $$
     {
         if(leftAhead)
         {
