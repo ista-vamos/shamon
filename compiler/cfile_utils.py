@@ -784,7 +784,7 @@ def define_binded_args(binded_args, stream_types):
         index = data[4]
         stream_index = data[5]
         if stream_index is not None:
-            event_source += stream_index
+            event_source += str(stream_index)
         answer += f"STREAM_{stream_type_out}_out * event_for_{arg} = (STREAM_{stream_type_out}_out *) " \
                   f"get_event_at_index(e1_{event_source}, i1_{event_source}, e2_{event_source}, " \
                   f"i2_{event_source}, sizeof(STREAM_{stream_type_out}_out), {index});\n" \
