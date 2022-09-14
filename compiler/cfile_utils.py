@@ -688,17 +688,17 @@ def buffer_peeks(binded_args, events_to_retrieve):
     called_buffers = set()
 
     for (arg, data) in binded_args.items():
-        if data[0] not in called_buffers:
+        buffer_name = data[0]
+        if data[5] is not None:
+            buffer_name += f"{data[5]}"
+        if buffer_name not in called_buffers:
             assert(len(data) == 6)
-            buffer_name = data[0]
-            if data[5] is not None:
-                buffer_name += f"{data[5]}"
             answer += f'''
-                char* e1_{data[0]}; size_t i1_{data[0]};
-	            char* e2_{data[0]}; size_t i2_{data[0]};
-	            shm_arbiter_buffer_peek(BUFFER_{buffer_name}, {events_to_retrieve[data[0]]}, (void**)&e1_{data[0]}, &i1_{data[0]},(void**) &e2_{data[0]}, &i2_{data[0]});
+                char* e1_{buffer_name}; size_t i1_{buffer_name};
+	            char* e2_{buffer_name}; size_t i2_{buffer_name};
+	            shm_arbiter_buffer_peek(BUFFER_{buffer_name}, {events_to_retrieve[data[0]]}, (void**)&e1_{buffer_name}, &i1_{buffer_name},(void**) &e2_{buffer_name}, &i2_{buffer_name});
             '''
-            called_buffers.add(data[0])
+            called_buffers.add(buffer_name)
     return answer
 
 
@@ -782,9 +782,10 @@ def define_binded_args(binded_args, stream_types):
         arg_type = data[3]
         stream_type_out = stream_types[event_source][1]
         index = data[4]
+        stream_index = data[5]
         answer += f"STREAM_{stream_type_out}_out * event_for_{arg} = (STREAM_{stream_type_out}_out *) " \
-                  f"get_event_at_index(e1_{event_source}, i1_{event_source}, e2_{event_source}, " \
-                  f"i2_{event_source}, sizeof(STREAM_{stream_type_out}_out), {index});\n" \
+                  f"get_event_at_index(e1_{event_source}{stream_index}, i1_{event_source}{stream_index}, e2_{event_source}{stream_index}, " \
+                  f"i2_{event_source}{stream_index}, sizeof(STREAM_{stream_type_out}_out), {index});\n" \
                   f"{arg_type} {arg} = event_for_{arg}->cases.{event}.{arg_name};\n\n"
     return answer
 
