@@ -360,3 +360,28 @@ def get_num_events_to_retrieve(tree, events_to_retrieve, match_fun_data) -> None
 
 
 
+def get_count_drop_events_from_l_buff(tree, answer):
+    if tree[0] == "l_buff_match_exp":
+        get_count_drop_events_from_l_buff(tree[1], answer)
+        get_count_drop_events_from_l_buff(tree[2], answer)
+    else:
+        if tree[0] == "buff_match_exp":
+            event_src_ref = tree[PPBUFFER_MATCH_EV_NAME]
+            assert (event_src_ref[0] == "event_src_ref")
+            event_source_name = event_src_ref[1]
+            stream_index = event_src_ref[2]
+            count = 0
+            if len(tree) > 3:
+                for i in range(2, len(tree)):
+
+                    if tree[i] == '|':
+                        break # only drop events that are behind |
+                    count += get_count_events_from_list_calls(tree[i])
+                if count > 0:
+                    if stream_index is not None:
+                        event_source_name += str(stream_index)
+                    assert(event_source_name not in answer.keys())
+                    answer[event_source_name] = count
+        else:
+            assert(tree[0] == "buff_match_exp-choose" or tree[0] == "buff_match_exp-args")
+
