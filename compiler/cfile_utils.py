@@ -496,11 +496,23 @@ def declare_rule_sets(tree):
         rule_set_declarations += f"int RULE_SET_{name}();\n"
     return rule_set_declarations
 
-def exists_open_streams():
-    return f'''bool exists_open_streams() {"{"}
-    return count_event_streams > 0;
+def are_buffers_empty():
+    code = "\tint c = 0;\n"
+    for (event_source, data) in TypeChecker.event_sources_data.items():
+        copies = data['copies']
+        if copies > 0:
+            for i in range(data['copies']):
+                code += f"\tc += are_there_events(BUFFER_{event_source}{i});\n"
+        else:
+            code += f"\tc += are_there_events(BUFFER_{event_source});\n"
+
+    return f'''
+bool are_buffers_empty() {"{"}
+{code}
+    return c == 0;
 {"}"}
     '''
+
 def arbiter_code(tree):
     assert(tree[0] == "arbiter_def")
 
@@ -513,7 +525,7 @@ def arbiter_code(tree):
 
 
     return f'''int arbiter() {"{"}
-    while (exists_open_streams()) {"{"}
+    while (!are_streams_done()) {"{"}
     {rule_set_invocations}\t{"}"}
     shm_monitor_set_finished(monitor_buffer);
 {"}"}

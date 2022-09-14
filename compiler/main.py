@@ -79,7 +79,21 @@ thrd_t ARBITER_THREAD;
 
 {event_sources_thread_funcs(components["event_source"], streams_to_events_map)}
 
-{exists_open_streams()}
+bool are_there_events(shm_arbiter_buffer * b) {"{"}
+  void * e1;
+  size_t i1;
+  void * e2;
+  size_t i2;
+  return shm_arbiter_buffer_peek(b, 0, & e1, & i1, & e2, & i2) > 0;
+{"}"}
+
+{are_buffers_empty()}
+bool are_streams_done() {"{"}
+    assert(count_event_streams >=0);
+    return count_event_streams == 0 && are_buffers_empty();
+{"}"}
+
+
 bool check_n_events(shm_arbiter_buffer* b, size_t n) {"{"}
     // checks if there are exactly n elements on a given stream s
     void* e1; size_t i1;
