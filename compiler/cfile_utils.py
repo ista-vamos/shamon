@@ -618,9 +618,9 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         
 
         if order == "first":
-            choose_statement = f"is_selection_succesful = bg_get_first_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
+            choose_statement = f"is_selection_successful = bg_get_first_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
         else:
-            choose_statement = f"is_selection_succesful = bg_get_last_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
+            choose_statement = f"is_selection_successful = bg_get_last_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
 
         binded_streams = []
         if context is not None:
@@ -655,7 +655,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             {"}"}
             '''
         answer += f'''
-            if (is_selection_succesful) {'{'}
+            if (is_selection_successful) {'{'}
                 {permutation_streams_code}
             {'}'}
                     '''

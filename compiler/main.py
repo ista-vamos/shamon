@@ -55,6 +55,7 @@ int *arbiter_counter;
 // monitor buffer
 shm_monitor_buffer *monitor_buffer;
 
+bool is_selection_successful;
 dll_node **chosen_streams; // used in rule set for get_first/last_n
 
 // globals code
@@ -151,6 +152,7 @@ STREAM_{arbiter_event_source}_out *arbiter_outevent;
 
 {build_rule_set_functions(ast[2], streams_to_events_map, stream_types)}
 {arbiter_code(ast[2])}
+
 int main(int argc, char **argv) {"{"}
 	initialize_events(); // Always call this first
 	chosen_streams = (dll_node *) malloc({get_count_events_sources()}); // the maximum size this can have is the total number of event sources
