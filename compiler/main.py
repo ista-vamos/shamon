@@ -186,7 +186,7 @@ int main(int argc, char **argv) {"{"}
 	
 	// free chosen_streams
 	for(int i = 0; i < {get_count_events_sources()}; i++) {"{"}
-		free(chosen_streams[i];
+		free(chosen_streams[i]);
 	{"}"}
 	free(chosen_streams);
 	{get_pure_c_code(components, 'cleanup')}
