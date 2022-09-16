@@ -13,7 +13,6 @@ void init_intmap(intmap *m) {
 
 void destroy_intmap(intmap *m) {
     delete (map<int, int> *) m->data_structure;
-    delete m;
 }
 
 int intmap_remove_upto(intmap* m, int key) {
