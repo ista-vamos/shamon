@@ -193,7 +193,7 @@ int main(int argc, char **argv) {"{"}
 	free(chosen_streams);
 	
 	// free stream args
-	{free_stream_args()}
+{free_stream_args()}
 	{get_pure_c_code(components, 'cleanup')}
 {"}"}
 '''

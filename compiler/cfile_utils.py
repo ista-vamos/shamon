@@ -169,9 +169,9 @@ def free_stream_args():
         if len(data['input_stream_args']) > 0:
             if data['copies']:
                 for i in range(data['copies']):
-                    answer += f"free(stream_args_{stream_name}_{i});\n"
+                    answer += f"\tfree(stream_args_{stream_name}_{i});\n"
             else:
-                answer += f"free(stream_args_{stream_name});\n"
+                answer += f"\tfree(stream_args_{stream_name});\n"
     return answer
 
 def stream_type_structs(stream_types) -> str:
