@@ -184,6 +184,7 @@ int main(int argc, char **argv) {"{"}
 	// destroy arbiter buffers
 {destroy_buffers()}
 	
+	free(arbiter_counter);
 	// free chosen_streams
 	for(int i = 0; i < {get_count_events_sources()}; i++) {"{"}
 		free(chosen_streams[i]);
