@@ -142,16 +142,36 @@ def initialize_stream_args():
     for (stream_name, data) in TypeChecker.event_sources_data.items():
         if len(data['input_stream_args']) > 0:
             stream_type = data["input_stream_type"]
-            for i in range(data['copies']):
-                answer += f"stream_args_{stream_name}_{i} = malloc(sizeof(STREAM_{stream_type}_ARGS));\n"
+            if data['copies']:
+                for i in range(data['copies']):
+                    answer += f"stream_args_{stream_name}_{i} = malloc(sizeof(STREAM_{stream_type}_ARGS));\n"
+            else:
+                answer += f"stream_args_{stream_name} = malloc(sizeof(STREAM_{stream_type}_ARGS));\n"
 
     for (event_source, data) in TypeChecker.event_sources_data.items():
         stream_args = TypeChecker.args_table[data["input_stream_type"]]
         if len(data['input_stream_args']) :
-            for i in range(data['copies']):
+            if data['copies']:
+                for i in range(data['copies']):
+                    for stream_arg, arg_value in zip(stream_args, data["input_stream_args"]):
+                        arg_name = stream_arg["name"]
+                        answer += f"\tstream_args_{event_source}_{i}->{arg_name} = {arg_value};\n"
+            else:
                 for stream_arg, arg_value in zip(stream_args, data["input_stream_args"]):
                     arg_name = stream_arg["name"]
-                    answer += f"\tstream_args_{event_source}_{i}->{arg_name} = {arg_value};\n";
+                    answer += f"\tstream_args_{event_source}->{arg_name} = {arg_value};\n"
+    return answer
+
+
+def free_stream_args():
+    answer = ""
+    for (stream_name, data) in TypeChecker.event_sources_data.items():
+        if len(data['input_stream_args']) > 0:
+            if data['copies']:
+                for i in range(data['copies']):
+                    answer += f"free(stream_args_{stream_name}_{i});\n"
+            else:
+                answer += f"free(stream_args_{stream_name});\n"
     return answer
 
 def stream_type_structs(stream_types) -> str:
