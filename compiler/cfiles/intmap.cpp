@@ -11,7 +11,7 @@ void init_intmap(intmap *m) {
 }
 
 void destroy_intmap(intmap *m) {
-    delete m->data_structure;
+    delete (map<int, int> *) m->data_structure;
     delete m;
 }
 
@@ -33,8 +33,8 @@ int intmap_remove_upto(intmap* m, int key) {
 }
 
 void intmap_insert(intmap *m, int key, int value) {
-    map_type & cpp_map = *static_cast<map_type*>(m->data_structure);
-    auto it = cpp_map.find(key);
+    map_type *cpp_map = static_cast<map_type*>(m->data_structure);
+    auto it = cpp_map->find(key);
 
     if (it != cpp_map.end()) {
         it->second = value;
