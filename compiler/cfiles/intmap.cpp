@@ -1,5 +1,6 @@
 #include "intmap.h"
 #include <map>
+#include <iostream>
 
 using namespace std;
 
@@ -16,10 +17,9 @@ void destroy_intmap(intmap *m) {
 }
 
 int intmap_remove_upto(intmap* m, int key) {
-    map_type & cpp_map = *static_cast<map_type*>(m->data_structure);
-    
-    auto first_element = cpp_map.begin();
-    auto last_element = cpp_map.lower_bound(key);
+    map_type * cpp_map = static_cast<map_type*>(m->data_structure);
+    auto first_element = cpp_map->begin();
+    auto last_element = cpp_map->lower_bound(key);
     
     int answer = 0;
     while(first_element != last_element) {
@@ -27,7 +27,7 @@ int intmap_remove_upto(intmap* m, int key) {
         first_element++;
     }
 
-    cpp_map.erase(cpp_map.begin(), cpp_map.lower_bound(key));
+    cpp_map->erase(cpp_map->begin(), cpp_map->lower_bound(key));
 
     return answer;
 }
@@ -36,18 +36,18 @@ void intmap_insert(intmap *m, int key, int value) {
     map_type *cpp_map = static_cast<map_type*>(m->data_structure);
     auto it = cpp_map->find(key);
 
-    if (it != cpp_map.end()) {
+    if (it != cpp_map->end()) {
         it->second = value;
     } else{
-        cpp_map.insert(pair<int, int>(key, value));
+        cpp_map->insert(pair<int, int>(key, value));
     }
 }
 
 int intmap_get(intmap *m, int key, int *result) {
-    map_type & cpp_map = *static_cast<map_type*>(m->data_structure);
-    auto it = cpp_map.find(key);
+    map_type * cpp_map = static_cast<map_type*>(m->data_structure);
+    auto it = cpp_map->find(key);
 
-    if(it != cpp_map.end()){
+    if(it != cpp_map->end()){
         *result = it->second;
         return true;
     }
@@ -56,6 +56,6 @@ int intmap_get(intmap *m, int key, int *result) {
 }
 
 void intmap_clear(intmap *m) {
-    map_type & cpp_map = *static_cast<map_type*>(m->data_structure);
-    cpp_map.erase(cpp_map.begin(), cpp_map.end());
+    map_type *cpp_map = static_cast<map_type*>(m->data_structure);
+    cpp_map->erase(cpp_map->begin(), cpp_map->end());
 }
