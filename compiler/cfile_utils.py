@@ -618,9 +618,9 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         
 
         if order == "first":
-            choose_statement = f"chosen_streams = bg_get_first_n(&BG_{buffer_name}, {count_choose});\n"
+            choose_statement = f"is_selection_succesful = bg_get_first_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
         else:
-            choose_statement = f"chosen_streams = bg_get_last_n(&BG_{buffer_name}, {count_choose});\n"
+            choose_statement = f"is_selection_succesful = bg_get_last_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
 
         binded_streams = []
         if context is not None:
@@ -637,9 +637,6 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         stream_type = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
 
         answer = f'''
-            if (chosen_streams != NULL) {"{"}
-                free(chosen_streams);
-            {"}"}
             bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
             {choose_statement}
         '''
@@ -658,7 +655,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             {"}"}
             '''
         answer += f'''
-            if (chosen_streams != NULL) {'{'}
+            if (is_selection_succesful) {'{'}
                 {permutation_streams_code}
             {'}'}
                     '''
@@ -850,13 +847,9 @@ def get_code_rule_sets(tree, mapping, stream_types, output_ev_source) -> str:
         assert(tree[0] == "arbiter_rule_set")
         rule_set_name = tree[PPARB_RULE_SET_NAME]
         return f'''int RULE_SET_{rule_set_name}() {"{"}
-        dll_node *chosen_streams;
+        
     STREAM_{output_ev_source}_out *outevent;   
     {arbiter_rule_code(tree[PPARB_RULE_LIST], mapping, stream_types, output_ev_source)}
-    if (chosen_streams != NULL) {"{"}
-        free(chosen_streams);
-    {"}"}
-    
     return 0;
 {"}"}
 '''
@@ -964,7 +957,6 @@ def build_rule_set_functions(tree, mapping, stream_types):
             assert (local_tree[0] == "arbiter_rule_set")
             rule_set_name = local_tree[1]
             return f"int RULE_SET_{rule_set_name}() {'{'}\n" \
-                   f"dll_node **chosen_streams; // used for match fun" \
                    f"{local_explore_rule_list(local_tree[2])}" \
                    f"return 0;\n" \
                    f"{'}'}"
