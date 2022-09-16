@@ -119,28 +119,26 @@ void bg_remove_last_n(buffer_group *bg, int n) {
     }
 }
 
-dll_node ** bg_get_first_n(buffer_group *bg, int n) {
+void bg_get_first_n(buffer_group *bg, int n, dll_node ***result) {
     if (bg->size < n) {
         return NULL;
     }
-    dll_node **result = calloc(n, sizeof(dll_node*));
     dll_node * curr = bg->head;
     for (int i = 0; i < n; i++){
-        result[i] = curr;
+        (*result)[i] = curr;
         curr = curr->next;
         result++;
     }
     return result;
 }
 
-dll_node ** bg_get_last_n(buffer_group *bg, int n) {
+void bg_get_last_n(buffer_group *bg, int n, dll_node ***result) {
     if (bg->size < n) {
         return NULL;
     }
-    dll_node **result = calloc(n, sizeof(dll_node*));
     dll_node * curr = bg->tail;
     for (int i = 0; i< n; i++){
-        result[i] = curr;
+        (*result)[i] = curr;
         curr = curr->prev;
     }
     return result;
@@ -152,7 +150,6 @@ void swap_dll_node(dll_node *node1, dll_node *node2) {
 
     dll_node *node2_prev = node2->prev;
     dll_node *node2_next = node2->next;
-    //printf("%lli %lli %lli %lli", node1_prev, node1_next, node2_prev, node2_next);
     if (node1_prev){
         node1_prev->next = node2;
     }
