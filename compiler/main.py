@@ -186,10 +186,6 @@ int main(int argc, char **argv) {"{"}
 	
 	free(arbiter_counter);
 	free(monitor_buffer);
-	// free chosen_streams
-	for(int i = 0; i < {get_count_events_sources()}; i++) {"{"}
-		free(chosen_streams[i]);
-	{"}"}
 	free(chosen_streams);
 	
 	// free stream args
