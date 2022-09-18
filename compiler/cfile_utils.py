@@ -162,18 +162,6 @@ def initialize_stream_args():
                     answer += f"\tstream_args_{event_source}->{arg_name} = {arg_value};\n"
     return answer
 
-
-def free_stream_args():
-    answer = ""
-    for (stream_name, data) in TypeChecker.event_sources_data.items():
-        if len(data['input_stream_args']) > 0:
-            if data['copies']:
-                for i in range(data['copies']):
-                    answer += f"\tfree(stream_args_{stream_name}_{i});\n"
-            else:
-                answer += f"\tfree(stream_args_{stream_name});\n"
-    return answer
-
 def stream_type_structs(stream_types) -> str:
     answer = ""
     for tree in stream_types:
@@ -913,26 +901,34 @@ def build_rule_set_functions(tree, mapping, stream_types):
     arbiter_rule_set_list = tree[2]
     return local_explore_arb_rule_set_list(arbiter_rule_set_list)
 
-def destroy_buffers() -> str:
+def destroy_all():
     answer = ""
-    for (event_source, data) in TypeChecker.event_sources_data.items():
-        for i in range(data["copies"]):
-            name = f"{event_source}{i}"
-            answer += f"\tshm_arbiter_buffer_free(BUFFER_{name});\n"
 
-    return answer
+    # destroy buffer groups
+    for buffer_group in TypeChecker.buffer_group_data.keys():
+        answer += f"\tdestroy_buffer_group(&BG_{buffer_group});\n"
 
-def destroy_streams() -> str:
-    answer = ""
+    # destroy event sources
     for (event_source, data) in TypeChecker.event_sources_data.items():
         for i in range(data["copies"]):
             name = f"{event_source}_{i}"
             answer += f"\tshm_stream_destroy(EV_SOURCE_{name});\n"
 
-    return answer
+    # destroy buffers
+    for (event_source, data) in TypeChecker.event_sources_data.items():
+        for i in range(data["copies"]):
+            name = f"{event_source}{i}"
+            answer += f"\tshm_arbiter_buffer_free(BUFFER_{name});\n"
 
-def destroy_buffer_groups():
-    answer = ""
-    for buffer_group in TypeChecker.buffer_group_data.keys():
-        answer +=f"\tdestroy_buffer_group(&BG_{buffer_group});\n"
+    answer +="\tfree(arbiter_counter);\n"
+    answer += "\tfree(monitor_buffer);\n"
+    answer += "\tfree(chosen_streams);\n"
+
+    for (stream_name, data) in TypeChecker.event_sources_data.items():
+        if len(data['input_stream_args']) > 0:
+            if data['copies']:
+                for i in range(data['copies']):
+                    answer += f"\tfree(stream_args_{stream_name}_{i});\n"
+            else:
+                answer += f"\tfree(stream_args_{stream_name});\n"
     return answer

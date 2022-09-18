@@ -177,20 +177,9 @@ int main(int argc, char **argv) {"{"}
      
  {monitor_code(ast[3], streams_to_events_map[arbiter_event_source], arbiter_event_source)}
  	
-{destroy_buffer_groups()}
-	// destroy event sources
-{destroy_streams()}
-
-	// destroy arbiter buffers
-{destroy_buffers()}
+{destroy_all()}
 	
-	free(arbiter_counter);
-	free(monitor_buffer);
-	free(chosen_streams);
-	
-	// free stream args
-{free_stream_args()}
-	{get_pure_c_code(components, 'cleanup')}
+{get_pure_c_code(components, 'cleanup')}
 {"}"}
 '''
 
