@@ -14,10 +14,11 @@ buffer group Ps : Primes order by pos includes P[all]
 
 globals
 $$
-    #include "intmap.h"
+    #include "./compiler/cfiles/intmap.h"
     intmap buf;
+    int count = 0;
   
-    void process(n, p, pos, opos)
+    int process(int n,int p,int pos,int opos)
     {
         if(pos < opos)
         {
@@ -74,7 +75,7 @@ arbiter : NumberPairs
 
         choose F,S from Ps where $$ true $$
         {
-            on F : hole(n) | where $$ count < 10 $$
+            on F : hole(n) | where $$ count < 10 || $F.pos; < $S.pos;$$
             $$
                 if($F.pos; < $S.pos;)
                 {
@@ -82,7 +83,7 @@ arbiter : NumberPairs
                 }
                 $F.pos; += n;
             $$
-            on F: Prime(n, p) | where $$ count < 10 $$
+            on F: Prime(n, p) | where $$ count < 10 || $F.pos; < $S.pos; $$
             $$
                 $F.pos; = process(n, p, $F.pos;, $S.pos;);
             $$
