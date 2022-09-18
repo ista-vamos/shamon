@@ -837,53 +837,100 @@ def monitor_code(tree, possible_events, arbiter_event_source) -> str:
     {"}"}
     '''
 
-def build_rule_set_functions(tree, mapping, stream_types):
-    def local_arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
-        # output_stream should be the output type of the event source
-        if tree[0] == "arb_rule_list":
-            return local_arbiter_rule_code(tree[PLIST_BASE_CASE], mapping, stream_types, output_ev_source) + \
-                   local_arbiter_rule_code(tree[PLIST_TAIL], mapping, stream_types, output_ev_source)
+def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
+    # output_stream should be the output type of the event source
+    if tree[0] == "arb_rule_list":
+        return arbiter_rule_code(tree[PLIST_BASE_CASE], mapping, stream_types, output_ev_source) + \
+               arbiter_rule_code(tree[PLIST_TAIL], mapping, stream_types, output_ev_source)
+    else:
+
+        if tree[0] == "arbiter_rule1":
+            binded_args = dict()
+            get_buff_math_binded_args(tree[PPARB_RULE_LIST_BUFF_EXPR], stream_types, mapping, binded_args,
+                                      TypeChecker.buffer_group_data, TypeChecker.match_fun_data)
+            events_to_retrieve = dict()
+            get_num_events_to_retrieve(tree[PPARB_RULE_LIST_BUFF_EXPR], events_to_retrieve,
+                                       TypeChecker.match_fun_data)
+            scanned_conditions = rule_set_streams_condition(tree[PPARB_RULE_LIST_BUFF_EXPR], mapping, stream_types,
+                                                            is_scan=True)
+            stream_drops_code = ""
+            stream_drops = dict()
+            get_count_drop_events_from_l_buff(tree[1], stream_drops)
+            if len(stream_drops.keys()) != 0:
+                assert (len(stream_drops.keys()) > 0)
+                for (stream, count) in stream_drops.items():
+                    stream_drops_code += f"\tshm_arbiter_buffer_drop(BUFFER_{stream}, {count});\n"
+            inner_code = f'''
+            if({tree[PPARB_RULE_CONDITION_CODE]}) {"{"}
+                {buffer_peeks(binded_args, events_to_retrieve)}
+                {define_binded_args(binded_args, stream_types)}
+                {get_arb_rule_stmt_list_code(tree[PPARB_RULE_STMT_LIST], mapping, binded_args, stream_types,
+                                             output_ev_source)}
+                {stream_drops_code}
+                return 1;
+            {"}"}
+            '''
+            return f'''
+            {declare_arrays(scanned_conditions)}
+            {rule_set_streams_condition(tree[PPARB_RULE_LIST_BUFF_EXPR], mapping, stream_types, inner_code)}
+            '''
         else:
-            assert (tree[0] == "arbiter_rule1" or tree[0] == "arbiter_rule2")
-            if tree[0] == "arbiter_rule1":
-                binded_args = dict()
-                get_buff_math_binded_args(tree[PPARB_RULE_LIST_BUFF_EXPR], stream_types, mapping, binded_args,
-                                          TypeChecker.buffer_group_data, TypeChecker.match_fun_data)
-                events_to_retrieve = dict()
-                get_num_events_to_retrieve(tree[PPARB_RULE_LIST_BUFF_EXPR], events_to_retrieve,
-                                           TypeChecker.match_fun_data)
-                scanned_conditions = rule_set_streams_condition(tree[PPARB_RULE_LIST_BUFF_EXPR], mapping, stream_types,
-                                                                is_scan=True)
-                stream_drops_code = ""
-                stream_drops = dict()
-                get_count_drop_events_from_l_buff(tree[1], stream_drops)
-                if len(stream_drops.keys()) != 0:
-                    assert (len(stream_drops.keys()) > 0)
-                    for (stream, count) in stream_drops.items():
-                        stream_drops_code += f"\tshm_arbiter_buffer_drop(BUFFER_{stream}, {count});\n"
-                inner_code = f'''
-                if({tree[PPARB_RULE_CONDITION_CODE]}) {"{"}
-                    {buffer_peeks(binded_args, events_to_retrieve)}
-                    {define_binded_args(binded_args, stream_types)}
-                    {get_arb_rule_stmt_list_code(tree[PPARB_RULE_STMT_LIST], mapping, binded_args, stream_types,
-                                                 output_ev_source)}
-                    {stream_drops_code}
-                    return 1;
+            assert (tree[0] == "arbiter_rule2")
+            binded_streams = []
+            get_list_ids(tree[2], binded_streams)
+
+            choose_order = tree[1]
+            count_choose = len(binded_streams)
+            buffer_name = tree[3]
+            assert buffer_name in TypeChecker.buffer_group_data.keys()
+            if (choose_order is  None) or (choose_order[1] == "first"):
+                choose_statement = ""
+                if choose_order is None:
+                    choose_statement += "# does not specifies order, we take first n even sources\n"
+                choose_statement += f"is_selection_successful = bg_get_first_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
+            else:
+                assert (choose_order[1] == "last")
+                choose_statement = f"is_selection_successful = bg_get_last_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
+
+            # TODO: get output type of event source correctly
+            for stream in binded_streams:
+                stream_types[stream] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"], TypeChecker.buffer_group_data[buffer_name]["in_stream"])
+            inner_code = arbiter_rule_code(tree[5], mapping, stream_types, output_ev_source)
+
+
+            # permute code
+            permutation_code = ""
+            stream_type = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
+            for perm in permutations(range(0, len(binded_streams))):
+                declared_streams = ""
+                for (index, name) in zip(perm, binded_streams):
+                    declared_streams += f"shm_stream *{name} = chosen_streams[{index}]->stream;\n"
+                    declared_streams += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams[{index}]->buffer;\n"
+                    declared_streams += f"STREAM_{stream_type}_ARGS *stream_args_{name} = (STREAM_{stream_type}_ARGS *)chosen_streams[{index}]->args;\n"
+
+                permutation_code += f'''
+                {"{"}
+                    {declared_streams}
+                    {inner_code}
                 {"}"}
                 '''
-                return f'''
-                {declare_arrays(scanned_conditions)}
-                {rule_set_streams_condition(tree[PPARB_RULE_LIST_BUFF_EXPR], mapping, stream_types, inner_code)}
-                '''
-            else:
-                raise Exception("This should be unreachable!")
 
+
+            return f'''
+            {choose_statement}
+            if (is_selection_successful) {"{"}
+                {permutation_code}
+            {"}"}
+            '''
+
+
+def build_rule_set_functions(tree, mapping, stream_types):
     def local_explore_rule_list(local_tree) -> str:
         if local_tree[0] == "arb_rule_list":
             return local_explore_rule_list(local_tree[1]) + local_explore_rule_list(local_tree[2])
         else:
             assert local_tree[0] == "arbiter_rule1" or local_tree[0] == "arbiter_rule2"
-            return local_arbiter_rule_code(local_tree, mapping, stream_types, TypeChecker.arbiter_output_type)
+            return arbiter_rule_code(local_tree, mapping, stream_types, TypeChecker.arbiter_output_type)
 
     def local_explore_arb_rule_set_list(local_tree) -> str:
         if local_tree[0] == "arb_rule_set_l":
