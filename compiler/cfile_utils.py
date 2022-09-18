@@ -860,6 +860,7 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
                 assert (len(stream_drops.keys()) > 0)
                 for (stream, count) in stream_drops.items():
                     stream_drops_code += f"\tshm_arbiter_buffer_drop(BUFFER_{stream}, {count});\n"
+            print(tree[PPARB_RULE_CONDITION_CODE])
             inner_code = f'''
             if({tree[PPARB_RULE_CONDITION_CODE]}) {"{"}
                 {buffer_peeks(binded_args, events_to_retrieve)}
@@ -917,6 +918,7 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
 
 
             return f'''
+            bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
             {choose_statement}
             if (is_selection_successful) {"{"}
                 {permutation_code}
