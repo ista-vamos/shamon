@@ -735,13 +735,13 @@ def p_monitor_rule(p):
     monitor_rule : ON ID '(' listids ')' WHERE BEGIN_CCODE expression BEGIN_CCODE CCODE_TOKEN
     '''
 
-    # ON ID ( listids ) WHERE expression list_statement
-    #  1 2  3    4    5   6       7            8
+    # ON ID '(' listids ')' WHERE BEGIN_CCODE expression BEGIN_CCODE CCODE_TOKEN
+    #  1  2  3    4      5   6       7            8          9          10
 
     TypeChecker.assert_symbol_type(p[PMONITOR_RULE_EV_NAME], EVENT_NAME)
     TypeChecker.assert_num_args_match(p[PMONITOR_RULE_EV_NAME], get_count_list_ids(p[PMONITOR_RULE_EV_ARGS]))
-    p[0] = ("monitor_rule", p[PMONITOR_RULE_EV_NAME], p[PMONITOR_RULE_EV_ARGS], p[PMONITOR_RULE_EXPR],
-            p[PMONITOR_RULE_CODE])
+    p[0] = ("monitor_rule", p[2], p[4], p[8],
+            p[10])
 
 # END monitor Specification
 
