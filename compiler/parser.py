@@ -488,13 +488,21 @@ def p_arbiter_rule(p):
     else:
         if len(p) == 11:
             # CHOOSE choose_order listids FROM ID WHERE pure_foreign_code '{' arbiter_rule_list '}'
-            #    1        2          3      4  5    6        7      8         9           10
+            #    1        2          3      4  5    6        7             8         9           10
+            tree_ids = p[3]
             p[0] = ("arbiter_rule2", p[2], p[3], p[5], p[7], p[9])
         else:
             assert(len(p) == 10)
             # CHOOSE listids FROM ID WHERE pure_foreign_code '{' arbiter_rule_list '}'
-            #    1      2      3  4     5          6          7          8          9 
+            #    1      2      3  4     5          6          7          8          9
+            tree_ids = p[2]
+
             p[0] = ("arbiter_rule2", None, p[2], p[4], p[6], p[8])
+
+        ids = []
+        get_list_ids(tree_ids, ids)
+        for id in ids:
+            TypeChecker.insert_symbol(id, EVENT_SOURCE_NAME)
 
 def p_arbiter_choose_order(p):
     '''
@@ -568,11 +576,16 @@ def p_buffer_match_exp(p):
             buffer_name = p[4]
         p[0] = ('buff_match_exp-choose', choose_order, args, buffer_name)
         TypeChecker.assert_symbol_type(p[4], BUFFER_GROUP_NAME)
+        ids = []
+        get_list_ids(args, ids)
+        for id in ids:
+            TypeChecker.insert_symbol(id, EVENT_SOURCE_NAME)
     elif len(p) == 4:
         TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1])
     elif len(p) == 5:
-        TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
+        # TODO: fix this check
+        # TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1], p[PBUFFER_MATCH_ARG2])
     else:
         TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
