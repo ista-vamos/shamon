@@ -56,7 +56,27 @@ arbiter : NumberPairs
     rule set rs
     {
         on P[0]: | Prime(ln, lp) , P[1]: | Prime(rn, rp) where $$ true $$
-        $$ 1 from P[1];$$
+        $$
+            if(ln == rn)
+            {
+                $yield NumberPair(ln, lp, rp);
+                $drop 1 from P[0];
+                $drop 1 from P[1];
+                intmap_clear(&buf);
+                $P[0].pos; = ln + 1;
+                $P[1].pos; = rn + 1;
+            }
+            else if($P[0].pos;<$P[1].pos;)
+            {
+                $P[0].pos; = process(ln, lp, $P[0].pos;, $P[1].pos;);
+                $drop 1 from P[0];
+            }
+            else
+            {
+                $P[1].pos; = process(rn, rp, $P[1].pos;, $P[0].pos;);
+                $drop 1 from P[1];
+            }
+        $$
 
         choose F,S from Ps where $$ true $$
         {
