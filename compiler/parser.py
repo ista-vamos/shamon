@@ -478,6 +478,7 @@ def p_arbiter_rule_list(p):
 def p_arbiter_rule(p):
     '''
     arbiter_rule : ON list_buff_match_exp WHERE expression arbiter_rule_stmt_list
+                 | CHOOSE listids FROM ID WHERE expression '{' arbiter_rule_list '}'
                  | CHOOSE choose_order listids FROM ID WHERE expression '{' arbiter_rule_list '}'
     '''
     if len(p) == 6:
@@ -485,9 +486,15 @@ def p_arbiter_rule(p):
         # 1           2            3           4                    5
         p[0] = ("arbiter_rule1", p[PARB_RULE_LIST_BUFF_EXPR], p[PARB_RULE_CONDITION_CODE], p[PARB_RULE_STMT_LIST])
     else:
-        # CHOOSE choose_order listids FROM ID WHERE pure_foreign_code '{' arbiter_rule_list '}'
-        #    1        2          3      4  5    6        7      8         9           10
-        p[0] = ("arbiter_rule2", p[2], p[3], p[5], p[7], p[9])
+        if len(p) == 11:
+            # CHOOSE choose_order listids FROM ID WHERE pure_foreign_code '{' arbiter_rule_list '}'
+            #    1        2          3      4  5    6        7      8         9           10
+            p[0] = ("arbiter_rule2", p[2], p[3], p[5], p[7], p[9])
+        else:
+            assert(len(p) == 10)
+            # CHOOSE listids FROM ID WHERE pure_foreign_code '{' arbiter_rule_list '}'
+            #    1      2      3  4     5          6          7          8          9 
+            p[0] = ("arbiter_rule2", None, p[2], p[4], p[6], p[8])
 
 def p_arbiter_choose_order(p):
     '''
