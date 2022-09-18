@@ -14,6 +14,7 @@ class MyLexer(object):
         r'\$\$'
         assert(t.lexer.current_state() == "INITIAL")
         t.lexer.push_state('CCODE')  # Enter 'ccode' state
+        return t
 
     def t_CCODE_END(self, t):
         r'\$\$'
@@ -160,6 +161,8 @@ class MyLexer(object):
         "BOOL", "INT", "ID",
         # ccode
         "CCODE_TOKEN", # matches everything except $
+        "BEGIN_CCODE"
+
     ] + list(reserved.values())
 
     # Regular expression rules for simple tokens

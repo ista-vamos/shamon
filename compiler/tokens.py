@@ -55,5 +55,6 @@ tokens = [
     # data types
      "BOOL", "INT", "ID",
      # ccode
-     "CCODE_TOKEN"
+     "CCODE_TOKEN",
+    "BEGIN_CCODE"
  ] + list(reserved.values())

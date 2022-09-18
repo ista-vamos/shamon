@@ -837,6 +837,18 @@ def monitor_code(tree, possible_events, arbiter_event_source) -> str:
     {"}"}
     '''
 
+def process_where_condition(tree):
+    if tree[0] == "l_where_expr":
+        return process_where_condition(tree[1]) + process_where_condition(tree[2])
+    else:
+        assert(tree[0] == "base_where_expr")
+        if type(tree[1]) == str:
+            return tree[1]
+        else:
+            field_access = tree[1]
+            assert(field_access[0] == "field_access")
+            return process_arb_rule_stmt(field_access, None, None)
+
 def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
     # output_stream should be the output type of the event source
     if tree[0] == "arb_rule_list":
@@ -860,9 +872,8 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
                 assert (len(stream_drops.keys()) > 0)
                 for (stream, count) in stream_drops.items():
                     stream_drops_code += f"\tshm_arbiter_buffer_drop(BUFFER_{stream}, {count});\n"
-            print(tree[PPARB_RULE_CONDITION_CODE])
             inner_code = f'''
-            if({tree[PPARB_RULE_CONDITION_CODE]}) {"{"}
+            if({process_where_condition(tree[PPARB_RULE_CONDITION_CODE])}) {"{"}
                 {buffer_peeks(binded_args, events_to_retrieve)}
                 {define_binded_args(binded_args, stream_types)}
                 {get_arb_rule_stmt_list_code(tree[PPARB_RULE_STMT_LIST], mapping, binded_args, stream_types,
