@@ -887,7 +887,7 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
             if (choose_order is  None) or (choose_order[1] == "first"):
                 choose_statement = ""
                 if choose_order is None:
-                    choose_statement += "# does not specifies order, we take first n even sources\n"
+                    choose_statement += "// does not specifies order, we take first n even sources\n"
                 choose_statement += f"is_selection_successful = bg_get_first_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
             else:
                 assert (choose_order[1] == "last")
