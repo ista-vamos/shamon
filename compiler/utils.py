@@ -398,6 +398,52 @@ def get_existing_buffers(type_checker) -> List[str]:
 
     return answer
 
+def insert_in_result(buffer_name, count, result, existing_buffers):
+    assert(count > -1)
+
+    if buffer_name in existing_buffers:
+        if buffer_name in result.keys():
+            result[buffer_name] = max(result[buffer_name], count)
+        else:
+            result[buffer_name] = count
+
+def local_get_buffer_peeks(local_tree, type_checker, result, existing_buffers):
+    if local_tree[0] ==  "l_buff_match_exp":
+        local_get_buffer_peeks(local_tree[1], type_checker, result, existing_buffers)
+        local_get_buffer_peeks(local_tree[2], type_checker, result, existing_buffers)
+    else:
+        if local_tree[0] == "buff_match_exp-args":
+            local_get_buffer_peeks(type_checker.match_fun_data[local_tree[1]]["buffer_match_expr"])
+        elif local_tree[0] == "buff_match_exp-choose":
+            pass
+        else:
+            assert(local_tree[0] == "buff_match_exp")
+            if len(local_tree) == 3:
+                if local_tree[-1] == "done":
+                    # event_src_ref ':' DONE
+                    pass
+                else:
+                    assert(local_tree[-1] == "nothing")
+                    # event_src_ref ':' NOTHING
+                    event_src_ref = local_tree[1]
+                    event_src_name = event_src_ref[1]
+                    if event_src_ref[2] is not None:
+                        event_src_name += str(event_src_ref[2])
+
+                    insert_in_result(event_src_name, 0, result, existing_buffers)
+            else:
+                assert(len(local_tree) == 4)
+                event_src_ref = local_tree[1]
+                event_src_name = event_src_ref[1]
+                if event_src_ref[2] is not None:
+                    event_src_name += str(event_src_ref[2])
+                local_count = 0
+                for list_event_calls in local_tree[2:]:
+                    if list_event_calls != "|":
+                        local_count += get_count_events_from_list_calls(list_event_calls)
+
+                insert_in_result(event_src_name, local_count, result, existing_buffers)
+
 def get_buffers_and_peeks(tree, result, type_checker, existing_buffers):
     '''
     :param tree: tree of arbiter_rules of a rule set
@@ -407,52 +453,6 @@ def get_buffers_and_peeks(tree, result, type_checker, existing_buffers):
     (not as an product of a choose expression)
     :return:
     '''
-    def insert_in_result(buffer_name, count):
-        assert(count > -1)
-
-        if buffer_name in existing_buffers:
-            if buffer_name in result.keys():
-                result[buffer_name] = max(result[buffer_name], count)
-            else:
-                result[buffer_name] = count
-
-    def local_get_buffer_peeks(local_tree):
-        if local_tree[0] ==  "l_buff_match_exp":
-            local_get_buffer_peeks(local_tree[1])
-            local_get_buffer_peeks(local_tree[2])
-        else:
-            if local_tree[0] == "buff_match_exp-args":
-                local_get_buffer_peeks(type_checker.match_fun_data[local_tree[1]]["buffer_match_expr"])
-            elif local_tree[0] == "buff_match_exp-choose":
-                pass
-            else:
-                assert(local_tree[0] == "buff_match_exp")
-                if len(local_tree) == 3:
-                    if local_tree[-1] == "done":
-                        # event_src_ref ':' DONE
-                        pass
-                    else:
-                        assert(local_tree[-1] == "nothing")
-                        # event_src_ref ':' NOTHING
-                        event_src_ref = local_tree[1]
-                        event_src_name = event_src_ref[1]
-                        if event_src_ref[2] is not None:
-                            event_src_name += str(event_src_ref[2])
-
-                        insert_in_result(event_src_name, 0)
-                else:
-                    assert(len(local_tree) == 4)
-                    event_src_ref = local_tree[1]
-                    event_src_name = event_src_ref[1]
-                    if event_src_ref[2] is not None:
-                        event_src_name += str(event_src_ref[2])
-                    local_count = 0
-                    for list_event_calls in local_tree[2:]:
-                        if list_event_calls != "|":
-                            local_count += get_count_events_from_list_calls(list_event_calls)
-
-                    insert_in_result(event_src_name, local_count)
-
     # MAIN CODE of this function
     if tree[0] == "arb_rule_list":
         get_buffers_and_peeks(tree[1], result, type_checker, existing_buffers)
@@ -461,7 +461,7 @@ def get_buffers_and_peeks(tree, result, type_checker, existing_buffers):
         if tree[0] == "arbiter_rule1":
 
             list_buff_match = tree[1]
-            local_get_buffer_peeks(list_buff_match)
+            local_get_buffer_peeks(list_buff_match, type_checker, result, existing_buffers)
         else:
             assert(tree[0] == "arbiter_rule2")
             get_buffers_and_peeks(tree[-1], result, type_checker, existing_buffers)

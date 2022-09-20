@@ -556,12 +556,12 @@ def arbiter_code(tree):
 {"}"}
     '''
 
-def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_scan=False, context=None):
+def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_scan=False, context=None, current_tail=None):
     # output_stream should be the output type of the event source
     if tree[0] == 'l_buff_match_exp':
         if not is_scan:
-            code_tail = rule_set_streams_condition(tree[PLIST_TAIL], mapping, stream_types, inner_code, is_scan, context)
-            code_base = rule_set_streams_condition(tree[PLIST_BASE_CASE], mapping, stream_types, code_tail, is_scan, context)
+            code_tail = rule_set_streams_condition(tree[PLIST_TAIL], mapping, stream_types, inner_code, is_scan, context, current_tail)
+            code_base = rule_set_streams_condition(tree[PLIST_BASE_CASE], mapping, stream_types, code_tail, is_scan, context, tree[PLIST_TAIL])
             return code_base
         else:
             return rule_set_streams_condition(tree[PLIST_BASE_CASE], mapping, stream_types, inner_code, is_scan) \
@@ -673,6 +673,14 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                 declared_streams += f"shm_stream *{name} = chosen_streams[{index}]->stream;\n"
                 declared_streams += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams[{index}]->buffer;\n"
                 declared_streams += f"STREAM_{stream_type}_ARGS *stream_args_{name} = (STREAM_{stream_type}_ARGS *)chosen_streams[{index}]->args;\n"
+                buffer_peeks_res = dict()
+                existing_buffers = set()
+                existing_buffers.add(name)
+                local_get_buffer_peeks(current_tail, TypeChecker, buffer_peeks_res, existing_buffers)
+                if name in buffer_peeks_res.keys():
+                    declared_streams += f"char* e1_{buffer_name}; size_t i1_{buffer_name}; char* e2_{buffer_name}; size_t i2_{buffer_name};\n" \
+                              f"int count_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, {buffer_peeks_res[name]}, " \
+                              f"&e1_{buffer_name}, &i1_{buffer_name}, &e2_{buffer_name}, &i2_{buffer_name});\n"
 
             permutation_streams_code += f'''
             {"{"}
@@ -707,7 +715,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                     context[original_arg] = context[new_arg]
                 else:
                     context[original_arg] = new_arg
-        return rule_set_streams_condition(TypeChecker.match_fun_data[match_fun_name]["buffer_match_expr"], mapping, stream_types, inner_code, is_scan, context)
+        return rule_set_streams_condition(TypeChecker.match_fun_data[match_fun_name]["buffer_match_expr"], mapping, stream_types, inner_code, is_scan, context, current_tail)
 
 def construct_arb_rule_outevent(mapping, output_ev_source, output_event, raw_args) -> str:
     local_args = []
@@ -937,6 +945,14 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
                     declared_streams += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams[{index}]->buffer;\n"
                     declared_streams += f"STREAM_{stream_type}_ARGS *stream_args_{name} = (STREAM_{stream_type}_ARGS *)chosen_streams[{index}]->args;\n"
 
+                    buffer_peeks_res = dict()
+                    existing_buffers = set()
+                    existing_buffers.add(name)
+                    get_buffers_and_peeks(tree[5], buffer_peeks_res, TypeChecker, existing_buffers)
+                    if name in buffer_peeks_res.keys():
+                        declared_streams += f"char* e1_{name}; size_t i1_{name}; char* e2_{name}; size_t i2_{name};\n" \
+                                            f"int count_{name} = shm_arbiter_buffer_peek(BUFFER_{name}, {buffer_peeks_res[name]}, " \
+                                            f"&e1_{name}, &i1_{name}, &e2_{name}, &i2_{name});\n"
                 permutation_code += f'''
                 {"{"}
                     {declared_streams}
