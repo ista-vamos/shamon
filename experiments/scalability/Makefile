@@ -6,6 +6,7 @@ LDFLAGS=-lpthread
 
 SOURCE_LIBS=../../shmbuf/libshamon-shmbuf.a\
             ../../core/libshamon-signature.a\
+            ../../core/libshamon-source.a\
             ../../core/libshamon-utils.a
 
 MONITOR_LIBS= ../../core/libshamon-signature.a\
