@@ -1,7 +1,6 @@
 #!/bin/bash
 
 set -x
-set -e
 
 CURDIR="$(pwd)"
 MONITORSRC="$1"
@@ -15,7 +14,6 @@ CPPFLAGS="-D_POSIX_C_SOURCE=200809L -I${GENDIR} -I$SHAMONDIR\
 	   -I$SHAMONDIR/streams -I$SHAMONDIR/core -I$SHAMONDIR/shmbuf"
 if grep -q 'CMAKE_BUILD_TYPE.*=Debug' $GENDIR/../CMakeCache.txt; then
 	CFLAGS="-g -O0"
-	# CFLAGS="$CFLAGS -fsanitize=address,undefined"
 else
 	CFLAGS="-g3 -O3 -flto  -fno-fat-lto-objects -fPIC -std=c11"
         CPPFLAGS="$CPPFLAGS -DNDEBUG"
@@ -29,7 +27,9 @@ LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
            $SHAMONDIR/core/list.c\
            $SHAMONDIR/core/signatures.c\
            $SHAMONDIR/shmbuf/libshamon-shmbuf.a\
-           $SHAMONDIR/streams/libshamon-streams.a"
+           $SHAMONDIR/streams/libshamon-streams.a\
+	   $SHAMONDIR/compiler/cfiles/compiler_utils.c\
+	   $SHAMONDIR/compiler/cfiles/intmap.o"
 
 test -z $CC && CC=cc
-${CC} $CFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC $@ $LIBRARIES $LDFLAGS
+${CC} $CFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC -lstdc++ $@ $LIBRARIES $LDFLAGS
