@@ -811,6 +811,8 @@ def monitor_events_code(tree, stream_name, possible_events, count_tabs) -> str:
     else:
         assert(tree[0] == "monitor_rule")
         event = tree[PPMONITOR_RULE_EV_NAME]
+        if event.lower() == "hole":
+            event = "hole"
         tabs = "\t"*count_tabs
         return f'''
 {tabs}if (received_event->head.kind == {possible_events[event]["index"]}) {"{"}

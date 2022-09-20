@@ -76,7 +76,7 @@ class TypeChecker:
 
     @staticmethod
     def get_symbol_type(symbol: str) -> str:
-        if symbol == "hole":
+        if symbol.lower() == "hole":
             return EVENT_NAME
         return TypeChecker.symbol_table[symbol]
 
@@ -106,7 +106,7 @@ class TypeChecker:
 
     @staticmethod
     def assert_num_args_match(symbol, expected_n):
-        if symbol == "hole":
+        if symbol.lower() == "hole":
             if expected_n != 1:
                 raise Exception("Event hole takes 1 argument.")
         elif len(TypeChecker.args_table[symbol]) != expected_n:
@@ -310,6 +310,9 @@ class TypeChecker:
         assert(event_src_declaration[0] == "event-decl")
         name, args = get_name_with_args(event_src_declaration[1])
         copies = event_src_declaration[2]
+
+        if copies is None:
+            copies = 1
 
         # processing input type
         stream_type_name, stream_args = get_name_with_args(name_arg_input_type)
