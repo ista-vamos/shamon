@@ -578,7 +578,6 @@ def p_buffer_match_exp(p):
         p[0] = ('buff_match_exp-args', p[1], arg1, arg2)
     elif p[1] == "choose":
         choose_order = None
-
         if len(p) == 6:
             # CHOOSE choose_order listids FROM ID
             #   1           2         3     4   5

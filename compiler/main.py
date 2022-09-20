@@ -32,6 +32,8 @@ streams_to_events_map = get_stream_to_events_mapping(components["stream_type"])
 stream_types : Dict[str, Tuple[str, str]] = get_stream_types(components["event_source"])
 
 arbiter_event_source = get_arbiter_event_source(ast[2])
+existing_buffers = get_existing_buffers(TypeChecker)
+
 TypeChecker.arbiter_output_type = arbiter_event_source
 
 program = f'''#include "shamon.h"
@@ -87,6 +89,7 @@ int no_consecutive_matches_limit = 1000000000;
 int no_matches_count = 0;
 
 bool are_there_events(shm_arbiter_buffer * b) {"{"}
+  // we use this function to determine if arbiter is done
   void * e1;
   size_t i1;
   void * e2;
@@ -101,22 +104,16 @@ bool are_streams_done() {"{"}
 {"}"}
 
 
-bool check_n_events(shm_arbiter_buffer* b, size_t n) {"{"}
-    // checks if there are exactly n elements on a given stream s
-    void* e1; size_t i1;
-	void* e2; size_t i2;
-	return shm_arbiter_buffer_peek(b,0, &e1, &i1, &e2, &i2) == n;
+bool check_n_events(size_t count, size_t n) {"{"}
+    // count is the result after calling shm_arbiter_buffer_peek
+	return count == n;
 {"}"}
 
 
-bool are_events_in_head(shm_arbiter_buffer *b, size_t ev_size, int event_kinds[], int n_events) {"{"}
-    char* e1; size_t i1;
-	char* e2; size_t i2;
-	int count = shm_arbiter_buffer_peek(b, n_events, (void **)&e1, &i1,(void**) &e2, &i2);
+bool are_events_in_head(char* e1, size_t i1, char* e2, size_t i2, int count, size_t ev_size, int event_kinds[], int n_events) {"{"}
 	if (count < n_events) {"{"}
 	    return false;
     {"}"}
-    
     
 	int i = 0;
 	while (i < i1) {"{"}
@@ -154,10 +151,8 @@ shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t 
 STREAM_{arbiter_event_source}_out *arbiter_outevent;
 {declare_rule_sets(ast[2])}
 
-{build_rule_set_functions(ast[2], streams_to_events_map, stream_types)}
-{print_event_name(stream_types)}
-{get_event_at_head()}
-{print_buffers_state()}
+
+{build_rule_set_functions(ast[2], streams_to_events_map, stream_types, existing_buffers)}
 {arbiter_code(ast[2])}
 
 int main(int argc, char **argv) {"{"}

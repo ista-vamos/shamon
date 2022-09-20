@@ -579,7 +579,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         if len(tree) == 3:
             if not is_scan:
                 if tree[PPBUFFER_MATCH_ARG1] == "nothing":
-                    return f'''if (check_n_events(EV_SOURCE_{stream_name}, 0)) {"{"}
+                    return f'''if (check_n_events(count_{stream_name}, EV_SOURCE_{stream_name}, 0)) {"{"}
                     {inner_code}
                     {"}"}'''
                 elif tree[PPBUFFER_MATCH_ARG1] == "done":
@@ -589,7 +589,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                     '''
                 else:
                     # check if there are n events
-                    return f'''if (check_n_events(EV_SOURCE_{stream_name}, {tree[PPBUFFER_MATCH_ARG1]})) {"{"}
+                    return f'''if (check_n_events(count_{stream_name}, EV_SOURCE_{stream_name}, {tree[PPBUFFER_MATCH_ARG1]})) {"{"}
                         {inner_code}
                     {"}"}'''
             return []
@@ -610,7 +610,8 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
 
 
                 return f'''
-                if (are_events_in_head(BUFFER_{buffer_name}, sizeof(STREAM_{out_type}_out), TEMPARR{StaticCounter.calls_counter-1}, {len(event_kinds)})) {"{"}
+                if (are_events_in_head(e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name}, 
+                count_{buffer_name}, sizeof(STREAM_{out_type}_out), TEMPARR{StaticCounter.calls_counter-1}, {len(event_kinds)})) {"{"}
                     {inner_code}
                     
                 {"}"}'''
@@ -707,27 +708,6 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                 else:
                     context[original_arg] = new_arg
         return rule_set_streams_condition(TypeChecker.match_fun_data[match_fun_name]["buffer_match_expr"], mapping, stream_types, inner_code, is_scan, context)
-
-
-def buffer_peeks(binded_args, events_to_retrieve):
-    answer = ""
-
-    called_buffers = set()
-
-    for (arg, data) in binded_args.items():
-        buffer_name = data[0]
-        if data[5] is not None:
-            buffer_name += f"{data[5]}"
-        if buffer_name not in called_buffers:
-            assert(len(data) == 6)
-            answer += f'''
-                char* e1_{buffer_name}; size_t i1_{buffer_name};
-	            char* e2_{buffer_name}; size_t i2_{buffer_name};
-	            shm_arbiter_buffer_peek(BUFFER_{buffer_name}, {events_to_retrieve[data[0]]}, (void**)&e1_{buffer_name}, &i1_{buffer_name},(void**) &e2_{buffer_name}, &i2_{buffer_name});
-            '''
-            called_buffers.add(buffer_name)
-    return answer
-
 
 def construct_arb_rule_outevent(mapping, output_ev_source, output_event, raw_args) -> str:
     local_args = []
@@ -912,7 +892,6 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
                     stream_drops_code += f"\tshm_arbiter_buffer_drop(BUFFER_{stream}, {count});\n"
             inner_code = f'''
             if({process_where_condition(tree[PPARB_RULE_CONDITION_CODE])}) {"{"}
-                {buffer_peeks(binded_args, events_to_retrieve)}
                 {define_binded_args(binded_args, stream_types)}
                 {get_arb_rule_stmt_list_code(tree[PPARB_RULE_STMT_LIST], mapping, binded_args, stream_types,
                                              output_ev_source)}
@@ -974,8 +953,17 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
             {"}"}
             '''
 
+def buffer_peeks(tree, existing_buffers):
+    answer = ""
+    buffers_to_peek = dict() # maps buffer_name to the number of elements we want to retrieve from the buffer
+    get_buffers_and_peeks(tree, buffers_to_peek, TypeChecker, existing_buffers)
+    for (buffer_name, desired_count) in buffers_to_peek.items():
+        answer += f"char* e1_{buffer_name}; size_t i1_{buffer_name}; char* e2_{buffer_name}; size_t i2_{buffer_name};\n" \
+                  f"int count_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, {desired_count}, & e1, & i1, & e2, & i2);\n"
 
-def build_rule_set_functions(tree, mapping, stream_types):
+    return answer
+
+def build_rule_set_functions(tree, mapping, stream_types, existing_buffers):
     def local_explore_rule_list(local_tree) -> str:
         if local_tree[0] == "arb_rule_list":
             return local_explore_rule_list(local_tree[1]) + local_explore_rule_list(local_tree[2])
@@ -990,8 +978,9 @@ def build_rule_set_functions(tree, mapping, stream_types):
             assert (local_tree[0] == "arbiter_rule_set")
             rule_set_name = local_tree[1]
             return f"int RULE_SET_{rule_set_name}() {'{'}\n" \
+                   f"{buffer_peeks(local_tree[2], existing_buffers)}" \
                    f"{local_explore_rule_list(local_tree[2])}" \
-                   f"return 0;\n" \
+                   f"\treturn 0;\n" \
                    f"{'}'}"
 
     assert (tree[0] == 'arbiter_def')
