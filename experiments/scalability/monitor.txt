@@ -1,0 +1,41 @@
+stream type Events
+{
+    Event(n : long);
+}
+
+event source Src : Events process using FORWARD to autodrop(1024)
+
+globals
+$$
+size_t processed = 0;
+size_t dropped = 0;
+$$
+
+cleanup
+$$
+printf("Processed %lu events, dropped %lu events\n", processed, dropped);
+$$
+
+arbiter : Events
+{
+    rule set rules
+    {
+        on Src: Event(n) where $$ true $$
+        $$
+            $yield Event(n);
+        $$
+    }
+}
+
+monitor
+{
+    on Event(n) where $$ true $$
+    $$
+      ++processed;
+    $$
+
+    on Hole(n) where $$ true $$
+    $$
+      dropped += n;
+    $$
+}

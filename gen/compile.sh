@@ -29,7 +29,9 @@ LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
            $SHAMONDIR/core/list.c\
            $SHAMONDIR/core/signatures.c\
            $SHAMONDIR/shmbuf/libshamon-shmbuf.a\
-           $SHAMONDIR/streams/libshamon-streams.a"
+           $SHAMONDIR/streams/libshamon-streams.a\
+	   $SHAMONDIR/compiler/cfiles/compiler_utils.c\
+	   $SHAMONDIR/compiler/cfiles/intmap.o"
 
 test -z $CC && CC=cc
-${CC} $CFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC ./compiler/cfiles/compiler_utils.c ./compiler/cfiles/intmap.o -lstdc++ $@ $LIBRARIES $LDFLAGS
+${CC} $CFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC -lstdc++ $@ $LIBRARIES $LDFLAGS

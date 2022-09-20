@@ -4,6 +4,9 @@ CFLAGS=-g3 -O3 -flto  -fno-fat-lto-objects -fPIC -std=c11
 CPPFLAGS=-D_POSIX_C_SOURCE=200809L -DNDEBUG
 LDFLAGS=-lpthread
 
+MON_COMPILER_PY=../../compiler/main.py
+MON_COMPILER=../../gen/compile.sh
+
 SOURCE_LIBS=../../shmbuf/libshamon-shmbuf.a\
             ../../core/libshamon-signature.a\
             ../../core/libshamon-source.a\
@@ -26,9 +29,11 @@ source: source.o
 monitor.o: monitor.c
 	$(CC) -c monitor.c -I ../.. -I ../../core $(CFLAGS)
 
-monitor: monitor.o
-	$(CC) monitor.o -o monitor ../../core/vector.c ../../monitors/utils.c\
-	      -I../.. -I../../core $(CFLAGS)  $(MONITOR_LIBS)  $(LDFLAGS)
+monitor.c: monitor.txt $(MON_COMPILER_PY)
+	python $(MON_COMPILER_PY) monitor.txt monitor.c
+
+monitor: monitor.c
+	$(MON_COMPILER) monitor.c
 
 experiments: source monitor
 	python3 -O -m compileall *.py
