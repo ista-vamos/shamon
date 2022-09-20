@@ -678,9 +678,9 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                 existing_buffers.add(name)
                 local_get_buffer_peeks(current_tail, TypeChecker, buffer_peeks_res, existing_buffers)
                 if name in buffer_peeks_res.keys():
-                    declared_streams += f"char* e1_{buffer_name}; size_t i1_{buffer_name}; char* e2_{buffer_name}; size_t i2_{buffer_name};\n" \
-                              f"int count_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, {buffer_peeks_res[name]}, " \
-                              f"&e1_{buffer_name}, &i1_{buffer_name}, &e2_{buffer_name}, &i2_{buffer_name});\n"
+                    declared_streams += f"char* e1_{name}; size_t i1_{name}; char* e2_{name}; size_t i2_{name};\n" \
+                              f"int count_{name} = shm_arbiter_buffer_peek(BUFFER_{name}, {buffer_peeks_res[name]}, " \
+                              f"&e1_{name}, &i1_{name}, &e2_{name}, &i2_{name});\n"
 
             permutation_streams_code += f'''
             {"{"}
