@@ -959,7 +959,8 @@ def buffer_peeks(tree, existing_buffers):
     get_buffers_and_peeks(tree, buffers_to_peek, TypeChecker, existing_buffers)
     for (buffer_name, desired_count) in buffers_to_peek.items():
         answer += f"char* e1_{buffer_name}; size_t i1_{buffer_name}; char* e2_{buffer_name}; size_t i2_{buffer_name};\n" \
-                  f"int count_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, {desired_count}, & e1, & i1, & e2, & i2);\n"
+                  f"int count_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, {desired_count}, " \
+                  f"&e1_{buffer_name}, &i1_{buffer_name}, &e2_{buffer_name}, &i2_{buffer_name});\n"
 
     return answer
 
