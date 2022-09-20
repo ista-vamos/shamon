@@ -200,8 +200,11 @@ def declare_event_sources(event_sources):
     get_event_sources_names(event_sources, event_srcs_names)
     answer = ""
     for name in event_srcs_names:
-        for  i in range(TypeChecker.event_sources_data[name]["copies"]):
-            answer += f"shm_stream *EV_SOURCE_{name}_{i};\n"
+        if TypeChecker.event_sources_data[name]["copies"]:
+            for  i in range(TypeChecker.event_sources_data[name]["copies"]):
+                answer += f"shm_stream *EV_SOURCE_{name}_{i};\n"
+        else:
+            answer += f"shm_stream *EV_SOURCE_{name};\n"
     return answer
 
 def declare_event_sources_flags(ast):
@@ -216,7 +219,10 @@ def declare_event_sources_flags(ast):
 def get_count_events_sources():
     total_count = 0
     for (event_source, data) in TypeChecker.event_sources_data.items():
-        total_count += data['copies']
+        if data['copies']:
+            total_count += data['copies']
+        else:
+            total_count += 1
     return total_count
 
 def event_sources_conn_code(event_sources) -> str:
@@ -240,20 +246,29 @@ def event_sources_conn_code(event_sources) -> str:
         connection_kind = TypeChecker.event_sources_data[stream_name]["connection_kind"]
         assert(connection_kind[0] == "conn_kind")
         buff_size = connection_kind[2]
-        for i in range(copies):
-            name = f"{stream_name}_{i}"
+        if copies:
+            for i in range(copies):
+                name = f"{stream_name}_{i}"
+                answer += f"\t// connect to event source {name}\n"
+                answer += f"\tEV_SOURCE_{name} = shm_stream_create(\"{name}\", argc, argv);\n"
+                answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
+        else:
+            name = f"{stream_name}"
             answer += f"\t// connect to event source {name}\n"
             answer += f"\tEV_SOURCE_{name} = shm_stream_create(\"{name}\", argc, argv);\n"
-            answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
+            answer += f"\tBUFFER_{stream_name} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
 
     return answer
 
 def declare_evt_srcs_threads() -> str:
     answer = ""
     for (event_source, data) in TypeChecker.event_sources_data.items():
-        for i in range(data["copies"]):
-            name = f"{event_source}_{i}"
-            answer += f"thrd_t THREAD_{name};\n"
+        if data["copies"]:
+            for i in range(data["copies"]):
+                name = f"{event_source}_{i}"
+                answer += f"thrd_t THREAD_{name};\n"
+        else:
+            answer += f"thrd_t THREAD_{event_source};\n"
 
     return answer
 
@@ -277,9 +292,12 @@ def activate_threads() -> str:
     answer = ""
     for (event_source, data) in TypeChecker.event_sources_data.items():
         copies = data["copies"]
-        for i in range(copies):
-            name = f"{event_source}_{i}"
-            answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{event_source},BUFFER_{event_source}{i});\n"
+        if copies:
+            for i in range(copies):
+                name = f"{event_source}_{i}"
+                answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{event_source},BUFFER_{event_source}{i});\n"
+        else:
+            answer += f"\tthrd_create(&THREAD_{event_source}, PERF_LAYER_{event_source},BUFFER_{event_source});\n"
 
 
     return answer
@@ -288,9 +306,12 @@ def activate_threads() -> str:
 def activate_buffers() -> str:
     answer = ""
     for (event_source, data) in TypeChecker.event_sources_data.items():
-        for i in range(data["copies"]):
-            name = f"{event_source}{i}"
-            answer += f"\tshm_arbiter_buffer_set_active(BUFFER_{name}, true);\n"
+        if data["copies"]:
+            for i in range(data["copies"]):
+                name = f"{event_source}{i}"
+                answer += f"\tshm_arbiter_buffer_set_active(BUFFER_{name}, true);\n"
+        else:
+            answer += f"\tshm_arbiter_buffer_set_active(BUFFER_{event_source}, true);\n"
 
     return answer
 
@@ -489,8 +510,8 @@ def are_buffers_empty():
     code = "\tint c = 0;\n"
     for (event_source, data) in TypeChecker.event_sources_data.items():
         copies = data['copies']
-        if copies > 0:
-            for i in range(data['copies']):
+        if copies:
+            for i in range(copies):
                 code += f"\tc += are_there_events(BUFFER_{event_source}{i});\n"
         else:
             code += f"\tc += are_there_events(BUFFER_{event_source});\n"
@@ -972,15 +993,21 @@ def destroy_all():
 
     # destroy event sources
     for (event_source, data) in TypeChecker.event_sources_data.items():
-        for i in range(data["copies"]):
-            name = f"{event_source}_{i}"
-            answer += f"\tshm_stream_destroy(EV_SOURCE_{name});\n"
+        if data["copies"]:
+            for i in range(data["copies"]):
+                name = f"{event_source}_{i}"
+                answer += f"\tshm_stream_destroy(EV_SOURCE_{name});\n"
+        else:
+            answer += f"\tshm_stream_destroy(EV_SOURCE_{event_source});\n"
 
     # destroy buffers
     for (event_source, data) in TypeChecker.event_sources_data.items():
-        for i in range(data["copies"]):
-            name = f"{event_source}{i}"
-            answer += f"\tshm_arbiter_buffer_free(BUFFER_{name});\n"
+        if data["copies"]:
+            for i in range(data["copies"]):
+                name = f"{event_source}{i}"
+                answer += f"\tshm_arbiter_buffer_free(BUFFER_{name});\n"
+        else:
+            answer += f"\tshm_arbiter_buffer_free(BUFFER_{event_source});\n"
 
     answer +="\tfree(arbiter_counter);\n"
     answer += "\tfree(monitor_buffer);\n"

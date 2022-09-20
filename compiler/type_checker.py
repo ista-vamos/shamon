@@ -311,9 +311,6 @@ class TypeChecker:
         name, args = get_name_with_args(event_src_declaration[1])
         copies = event_src_declaration[2]
 
-        if copies is None:
-            copies = 1
-
         # processing input type
         stream_type_name, stream_args = get_name_with_args(name_arg_input_type)
 
