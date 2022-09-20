@@ -413,7 +413,7 @@ def local_get_buffer_peeks(local_tree, type_checker, result, existing_buffers):
         local_get_buffer_peeks(local_tree[2], type_checker, result, existing_buffers)
     else:
         if local_tree[0] == "buff_match_exp-args":
-            local_get_buffer_peeks(type_checker.match_fun_data[local_tree[1]]["buffer_match_expr"])
+            local_get_buffer_peeks(type_checker.match_fun_data[local_tree[1]]["buffer_match_expr"], type_checker, result, existing_buffers)
         elif local_tree[0] == "buff_match_exp-choose":
             pass
         else:
