@@ -1,6 +1,6 @@
 stream type Events
 {
-    Event(n : long);
+    E(n : long);
 }
 
 event source Src : Events process using FORWARD to autodrop(1024)
@@ -20,16 +20,16 @@ arbiter : Events
 {
     rule set rules
     {
-        on Src: Event(n) where $$ true $$
+        on Src: E(n) | where $$ true $$
         $$
-            $yield Event(n);
+            $yield E(n);
         $$
     }
 }
 
 monitor
 {
-    on Event(n) where $$ true $$
+    on E(n) where $$ true $$
     $$
       ++processed;
     $$
