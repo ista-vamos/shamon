@@ -83,7 +83,7 @@ thrd_t ARBITER_THREAD;
 {event_sources_thread_funcs(components["event_source"], streams_to_events_map)}
 
 // variables used to debug arbiter
-int no_consecutive_matches_limit = 10000;
+int no_consecutive_matches_limit = 1000000000;
 int no_matches_count = 0;
 
 bool are_there_events(shm_arbiter_buffer * b) {"{"}
