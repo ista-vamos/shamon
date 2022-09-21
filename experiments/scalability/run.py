@@ -7,10 +7,11 @@ from os import chdir, unlink
 from measure import *
 from sys import argv
 from run_common import *
-from time import clock_gettime, CLOCK_MONOTONIC
-from subprocess import run
+from subprocess import run, TimeoutExpired
 
 NUM="1000"
+TIMEOUT=10  # timeout for one experiment
+
 if len(argv) > 1:
     BS = argv[1]
     if len(argv) > 2:
@@ -49,31 +50,37 @@ def run_measurement(source_freq, buffsize):
     source = ParseSource()
     monitor = ParseMonitor()
     shmname = mktemp(prefix="/vamos.ev-")
-    start = clock_gettime(CLOCK_MONOTONIC)
+    duration =\
     measure(f"Source waits {source_freq} cycles, buffer has size {buffsize}",
             [Command(SOURCE_EXE, shmname, str(source_freq), NUM).withparser(source)],
             [Command(MONITOR_EXE, f"Src:generic:{shmname}",
-                     stdout=PIPE).withparser(monitor)])
-    end = clock_gettime(CLOCK_MONOTONIC)
+                     stdout=PIPE).withparser(monitor)],
+            timeout=TIMEOUT)
     print("duration    src-wait     mon-proc     mon-drop     mon-drop-evs"),
-    print(f"{end-start :<12.5f}"
+    print(f"{duration :<12.5f}"
           f"{source.waiting[0] :<12}",
           f"{monitor.processed :<12}",
           f"{monitor.dropped :<12}",
           f"{monitor.dropped_times :<12}")
     csv.writerow([source_freq, buffsize,
                   source.waiting[0], monitor.processed,
-                  monitor.dropped, monitor.dropped_times, end-start])
+                  monitor.dropped, monitor.dropped_times, duration])
+
+retval = 0
 
 try:
     for buffsize in (16, 128, 1024):
         compile_monitor_txt(buffsize)
 
         for source_freq in (0, 10, 100, 1000, 10000):
-            run_measurement(source_freq, buffsize)
-
+            try:
+                run_measurement(source_freq, buffsize)
+            except TimeoutExpired:
+                lprint("TIMEOUT!", color="red")
+                retval = -1
 except Exception as e:
     lprint(str(e))
+    retval = -1
 finally:
     close_log()
     close_csvlog()
@@ -81,3 +88,4 @@ finally:
     chdir("/")
     rmtree(WORKINGDIR)
 
+    exit(retval)
