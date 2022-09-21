@@ -31,6 +31,7 @@ monitor.o: monitor.c
 
 monitor.c: monitor.txt $(MON_COMPILER_PY)
 	python $(MON_COMPILER_PY) monitor.txt monitor.c
+	-clang-format -i monitor.c
 
 monitor: monitor.c
 	$(MON_COMPILER) monitor.c
