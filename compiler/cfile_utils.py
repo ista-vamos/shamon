@@ -1109,7 +1109,7 @@ def print_buffers_state():
             code += f'\tprint_event_name({event_source_index}, event_index);\n'
     return f'''
 void print_buffers_state() {"{"}
-    {code}
+{code}
 {"}"}    
     
 '''
