@@ -531,12 +531,27 @@ def arbiter_code(tree):
 
     rule_set_invocations = ""
     for name in rule_set_names:
-        rule_set_invocations += f"\tRULE_SET_{name}();\n"
-
+        rule_set_invocations += f"\trule_sets_match_count += RULE_SET_{name}();\n"
 
     return f'''int arbiter() {"{"}
+    
     while (!are_streams_done()) {"{"}
-    {rule_set_invocations}\t{"}"}
+        int rule_sets_match_count = 0;
+    {rule_set_invocations}
+        if(rule_sets_match_count == 0) {"{"}
+            // increment counter of no consecutive matches
+            no_matches_count++;
+        {"}"} else {"{"}
+            // if there is a match reinit counter
+            no_matches_count = 0;
+        {"}"}
+        
+        if(no_matches_count == no_consecutive_matches_limit) {"{"}
+            printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\n", no_consecutive_matches_limit);
+            print_buffers_state();
+            break;
+        {"}"}
+    {"}"}
     shm_monitor_set_finished(monitor_buffer);
 {"}"}
     '''
@@ -1021,3 +1036,81 @@ def destroy_all():
             else:
                 answer += f"\tfree(stream_args_{stream_name});\n"
     return answer
+
+
+def get_event_at_head():
+    return f'''
+int get_event_at_head(shm_arbiter_buffer *b) {"{"}
+    void * e1; size_t i1;
+    void * e2; size_t i2;
+    
+    int count = shm_arbiter_buffer_peek(b, 0, &e1, &i1, &e2, &i2);
+    if (count == 0) {"{"}
+        return -1;
+    {"}"}
+    shm_event * ev = (shm_event *) (e1);
+    return ev->kind;
+{"}"}
+    '''
+
+def print_event_name(stream_types):
+
+    def local_build_if_from_events(events) -> str:
+        answer = ""
+        for (index, event) in enumerate(events):
+            answer += f'''
+        if (event_index == {index+2} ) {"{"}
+            printf("{event}\\n");
+            return;
+        {"}"}
+            '''
+        return answer
+
+    code = ""
+    for (event_source_index, (event_source, data) )in enumerate(TypeChecker.event_sources_data.items()):
+        output_type = stream_types[event_source][1]
+        code += f'''
+    if(ev_src_index == {event_source_index}) {"{"}
+        {local_build_if_from_events(TypeChecker.stream_types_to_events[output_type])}
+        printf("No event matched! this should not happen, please report!\\n");
+        return;
+    {"}"}
+        '''
+
+    return f'''
+void print_event_name(int ev_src_index, int event_index) {"{"}
+    if (event_index == -1) {"{"}
+        printf("None\\n");
+        return;
+    {"}"}
+    
+    if (event_index == 1) {"{"}
+        printf("hole\\n");
+    {"}"}
+    
+    {code}
+    printf("Invalid event source! this should not happen, please report!\\n");
+{"}"}
+    '''
+
+def print_buffers_state():
+    code = ""
+    for (event_source_index, (event_source, data)) in enumerate(TypeChecker.event_sources_data.items()):
+        copies = data["copies"]
+        if copies:
+            for i in range(copies):
+                name_ev_source = event_source + str(i)
+                code += f"\tint event_index = get_event_at_head(BUFFER_{name_ev_source});\n"
+                code += f'\tprintf("{name_ev_source} -> ");\n'
+                code += f'\tprint_event_name({event_source_index}, event_index);\n'
+        else:
+            code += f"\tint event_index = get_event_at_head(BUFFER_{event_source});\n"
+            code += f'\tprintf("{event_source} -> ");\n'
+            code += f'\tprint_event_name({event_source_index}, event_index);\n'
+    return f'''
+void print_buffers_state() {"{"}
+    {code}
+{"}"}    
+    
+'''
+

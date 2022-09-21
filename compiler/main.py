@@ -82,6 +82,10 @@ thrd_t ARBITER_THREAD;
 
 {event_sources_thread_funcs(components["event_source"], streams_to_events_map)}
 
+// variables used to debug arbiter
+int no_consecutive_matches_limit = 10000;
+int no_matches_count = 0;
+
 bool are_there_events(shm_arbiter_buffer * b) {"{"}
   void * e1;
   size_t i1;
@@ -151,6 +155,9 @@ STREAM_{arbiter_event_source}_out *arbiter_outevent;
 {declare_rule_sets(ast[2])}
 
 {build_rule_set_functions(ast[2], streams_to_events_map, stream_types)}
+{print_event_name(stream_types)}
+{get_event_at_head()}
+{print_buffers_state()}
 {arbiter_code(ast[2])}
 
 int main(int argc, char **argv) {"{"}
