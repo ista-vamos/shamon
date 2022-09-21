@@ -106,7 +106,7 @@ def events_declaration_structs(tree) -> str:
             if not is_last:
                 struct_fields += f"\t{data['type']} {data['name']};\n"
             else:
-                struct_fields += f"\t{data['type']} {data['name']};"
+                struct_fields += f"\t{data['type']} {data['name']};\n"
 
         return f'''struct _EVENT_{event_name} {"{"}
 {struct_fields}
@@ -547,7 +547,7 @@ def arbiter_code(tree):
         {"}"}
         
         if(no_matches_count == no_consecutive_matches_limit) {"{"}
-            printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\n", no_consecutive_matches_limit);
+            printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\\n", no_consecutive_matches_limit);
             print_buffers_state();
             break;
         {"}"}
@@ -1100,15 +1100,16 @@ def print_buffers_state():
         if copies:
             for i in range(copies):
                 name_ev_source = event_source + str(i)
-                code += f"\tint event_index = get_event_at_head(BUFFER_{name_ev_source});\n"
+                code += f"\tevent_index = get_event_at_head(BUFFER_{name_ev_source});\n"
                 code += f'\tprintf("{name_ev_source} -> ");\n'
                 code += f'\tprint_event_name({event_source_index}, event_index);\n'
         else:
-            code += f"\tint event_index = get_event_at_head(BUFFER_{event_source});\n"
+            code += f"\tevent_index = get_event_at_head(BUFFER_{event_source});\n"
             code += f'\tprintf("{event_source} -> ");\n'
             code += f'\tprint_event_name({event_source_index}, event_index);\n'
     return f'''
 void print_buffers_state() {"{"}
+    int event_index;
 {code}
 {"}"}    
     
