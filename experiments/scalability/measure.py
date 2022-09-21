@@ -177,7 +177,7 @@ def compile_monitor(compilesh, primessrc):
     if p.wait() != 0:
         log(f"-- Compiling monitor failed --",
             f"-- \033[0;31m!! Compiling monitor failed (see log) --\033[0m")
-        raise RuntimeError("Compiling monitor faile!")
+        raise RuntimeError("Compiling monitor failed!")
     else:
         lprint("-- Monitor compiled --")
 

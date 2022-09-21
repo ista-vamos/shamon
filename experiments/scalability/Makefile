@@ -20,7 +20,7 @@ MONITOR_LIBS= ../../core/libshamon-signature.a\
               ../../streams/libshamon-streams.a\
 	      ../../shmbuf/libshamon-shmbuf.a
 
-source.o: source.c
+source.o: source.c $(SOURCE_LIBS)
 	$(CC) -c source.c -I ../.. -I ../../core $(CFLAGS)
 
 source: source.o

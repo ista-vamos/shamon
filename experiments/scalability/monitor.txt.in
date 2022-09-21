@@ -3,17 +3,19 @@ stream type Events
     E(n : long);
 }
 
-event source Src : Events process using FORWARD to autodrop(1024)
+event source Src : Events process using FORWARD to autodrop(@BUFSIZE)
 
 globals
 $$
 size_t processed = 0;
 size_t dropped = 0;
+size_t holes_num = 0;
 $$
 
 cleanup
 $$
-printf("Processed %lu events, dropped %lu events\n", processed, dropped);
+printf("Processed %lu events, dropped %lu events in %lu holes\n",
+        processed, dropped, holes_num);
 $$
 
 arbiter : Events
@@ -36,6 +38,7 @@ monitor
 
     on Hole(n) where $$ true $$
     $$
+      ++holes_num;
       dropped += n;
     $$
 }

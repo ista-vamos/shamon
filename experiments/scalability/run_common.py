@@ -63,18 +63,18 @@ class ParseMonitor:
         for line in out.splitlines():
             if line.startswith(b'Processed '):
                 parts = line.split()
-                assert len(parts) == 3, parts
+                assert len(parts) == 9, parts
                 self.processed = int(parts[1])
-            elif line.startswith(b'Dropped '):
-                parts = line.split()
-                assert len(parts) == 7, parts
-                self.dropped_times = int(parts[1])
-                self.dropped = int(parts[5])
+                self.dropped = int(parts[4])
+                self.dropped_times = int(parts[7])
 
         if self.processed is None or\
            self.dropped is None or\
            self.dropped_times is None:
             lprint("-- ERROR while parsing monitor output (see log.txt)--")
+            log("stdout:")
             log(out)
+            log("stderr:")
+            log(err)
             raise RuntimeError("Did not find right values")
 
