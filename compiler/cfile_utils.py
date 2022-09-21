@@ -1086,6 +1086,7 @@ void print_event_name(int ev_src_index, int event_index) {"{"}
     
     if (event_index == 1) {"{"}
         printf("hole\\n");
+        return;
     {"}"}
     
     {code}
