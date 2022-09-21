@@ -14,7 +14,7 @@
 #include "stream.h"
 #include "utils.h"
 
-shm_stream *shm_stream_create(const char *name, int argc, char *argv[]);
+shm_stream *shm_stream_create_from_argv(const char *name, int argc, char *argv[]);
 #define SLEEP_NS_INIT (50)
 #define SLEEP_THRESHOLD_NS (10000000)
 
