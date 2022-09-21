@@ -549,7 +549,7 @@ def arbiter_code(tree):
         if(no_matches_count == no_consecutive_matches_limit) {"{"}
             printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\\n", no_consecutive_matches_limit);
             print_buffers_state();
-            break;
+            abort();
         {"}"}
     {"}"}
     shm_monitor_set_finished(monitor_buffer);
