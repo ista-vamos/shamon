@@ -392,9 +392,12 @@ def get_existing_buffers(type_checker) -> List[str]:
     '''
     answer = []
     for (event_source, data) in type_checker.event_sources_data.items():
-        for i in range(data["copies"]):
-            name = f"{event_source}{i}"
-            answer.append(name)
+        if data["copies"]:
+            for i in range(data["copies"]):
+                name = f"{event_source}{i}"
+                answer.append(name)
+        else:
+            answer.append(event_source)
 
     return answer
 
