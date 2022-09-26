@@ -250,12 +250,12 @@ def event_sources_conn_code(event_sources) -> str:
             for i in range(copies):
                 name = f"{stream_name}_{i}"
                 answer += f"\t// connect to event source {name}\n"
-                answer += f"\tEV_SOURCE_{name} = shm_stream_create(\"{name}\", argc, argv);\n"
+                answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv);\n"
                 answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
         else:
             name = f"{stream_name}"
             answer += f"\t// connect to event source {name}\n"
-            answer += f"\tEV_SOURCE_{name} = shm_stream_create(\"{name}\", argc, argv);\n"
+            answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv);\n"
             answer += f"\tBUFFER_{stream_name} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
 
     return answer
