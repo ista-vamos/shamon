@@ -152,6 +152,8 @@ shm_stream *shm_stream_create(const char *name,
                               int argc,
                               char *argv[]);
 
+shm_stream *shm_stream_create_from_argv(const char *stream_name, int argc, char *argv[]);
+
 /************************************************************************
  * ARBITER BUFFER
  ************************************************************************/
