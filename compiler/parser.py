@@ -115,6 +115,7 @@ def p_event_declaration(p):
 
     p[0] = ('event_decl', p[PEVENT_NAME], p[PEVENT_PARAMS_LIST])
 
+
 def p_field_declaration_list(p):
     '''
     list_field_decl : field_decl
