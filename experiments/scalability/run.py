@@ -9,7 +9,7 @@ from sys import argv
 from run_common import *
 from subprocess import run, TimeoutExpired
 
-NUM="100000"
+NUM="1000000"
 TIMEOUT=None #10  # timeout for one experiment
 
 if len(argv) > 1:
@@ -51,7 +51,7 @@ def run_measurement(source_freq, buffsize):
     monitor = ParseMonitor()
     shmname = mktemp(prefix="/vamos.ev-")
     duration =\
-    measure(f"Source waits {source_freq} cycles, arbiter buffer has size {buffsize}",
+    measure(f"[SHM {BS} pgs] source waits {source_freq} cyc., arbiter buffer has size {buffsize}",
             [Command(SOURCE_EXE, shmname, str(source_freq), NUM).withparser(source)],
             [Command(MONITOR_EXE, f"Src:generic:{shmname}",
                      stdout=PIPE).withparser(monitor)],
