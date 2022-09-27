@@ -9,7 +9,7 @@ from sys import argv
 from run_common import *
 from subprocess import run, TimeoutExpired
 
-NUM="1000"
+NUM="100000"
 TIMEOUT=10  # timeout for one experiment
 
 if len(argv) > 1:
@@ -82,7 +82,7 @@ def run_measurement(source_freq, buffsize):
 retval = 0
 
 try:
-    for buffsize in (16, 128, 1024):
+    for buffsize in (4, 8, 16, 128, 1024, 2048):
         compile_monitor_txt(buffsize)
 
         for source_freq in (0, 10, 100, 1000, 10000):
