@@ -9,7 +9,6 @@ MON_COMPILER=../../gen/compile.sh
 
 SOURCE_LIBS=../../shmbuf/libshamon-shmbuf.a\
             ../../core/libshamon-signature.a\
-            ../../core/libshamon-source.a\
             ../../core/libshamon-utils.a
 
 MONITOR_LIBS= ../../core/libshamon-signature.a\
@@ -29,18 +28,19 @@ source: source.o
 monitor.o: monitor.c
 	$(CC) -c monitor.c -I ../.. -I ../../core $(CFLAGS)
 
-monitor.c: monitor.txt $(MON_COMPILER_PY)
+monitor.c: monitor.txt.in $(MON_COMPILER_PY)
 	python $(MON_COMPILER_PY) monitor.txt monitor.c
 	-clang-format -i monitor.c
 
 monitor: monitor.c
 	$(MON_COMPILER) monitor.c
 
-experiments: source monitor
+experiments: source
 	python3 -O -m compileall *.py
 	./experiments.sh
 
 .PHONY clean:
+	-rm monitor.c monitor.txt
 	-rm *.o monitor source
 	-rm -rf __pycache__
 
