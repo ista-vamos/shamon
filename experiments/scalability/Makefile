@@ -29,7 +29,7 @@ monitor.o: monitor.c
 	$(CC) -c monitor.c -I ../.. -I ../../core $(CFLAGS)
 
 monitor.c: monitor.txt.in $(MON_COMPILER_PY)
-	python $(MON_COMPILER_PY) monitor.txt monitor.c
+	python3 $(MON_COMPILER_PY) monitor.txt monitor.c
 	-clang-format -i monitor.c
 
 monitor: monitor.c

@@ -26,6 +26,10 @@ arbiter : Events
         $$
             $yield E(n);
         $$
+
+        on Src: hole(n) | where $$ true $$
+        $$
+        $$
     }
 }
 
