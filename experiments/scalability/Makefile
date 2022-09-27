@@ -19,7 +19,7 @@ MONITOR_LIBS= ../../core/libshamon-signature.a\
               ../../streams/libshamon-streams.a\
 	      ../../shmbuf/libshamon-shmbuf.a
 
-source.o: source.c $(SOURCE_LIBS)
+source.o: source.c
 	$(CC) -c source.c -I ../.. -I ../../core $(CFLAGS)
 
 source: source.o
@@ -32,7 +32,7 @@ monitor.c: monitor.txt
 monitor: monitor.c
 	$(MON_COMPILER) monitor.c
 
-experiments: source
+experiments:
 	python3 -O -m compileall *.py
 	./experiments.sh
 
