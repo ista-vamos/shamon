@@ -25,6 +25,7 @@ class ParseSource:
     def __init__(self, dbg=False):
         self.waiting = []
         self.waited = 0
+        self.sent = 0
         self.dbg = dbg
 
     def parse(self, out, err):
@@ -41,6 +42,7 @@ class ParseSource:
             if b'busy waited' in line:
                 parts = line.split()
                 assert len(parts) == 10, parts
+                self.sent = int(parts[2])
                 c = int(parts[8])
                 self.waited += c
                 self.waiting.append(c)

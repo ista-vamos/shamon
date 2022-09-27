@@ -62,6 +62,10 @@ def run_measurement(source_freq, buffsize):
           f"{monitor.processed :<12}",
           f"{monitor.dropped :<12}",
           f"{monitor.dropped_times :<12}")
+    if source.sent != int(NUM):
+        raise RuntimeError(f"Wrong values found, is source buggy?")
+    if monitor.processed + monitor.dropped != int(NUM):
+        raise RuntimeError(f"Wrong values found, is monitor buggy?")
     csv.writerow([source_freq, buffsize,
                   source.waiting[0], monitor.processed,
                   monitor.dropped, monitor.dropped_times, duration])
