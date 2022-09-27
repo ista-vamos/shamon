@@ -27,6 +27,7 @@ class ParseSource:
         self.waited = 0
         self.sent = 0
         self.dbg = dbg
+        self.lines = []
 
     def parse(self, out, err):
         if self.dbg:
@@ -40,6 +41,7 @@ class ParseSource:
         foundwaited = False
         for line in err.splitlines():
             if b'busy waited' in line:
+                self.lines.append(line)
                 parts = line.split()
                 assert len(parts) == 10, parts
                 self.sent = int(parts[2])
@@ -60,10 +62,12 @@ class ParseMonitor:
         self.processed = None
         self.dropped = None
         self.dropped_times = None
+        self.lines = []
 
     def parse(self, out, err):
         for line in out.splitlines():
             if line.startswith(b'Processed '):
+                self.lines.append(line)
                 parts = line.split()
                 assert len(parts) == 9, parts
                 self.processed = int(parts[1])
