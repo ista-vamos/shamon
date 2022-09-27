@@ -36,7 +36,7 @@ lprint(f"-- Working directory is {WORKINGDIR} --")
 lprint(f"Sending numbers up to {NUM}th...")
 
 def compile_monitor_txt(buffsize):
-    lprint(f"Generating monitor with bufsize {buffsize}")
+    lprint(f"Generating monitor with arbiter bufsize {buffsize}")
     outname = MONITOR_TXT_IN[:-3]
     with open(MONITOR_TXT_IN, "r") as infile:
         with open(outname, "w") as outfile:
