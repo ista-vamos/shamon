@@ -32,3 +32,15 @@ for buffsize in [4, 16, 128, 1024]:
     # move exec to /primes/programs
     run(["mv", "monitor", f"{CURRENT_PATH}/programs/monitor{buffsize}" ], check=True)
 
+
+# compile empty monitor
+
+COMPILE_SCRIPT= f"{CURRENT_PATH}/../../gen/compile.sh"
+for buffsize in [4, 16, 128, 1024]:
+    # compile c files
+    run(["bash", COMPILE_SCRIPT, f"{CURRENT_PATH}/../../mmtest/mmempty.c" ], check=True)
+
+    # move exec to /primes/programs
+    run(["mv", "monitor", f"{CURRENT_PATH}/programs/empty_monitor{buffsize}" ], check=True)
+
+
