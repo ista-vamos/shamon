@@ -25,8 +25,8 @@ else:
 open_log()
 open_csvlog(BS, NUM)
 
-EMPTY_MONITOR_PATH = f"./execs/empty_monitor{ABS}"
-MONITOR_PATH = f"./execs/monitor{ABS}"
+EMPTY_MONITOR_PATH = f"./programs/empty_monitor{ABS}"
+MONITOR_PATH = f"./programs/monitor{ABS}"
 
 WORKINGDIR = mkdtemp(prefix="midmon.", dir="/tmp")
 chdir(WORKINGDIR)

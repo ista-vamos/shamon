@@ -20,8 +20,8 @@ else:
     print("arbiter-buffer-size is will set the size of the arbiter buffer in the monitor.")
     exit(1)
 
-EMPTY_MONITOR_PATH = f"./execs/empty_monitor{ABS}"
-MONITOR_PATH = f"./execs/monitor{ABS}"
+EMPTY_MONITOR_PATH = f"./programs/empty_monitor{ABS}"
+MONITOR_PATH = f"./programs/monitor{ABS}"
 
 open_log()
 open_csvlog(BS, NUM)

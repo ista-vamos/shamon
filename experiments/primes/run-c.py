@@ -26,8 +26,8 @@ open_csvlog(BS, NUM)
 lprint(f"Enumerating primes up to {NUM}th prime...")
 lprint(f"Taking average of {repeat_num()} runs...\n")
 
-EMPTY_MONITOR_PATH = f"./execs/empty_monitor{ABS}"
-MONITOR_PATH = f"./execs/monitor{ABS}"
+EMPTY_MONITOR_PATH = f"./programs/empty_monitor{ABS}"
+MONITOR_PATH = f"./programs/monitor{ABS}"
 
 ###############################################################################
 
