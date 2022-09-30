@@ -26,6 +26,9 @@ open_csvlog(BS, NUM)
 lprint(f"Enumerating primes up to {NUM}th prime...")
 lprint(f"Taking average of {repeat_num()} runs...\n")
 
+EMPTY_MONITOR_PATH = f"./execs/empty_monitor{ABS}"
+MONITOR_PATH = f"./execs/monitor{ABS}"
+
 ###############################################################################
 
 c_native = ParseTime(withwaitstats=False)
@@ -43,8 +46,7 @@ WORKINGDIR = mkdtemp(prefix="midmon.", dir="/tmp")
 chdir(WORKINGDIR)
 lprint(f"-- Working directory is {WORKINGDIR} --")
 
-lprint("-- Compiling empty monitor --")
-compile_monitor(COMPILESH, EMPTYMONSRC, ABS)
+lprint("--  Using empty monitor: {EMPTY_MONITOR_PATH} --")
 
 # create temporary names for SHM files
 primes1 = rand_shm_name('primes1')
@@ -59,7 +61,7 @@ measure("'Empty monitor C/C for primes' DynamoRIO sources",
          Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
                  primes2, "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_consume_time_c2)],
-        [Command("./monitor", f"Left:drregex:{primes1}", f"Right:drregex:{primes2}",
+        [Command(EMPTY_MONITOR_PATH, f"Left:drregex:{primes1}", f"Right:drregex:{primes2}",
                  stdout=PIPE)])
 dm_drio_consume_time_c1.report('c-c-empty', msg="C (1) program")
 dm_drio_consume_time_c2.report('c-c-empty', msg="C (2) program")
@@ -74,8 +76,7 @@ WORKINGDIR = mkdtemp(prefix="midmon.", dir="/tmp")
 chdir(WORKINGDIR)
 lprint(f"-- Working directory is {WORKINGDIR} --")
 
-lprint("-- Compiling differential monitor --")
-compile_monitor(COMPILESH, PRIMESMONSRC, ABS)
+lprint(f"-- Using differential monitor: {MONITOR_PATH} --")
 
 ###############################################################################
 
@@ -89,7 +90,7 @@ measure("'Differential monitor C/C for primes' DynamoRIO sources",
          Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
                  primes2, "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_time_c2)],
-        [Command("./monitor", f"Left:drregex:{primes1}", f"Right:drregex:{primes2}",
+        [Command(MONITOR_PATH, f"P_0:drregex:{primes1}", f"P_1:drregex:{primes2}",
                  stdout=PIPE).withparser(dm_drio_stats2)])
 dm_drio_time_c1.report('c-c-dm', msg="C (1) program")
 dm_drio_time_c2.report('c-c-dm', msg="C (2) program")
@@ -106,8 +107,8 @@ measure("'Differential monitor C/C for primes' DynamoRIO sources, 10% errors",
          Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
                  primes2, "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  f"{PRIMESPATH}/primes-bad", NUM, str(int(NUM)/10)).withparser(dm_drio_bad_time_c2)],
-        [Command("./monitor", f"Left:drregex:{primes1}",
-                 f"Right:drregex:{primes2}", stdout=PIPE).withparser(dm_drio_bad_stats2)])
+        [Command(MONITOR_PATH, f"P_0:drregex:{primes1}",
+                 f"P_1:drregex:{primes2}", stdout=PIPE).withparser(dm_drio_bad_stats2)])
 dm_drio_bad_time_c1.report('c-c-dm-errs-good', msg="C (1) program (good)")
 dm_drio_bad_time_c2.report('c-c-dm-errs-bad', msg="C (2) program (bad)")
 dm_drio_bad_stats2.report('c-c-dm-errs-stats')

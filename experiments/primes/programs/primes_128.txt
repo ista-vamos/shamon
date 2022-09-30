@@ -1,0 +1,106 @@
+stream type Primes(pos : int)
+{
+    Prime(n : int, p : int);  
+}
+
+stream type NumberPairs
+{
+    NumberPair(i : int, n : int, m : int);
+}
+
+event source P[2] : Primes(0) process using FORWARD to autodrop(128)
+
+buffer group Ps : Primes order by pos includes P[all]
+
+globals
+$$
+    #include "./compiler/cfiles/intmap.h"
+    intmap buf;
+    int count = 0;
+
+    int process(int n, int p, int pos, int opos)
+    {
+        if(pos < opos)
+        {
+            int oval=0;
+            if(intmap_get(&buf, n, &oval))
+            {
+                $yield NumberPair(n, oval, p);
+            }
+            count -= intmap_remove_upto(&buf, n);
+        }
+        else
+        {
+            if(count<10)
+            {
+                intmap_insert(&buf, n, p);
+                count++;
+            }
+        }
+        return n+1;
+    }
+$$
+
+startup 
+$$
+init_intmap(&buf);
+$$
+
+cleanup
+$$
+destroy_intmap(&buf);
+$$
+
+match fun Prio[F,S]() = choose F,S from Ps
+
+arbiter : NumberPairs
+{
+    rule set rs
+    {
+        on P[0]: | Prime(ln, lp) , P[1]: | Prime(rn, rp) where $$ true $$
+        $$
+            if(ln == rn)
+            {
+                $yield NumberPair(ln, lp, rp);
+                $drop 1 from P[0];
+                $drop 1 from P[1];
+                intmap_clear(&buf);
+                $P[0].pos; = ln + 1;
+                $P[1].pos; = rn + 1;
+            }
+            else if($P[0].pos;<$P[1].pos;)
+            {
+                $P[0].pos; = process(ln, lp, $P[0].pos;, $P[1].pos;);
+                $drop 1 from P[0];
+            }
+            else
+            {
+                $P[1].pos; = process(rn, rp, $P[1].pos;, $P[0].pos;);
+                $drop 1 from P[1];
+            }
+        $$
+        on Prio[F,S](), F : hole(n) | where $$ true $$
+        $$
+            if($F.pos; < $S.pos;)
+            {
+                count -= intmap_remove_upto(&buf, $F.pos;+n);
+            }
+            $F.pos; += n;
+        $$
+        on Prio[F,S](), F: Prime(n, p) | where $$ true $$
+        $$
+            $F.pos; = process(n, p, $F.pos;, $S.pos;);
+        $$
+    }
+}
+
+monitor
+{
+    on NumberPair(i, n, m) where $$ true $$
+    $$
+        if(n!=m)
+        {
+          printf("Error at index %i: %i is not equal to %i\n", i, n, m);
+        }
+    $$
+}
