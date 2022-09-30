@@ -155,7 +155,7 @@ def _measure(cmds, moncmds = (), pipe=False):
     ts = [0] if pipe else [0]*len(cmds)
     for i in range(REPEAT_NUM):
 
-        # --- RUN CLINETS ---
+        # --- RUN CLIENTS ---
         for cmd in cmds:
             cmd.run()
 

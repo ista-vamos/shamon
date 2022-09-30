@@ -7,6 +7,8 @@ CURDIR="$(pwd)"
 MONITORSRC="$1"
 shift  # consume the first argument in case there are some additional ones
        # for the compilation
+ARBITER_BUFSIZE="$1"
+shift
 
 GENDIR=$(dirname $0)
 SHAMONDIR="$GENDIR/.."
@@ -32,4 +34,4 @@ LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
            $SHAMONDIR/streams/libshamon-streams.a"
 
 test -z $CC && CC=cc
-${CC} $CFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC $@ $LIBRARIES $LDFLAGS
+${CC} $CFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC $@ $LIBRARIES $LDFLAGS -DSHMBUF_ARBITER_BUFSIZE=$ARBITER_BUFSIZE

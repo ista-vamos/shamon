@@ -26,8 +26,8 @@ open_csvlog(BS, NUM)
 lprint(f"Enumerating primes up to {NUM}th prime...")
 lprint(f"Taking average of {repeat_num()} runs...\n")
 
-EMPTY_MONITOR_PATH = f"./programs/empty_monitor{ABS}"
-MONITOR_PATH = f"./programs/monitor{ABS}"
+EMPTY_MONITOR_PATH = f"{PRIMESPATH}/programs/empty_monitor{ABS}"
+MONITOR_PATH = f"{PRIMESPATH}/programs/monitor{ABS}"
 
 ###############################################################################
 
@@ -46,7 +46,7 @@ WORKINGDIR = mkdtemp(prefix="midmon.", dir="/tmp")
 chdir(WORKINGDIR)
 lprint(f"-- Working directory is {WORKINGDIR} --")
 
-lprint("--  Using empty monitor: {EMPTY_MONITOR_PATH} --")
+lprint(f"--  Using empty monitor: {EMPTY_MONITOR_PATH} --")
 
 # create temporary names for SHM files
 primes1 = rand_shm_name('primes1')
