@@ -18,6 +18,21 @@ $$
     intmap buf;
     int count = 0;
 
+    int left_drops = 0;
+    int right_drops = 0;
+    
+    int left_processed = 0;
+    int right_processed = 0;
+
+    int left_compared = 0;
+    int right_compared = 0;
+    
+    int left_holes = 0;
+    int right_holes = 0;
+    
+    int left_skipped = 0;
+    int right_skipped = 0;
+
     int process(int n, int p, int pos, int opos)
     {
         if(pos < opos)
@@ -49,6 +64,9 @@ $$
 cleanup
 $$
 destroy_intmap(&buf);
+printf("LEFT: processed %d events (%d compared, %d dropped (in %d holes), %d skipped) \n", left_processed, left_compared, left_drops, left_holes, left_skipped);
+
+printf("RIGHT: processed %d events (%d compared, %d dropped (in %d holes), %d skipped) \n", right_processed, right_compared, right_drops, right_holes, right_skipped);
 $$
 
 match fun Prio[F,S]() = choose F,S from Ps
@@ -59,6 +77,10 @@ arbiter : NumberPairs
     {
         on P[0]: | Prime(ln, lp) , P[1]: | Prime(rn, rp) where $$ true $$
         $$
+            left_processed += 1;
+            right_processed += 1;
+            left_compared += 1;
+            right_compared +=1;
             if(ln == rn)
             {
                 $yield NumberPair(ln, lp, rp);
@@ -86,10 +108,24 @@ arbiter : NumberPairs
                 count -= intmap_remove_upto(&buf, $F.pos;+n);
             }
             $F.pos; += n;
+
+            if (F == EV_SOURCE_P_0) {
+                left_holes += 1;
+                left_drops += n;
+            } else {
+                right_holes += 1;
+                right_drops += n;
+            }
         $$
         on Prio[F,S](), F: Prime(n, p) | where $$ true $$
         $$
             $F.pos; = process(n, p, $F.pos;, $S.pos;);
+
+            if (F == EV_SOURCE_P_0) {
+                left_skipped += 1;
+            } else {
+                right_skipped += 1;
+            }
         $$
     }
 }
