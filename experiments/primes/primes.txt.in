@@ -110,11 +110,11 @@ arbiter : NumberPairs
             $F.pos; += n;
 
             if (F == EV_SOURCE_P_0) {
-                left_processed += 1;
+                left_processed += n;
                 left_holes += 1;
                 left_drops += n;
             } else {
-                right_processed += 1;
+                right_processed += n;
                 right_holes += 1;
                 right_drops += n;
             }
