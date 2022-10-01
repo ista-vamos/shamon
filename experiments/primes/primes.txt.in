@@ -110,9 +110,11 @@ arbiter : NumberPairs
             $F.pos; += n;
 
             if (F == EV_SOURCE_P_0) {
+                left_processed += 1;
                 left_holes += 1;
                 left_drops += n;
             } else {
+                right_processed += 1;
                 right_holes += 1;
                 right_drops += n;
             }
@@ -122,8 +124,10 @@ arbiter : NumberPairs
             $F.pos; = process(n, p, $F.pos;, $S.pos;);
 
             if (F == EV_SOURCE_P_0) {
+                left_processed += 1;
                 left_skipped += 1;
             } else {
+                right_processed += 1;
                 right_skipped += 1;
             }
         $$
