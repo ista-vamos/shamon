@@ -131,12 +131,15 @@ arbiter : NumberPairs
         $$
             $F.pos; = process(n, p, $F.pos;, $S.pos;);
 
+            if (F == EV_SOURCE_P_0) {
+                left_processed += 1;
+            } else {
+                right_processed += 1;
+            }
             if(!is_compared) {
                 if (F == EV_SOURCE_P_0) {
-                    left_processed += 1;
                     left_skipped += 1;
                 } else {
-                    right_processed += 1;
                     right_skipped += 1;
                 }
             }
