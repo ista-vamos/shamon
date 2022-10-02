@@ -28,9 +28,6 @@ $$
     
     int left_holes = 0;
     int right_holes = 0;
-    
-    int left_skipped = 0;
-    int right_skipped = 0;
 
     bool is_compared = false;
     int process(int n, int p, int pos, int opos)
@@ -68,6 +65,8 @@ $$
 cleanup
 $$
 destroy_intmap(&buf);
+int left_skipped = left_processed - compared - left_drops;
+int right_skipped = left_processed - compared - right_drops;
 printf("LEFT: processed %d events (%d compared, %d dropped (in %d holes), %d skipped) \n", left_processed, compared, left_drops, left_holes, left_skipped);
 
 printf("RIGHT: processed %d events (%d compared, %d dropped (in %d holes), %d skipped) \n", right_processed, compared, right_drops, right_holes, right_skipped);
@@ -98,18 +97,12 @@ arbiter : NumberPairs
             {
                 left_processed += 1;
                 $P[0].pos; = process(ln, lp, $P[0].pos;, $P[1].pos;);
-                if (!is_compared) {
-                    left_skipped++;
-                }
                 $drop 1 from P[0];
             }
             else
             {
                 right_processed += 1;
                 $P[1].pos; = process(rn, rp, $P[1].pos;, $P[0].pos;);
-                if (!is_compared) {
-                    right_skipped++;
-                }
                 $drop 1 from P[1];
             }
         $$
@@ -117,6 +110,7 @@ arbiter : NumberPairs
         $$
             if($F.pos; < $S.pos;)
             {
+                
                 count -= intmap_remove_upto(&buf, $F.pos;+n);
             }
             $F.pos; += n;
@@ -133,21 +127,12 @@ arbiter : NumberPairs
         $$
         on Prio[F,S](), F: Prime(n, p) | where $$ true $$
         $$
-            $F.pos; = process(n, p, $F.pos;, $S.pos;);
-
+            $F.pos; = process(n, p, $F.pos;, $S.pos;);  
             if (F == EV_SOURCE_P_0) {
-                left_processed += 1;
+                left_processed ++;
             } else {
-                right_processed += 1;
-            }
-            if(!is_compared) {
-                if (F == EV_SOURCE_P_0) {
-                    left_skipped += 1;
-                } else {
-                    right_skipped += 1;
-                }
-            }
-            
+                right_processed ++;
+            }        
         $$
     }
 }
