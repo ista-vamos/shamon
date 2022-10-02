@@ -51,6 +51,7 @@ $$
         {
             if(count<10)
             {
+                is_compared = true;
                 intmap_insert(&buf, n, p);
                 count++;
             }
@@ -80,10 +81,11 @@ arbiter : NumberPairs
     {
         on P[0]: | Prime(ln, lp) , P[1]: | Prime(rn, rp) where $$ true $$
         $$
-            left_processed += 1;
-            right_processed += 1;
+
             if(ln == rn)
             {
+                left_processed += 1;
+                right_processed += 1;
                 compared++;
                 $yield NumberPair(ln, lp, rp);
                 $drop 1 from P[0];
@@ -94,6 +96,7 @@ arbiter : NumberPairs
             }
             else if($P[0].pos;<$P[1].pos;)
             {
+                left_processed += 1;
                 $P[0].pos; = process(ln, lp, $P[0].pos;, $P[1].pos;);
                 if (!is_compared) {
                     left_skipped++;
@@ -102,6 +105,7 @@ arbiter : NumberPairs
             }
             else
             {
+                right_processed += 1;
                 $P[1].pos; = process(rn, rp, $P[1].pos;, $P[0].pos;);
                 if (!is_compared) {
                     right_skipped++;
