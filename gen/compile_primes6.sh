@@ -10,7 +10,7 @@ shift  # consume the first argument in case there are some additional ones
 GENDIR=$(dirname $0)
 SHAMONDIR="$GENDIR/.."
 
-g++ -c $SHAMONDIR/../compiler/cfiler/intmap.cpp
+g++ -c $SHAMONDIR/compiler/cfiles/intmap.cpp
 
 CPPFLAGS="-D_POSIX_C_SOURCE=200809L -I${GENDIR} -I$SHAMONDIR\
 	   -I$SHAMONDIR/streams -I$SHAMONDIR/core -I$SHAMONDIR/shmbuf"
@@ -31,7 +31,7 @@ LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
            $SHAMONDIR/shmbuf/libshamon-shmbuf.a\
            $SHAMONDIR/streams/libshamon-streams.a\
 	   $SHAMONDIR/compiler/cfiles/compiler_utils.c\
-	   $CURDIR/intmap.o"
+	   $SHAMONDIR/compiler/cfiles/intmap.o"
 
 test -z $CC && CC=cc
 ${CC} $CFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC -lstdc++ $@ $LIBRARIES $LDFLAGS
