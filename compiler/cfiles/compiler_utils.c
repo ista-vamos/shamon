@@ -30,8 +30,6 @@ void bg_insert(buffer_group *bg, shm_stream *stream, void* buffer, void *args, b
     if(bg->size == 0) {
         bg->head = new_node;
         bg->tail = new_node;
-        printf("size bg is 0\n");
-        
     } else {
         // check if it goes on the tail
         if (bg->tail->stream == stream) return;
@@ -127,7 +125,6 @@ bool bg_get_first_n(buffer_group *bg, int n, dll_node ***result) {
     for (int i = 0; i < n; i++){
         (*result)[i] = curr;
         curr = curr->next;
-        result++;
     }
     return true;
 }
