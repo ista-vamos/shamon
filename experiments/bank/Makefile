@@ -1,7 +1,16 @@
-CPPFLAGS=#-I.. -I/home/fabian/DynamoRIO-Linux-9.0.0/include -I/home/fabian/DynamoRIO-Linux-9.0.0/ext/include
+CPPFLAGS= -Wno-unused-result -I.. -I../../../DynamoRIO-Linux-9.0.0/include -I../../../DynamoRIO-Linux-9.0.0/ext/include
 CFLAGS=-O3
 
-all: monitor bank monbank monbanknw monitornw smtmonitor #gennums_hardcoded-instr
+all: monitor bank monbank monbanknw monitornw smtmonitor ../interact inputs.txt inputs100.txt #gennums_hardcoded-instr
+
+inputs.txt : inputs.py
+	python $^ 100000 > $@
+
+inputs100.txt : inputs.py
+	python $^ 100 > $@
+
+../interact: ../interact.c
+	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@
 
 monitor: monitor.o shm_monitor.o shm_common.o
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -lrt -lm -lpthread
@@ -55,6 +64,6 @@ monbanknw: monclientnw.o bank.o shm_monitored.o shm_common.o
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -lpthread
 
 clean:
-	-rm *.o monitor bank monbank monbanknw monitornw
+	-rm *.o monitor bank monbank monbanknw monitornw ../interact inputs.txt inputs100.txt
 
 .PHONY: clean all

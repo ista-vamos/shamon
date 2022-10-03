@@ -1,5 +1,7 @@
 stream type BankOutputEvent
 {
+	Padding1();
+	Padding2();
 	Balance(account : int, balance : int);
 	Deposit(account : int);
 	Withdraw(account: int);
@@ -42,6 +44,8 @@ $$
 	intmap lower_bounds;
 	int in_ahead=0;
 	int out_ahead=0;
+	int in_processed=0;
+	int out_processed=0;
 $$
 
 startup
@@ -53,6 +57,8 @@ $$
 
 cleanup
 $$
+printf("\nin_ahead: %i, out_ahead: %i\n", in_ahead, out_ahead);
+printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
 destroy_intmap(&balances);
 destroy_intmap(&upper_bounds);
 destroy_intmap(&lower_bounds);
@@ -80,6 +86,7 @@ arbiter : BankEvent
 			{
 				in_ahead+=n;
 			}
+			in_processed++;
 		$$
 		on Out : hole(n) | where $$ true $$
 		$$
@@ -100,63 +107,84 @@ arbiter : BankEvent
 			{
 				out_ahead+=n;
 			}
+			out_processed++;
 		$$
 		on In : 1 where $$ out_ahead > 0 $$
 		$$
 			$drop 1 from In;
 			out_ahead--;
+			in_processed++;
 		$$
 		on Out : 1 where $$ in_ahead > 0 $$
 		$$
 			$yield Clear();
 			$drop 1 from Out;
 			in_ahead--;
+			out_processed++;
 		$$
 		on Out : Balance(acc, amnt) | where $$ true $$
 		$$
 			$yield SawBalance(acc,amnt);
 			out_ahead++;
+			out_processed++;
 		$$
 		on Out : OtherOut() | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			out_ahead=1;
+			out_processed++;
 		$$
 		on Out : TransferTo(from_) TransferAmount(from2, to_) TransferSuccess() | , In : Number(f) Number(amount) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$yield SawTransfer(from_, to_, amount);
 			out_ahead=1;
+			out_processed+=3;
+			in_processed+=2;
 		$$
 		on Out : TransferTo(from_) TransferAmount(from2, to_) TransferFail() | , In : Number(f) Number(amount) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$yield SawTransferFail(from_, to_, amount);
 			out_ahead=1;
+			out_processed+=3;
+			in_processed+=2;
 		$$
 		on Out : Deposit(acc) DepositSuccess() |, In : Number(amount) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$yield SawDeposit(acc, amount);
 		    out_ahead=1;
+			out_processed+=2;
+			in_processed+=1;
 		$$
 		on Out : Withdraw(acc) WithdrawSuccess() |, In : Number(amount) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$yield SawWithdraw(acc, amount);
 		    out_ahead=1;
+			out_processed+=2;
+			in_processed+=1;
 		$$
 		on Out : Withdraw(acc) WithdrawFail() |, In : Number(amount) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$yield SawWithdrawFail(acc, amount);
 		    out_ahead=1;
+			out_processed+=2;
+			in_processed+=1;
 		$$
 		on Out : 3, In: 2, Out: TransferTo(from_) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$drop 1 from In;
+			out_processed+=1;
+			in_processed+=1;
 		$$
 		on Out : 2, In : 1, Out : Deposit(acc) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$drop 1 from In;
+			out_processed+=1;
+			in_processed+=1;
 		$$
 		on Out : 2, In : 1, Out : Withdraw(acc) |  where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$drop 1 from In;
+			out_processed+=1;
+			in_processed+=1;
 		$$
 	}
 }
