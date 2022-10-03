@@ -31,6 +31,11 @@ int intmap_remove_upto(intmap* m, int key) {
     return answer;
 }
 
+void intmap_remove(intmap *m, int key) {
+    map_type * cpp_map = static_cast<map_type*>(m->data_structure);
+    cpp_map->erase(key);
+}
+
 void intmap_insert(intmap *m, int key, int value) {
     map_type *cpp_map = static_cast<map_type*>(m->data_structure);
     auto it = cpp_map->find(key);

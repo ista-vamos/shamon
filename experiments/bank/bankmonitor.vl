@@ -1,5 +1,7 @@
 stream type BankOutputEvent
 {
+	Padding1();
+	Padding2();
 	Balance(account : int, balance : int);
 	Deposit(account : int);
 	Withdraw(account: int);
@@ -26,13 +28,13 @@ stream type BankEvent
 	SawDeposit(account : int, amount : int);
 	SawWithdraw(account : int, amount : int);
 	SawWithdrawFail(account : int, amount : int);
-	SawTransfer(from : int, to : int, amount : int);
-	SawTransferFail(from : int, to : int, amount : int);
+	SawTransfer(from_ : int, to_ : int, amount : int);
+	SawTransferFail(from_ : int, to_ : int, amount : int);
 	Clear();
 }
 
-event source In : BankInputEvent to autodrop(16);
-event source Out : BankOutputEvent to autodrop(16);
+event source In : BankInputEvent to autodrop(16)
+event source Out : BankOutputEvent to autodrop(16)
 
 globals
 $$
@@ -42,6 +44,8 @@ $$
 	intmap lower_bounds;
 	int in_ahead=0;
 	int out_ahead=0;
+	int in_processed=0;
+	int out_processed=0;
 $$
 
 startup
@@ -53,6 +57,8 @@ $$
 
 cleanup
 $$
+printf("\nin_ahead: %i, out_ahead: %i\n", in_ahead, out_ahead);
+printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
 destroy_intmap(&balances);
 destroy_intmap(&upper_bounds);
 destroy_intmap(&lower_bounds);
@@ -62,7 +68,7 @@ arbiter : BankEvent
 {
 	rule set rs
 	{
-		on In : hole(n) |
+		on In : hole(n) | where $$ true $$
 		$$
 			if(out_ahead > 0)
 			{
@@ -80,8 +86,9 @@ arbiter : BankEvent
 			{
 				in_ahead+=n;
 			}
+			in_processed++;
 		$$
-		on Out : hole(n) |
+		on Out : hole(n) | where $$ true $$
 		$$
 			$yield Clear();
 			if(in_ahead > 0)
@@ -100,76 +107,97 @@ arbiter : BankEvent
 			{
 				out_ahead+=n;
 			}
+			out_processed++;
 		$$
 		on In : 1 where $$ out_ahead > 0 $$
 		$$
 			$drop 1 from In;
 			out_ahead--;
+			in_processed++;
 		$$
 		on Out : 1 where $$ in_ahead > 0 $$
 		$$
 			$yield Clear();
 			$drop 1 from Out;
 			in_ahead--;
+			out_processed++;
 		$$
-		on Out : Balance(acc, amnt) |
+		on Out : Balance(acc, amnt) | where $$ true $$
 		$$
 			$yield SawBalance(acc,amnt);
 			out_ahead++;
+			out_processed++;
 		$$
 		on Out : OtherOut() | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			out_ahead=1;
+			out_processed++;
 		$$
-		on Out : TransferTo(from) TransferAmount(from2, to) TransferSuccess() | , In : Number(f) Number(amount) | where $$ in_ahead == 0 && out_ahead == 0 $$
+		on Out : TransferTo(from_) TransferAmount(from2, to_) TransferSuccess() | , In : Number(f) Number(amount) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
-			$yield SawTransfer(from, to, amount);
+			$yield SawTransfer(from_, to_, amount);
 			out_ahead=1;
+			out_processed+=3;
+			in_processed+=2;
 		$$
-		on Out : TransferTo(from) TransferAmount(from2, to) TransferFail() | , In : Number(f) Number(amount) | where $$ in_ahead == 0 && out_ahead == 0 $$
+		on Out : TransferTo(from_) TransferAmount(from2, to_) TransferFail() | , In : Number(f) Number(amount) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
-			$yield SawTransferFail(from, to, amount);
+			$yield SawTransferFail(from_, to_, amount);
 			out_ahead=1;
+			out_processed+=3;
+			in_processed+=2;
 		$$
 		on Out : Deposit(acc) DepositSuccess() |, In : Number(amount) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$yield SawDeposit(acc, amount);
 		    out_ahead=1;
+			out_processed+=2;
+			in_processed+=1;
 		$$
 		on Out : Withdraw(acc) WithdrawSuccess() |, In : Number(amount) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$yield SawWithdraw(acc, amount);
 		    out_ahead=1;
+			out_processed+=2;
+			in_processed+=1;
 		$$
 		on Out : Withdraw(acc) WithdrawFail() |, In : Number(amount) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$yield SawWithdrawFail(acc, amount);
 		    out_ahead=1;
+			out_processed+=2;
+			in_processed+=1;
 		$$
-		on Out : 3, In: 2, Out: TransferTo(from) | where $$ in_ahead == 0 && out_ahead == 0 $$
+		on Out : 3, In: 2, Out: TransferTo(from_) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$drop 1 from In;
+			out_processed+=1;
+			in_processed+=1;
 		$$
 		on Out : 2, In : 1, Out : Deposit(acc) | where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$drop 1 from In;
+			out_processed+=1;
+			in_processed+=1;
 		$$
 		on Out : 2, In : 1, Out : Withdraw(acc) |  where $$ in_ahead == 0 && out_ahead == 0 $$
 		$$
 			$drop 1 from In;
+			out_processed+=1;
+			in_processed+=1;
 		$$
 	}
 }
 
 monitor(8)
 {
-	on Clear()
+	on Clear() where $$ true $$
 	$$
 		intmap_clear(&balances);
 		intmap_clear(&upper_bounds);
 		intmap_clear(&lower_bounds);
 	$$
-	on SawBalance(account, balance)
+	on SawBalance(account, balance) where $$ true $$
 	$$
 		int old_value=0;
 		if(intmap_get(&balances, account, &old_value))
@@ -201,7 +229,7 @@ monitor(8)
 			intmap_insert(&balances, account, balance);
 		}
 	$$
-	on SawDeposit(account,amount)
+	on SawDeposit(account,amount) where $$ true $$
 	$$
 		int old_value=0;
 		if(intmap_get(&balances, account, &old_value))
@@ -224,7 +252,7 @@ monitor(8)
 			}
 		}
 	$$
-	on SawWithdraw(account, amount)
+	on SawWithdraw(account, amount) where $$ true $$
 	$$
 		int old_value=0;
 		if(intmap_get(&balances, account, &old_value))
@@ -266,7 +294,7 @@ monitor(8)
 			}
 		}
 	$$
-	on SawWithdrawFail(account, amount)
+	on SawWithdrawFail(account, amount) where $$ true $$
 	$$
 		int old_value=0;
 		if(intmap_get(&balances, account, &old_value))
@@ -300,98 +328,98 @@ monitor(8)
 			}
 		}
 	$$
-	on SawTransfer(from, to, amount)
+	on SawTransfer(from_, to_, amount) where $$ true $$
 	$$
 		int old_value=0;
-		if(intmap_get(&balances, to, &old_value))
+		if(intmap_get(&balances, to_, &old_value))
 		{
-			intmap_insert(&balances, to, old_value + amount);
+			intmap_insert(&balances, to_, old_value + amount);
 		}
 		else
 		{
-			if(intmap_get(&upper_bounds, to, &old_value))
+			if(intmap_get(&upper_bounds, to_, &old_value))
 			{
-				intmap_insert(&upper_bounds, to, old_value + amount);
+				intmap_insert(&upper_bounds, to_, old_value + amount);
 			}
-			if(intmap_get(&lower_bounds, to, &old_value))
+			if(intmap_get(&lower_bounds, to_, &old_value))
 			{
-				intmap_insert(&lower_bounds, to, old_value + amount);
+				intmap_insert(&lower_bounds, to_, old_value + amount);
 			}
 			else
 			{
-				intmap_insert(&lower_bounds, to, amount);
+				intmap_insert(&lower_bounds, to_, amount);
 			}
 		}
 
-		if(intmap_get(&balances, from, &old_value))
+		if(intmap_get(&balances, from_, &old_value))
 		{
 			if(old_value >= amount)
 			{
-				intmap_insert(&balances, from, old_value - amount);
+				intmap_insert(&balances, from_, old_value - amount);
 			}
 			else
 			{
-				printf("Transfer of %i from account #%i should have failed based on balance %i\n", amount, from, old_value);
-				intmap_remove(&balances, from);
+				printf("Transfer of %i from account #%i should have failed based on balance %i\n", amount, from_, old_value);
+				intmap_remove(&balances, from_);
 			}
 		}
 		else
 		{
-			if(intmap_get(&upper_bounds, from, &old_value))
+			if(intmap_get(&upper_bounds, from_, &old_value))
 			{
 				if(old_value >= amount)
 				{
-					intmap_insert(&upper_bounds, from, old_value - amount);
+					intmap_insert(&upper_bounds, from_, old_value - amount);
 				}
 				else
 				{
-					printf("Transfer of %i from account #%i should have failed based on upper balance bound %i\n", amount, from, old_value);
-					intmap_remove(&upper_bounds, from);
+					printf("Transfer of %i from account #%i should have failed based on upper balance bound %i\n", amount, from_, old_value);
+					intmap_remove(&upper_bounds, from_);
 				}
 			}
-			if(intmap_get(&lower_bounds, from, &old_value))
+			if(intmap_get(&lower_bounds, from_, &old_value))
 			{
 				if(old_value >= amount)
 				{
-					intmap_insert(&lower_bounds, from, old_value - amount);
+					intmap_insert(&lower_bounds, from_, old_value - amount);
 				}
 				else
 				{
-					intmap_insert(&lower_bounds, from, 0);
+					intmap_insert(&lower_bounds, from_, 0);
 				}
 			}
 		}
 	$$
-	on SawTransferFail(from, to, amount)
+	on SawTransferFail(from_, to_, amount) where $$ true $$
 	$$
 		int old_value=0;
-		if(intmap_get(&balances, from, &old_value))
+		if(intmap_get(&balances, from_, &old_value))
 		{
 			if(old_value >= amount)
 			{
-				printf("Transfer of %i from account #%i should have succeeded based on balance %i\n", amount, from, old_value);
-				intmap_remove(&balances, from);
+				printf("Transfer of %i from account #%i should have succeeded based on balance %i\n", amount, from_, old_value);
+				intmap_remove(&balances, from_);
 			}
 		}
 		else
 		{
-			if(intmap_get(&upper_bounds, from, &old_value))
+			if(intmap_get(&upper_bounds, from_, &old_value))
 			{
 				if(old_value < amount)
 				{
-					intmap_insert(&upper_bounds, from, amount);
+					intmap_insert(&upper_bounds, from_, amount);
 				}
 			}
 			else
 			{
-				intmap_insert(&upper_bounds, from, amount);
+				intmap_insert(&upper_bounds, from_, amount);
 			}
-			if(intmap_get(&lower_bounds, from, &old_value))
+			if(intmap_get(&lower_bounds, from_, &old_value))
 			{
 				if(old_value >= amount)
 				{
-					printf("Transfer of %i from account #%i should have succeeded based on lower balance bound %i\n", amount, from, old_value);
-					intmap_remove(&lower_bounds, from);
+					printf("Transfer of %i from account #%i should have succeeded based on lower balance bound %i\n", amount, from_, old_value);
+					intmap_remove(&lower_bounds, from_);
 				}
 			}
 		}

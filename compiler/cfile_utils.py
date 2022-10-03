@@ -98,7 +98,8 @@ def events_declaration_structs(tree) -> str:
         assert(tree[0] == "event_decl")
         event_name = tree[PPEVENT_NAME]
         fields = []
-        get_parameters_types_field_decl(tree[PPEVENT_PARAMS_LIST], fields)
+        if tree[PPEVENT_PARAMS_LIST]:
+            get_parameters_types_field_decl(tree[PPEVENT_PARAMS_LIST], fields)
         struct_fields = ""
         index = 0
         for data in fields:
@@ -523,7 +524,7 @@ bool are_buffers_empty() {"{"}
 {"}"}
     '''
 
-def arbiter_code(tree):
+def arbiter_code(tree, components):
     assert(tree[0] == "arbiter_def")
 
     rule_set_names = []
@@ -549,6 +550,8 @@ def arbiter_code(tree):
         if(no_matches_count == no_consecutive_matches_limit) {"{"}
             printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\\n", no_consecutive_matches_limit);
             print_buffers_state();
+            // cleanup code
+            {get_pure_c_code(components, 'cleanup')}
             abort();
         {"}"}
     {"}"}
@@ -603,15 +606,14 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             if tree[PPBUFFER_MATCH_ARG2] != "|":
                 get_event_kinds(tree[PPBUFFER_MATCH_ARG2], event_kinds, mapping[out_type])
             if not is_scan:
-                StaticCounter.calls_counter+=1
+
+                StaticCounter.calls_counter-=1
                 buffer_name = event_src_ref[1]
                 if event_src_ref[2] is not None:
                     buffer_name += str(event_src_ref[2])
-
-
                 return f'''
                 if (are_events_in_head(e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name}, 
-                count_{buffer_name}, sizeof(STREAM_{out_type}_out), TEMPARR{StaticCounter.calls_counter-1}, {len(event_kinds)})) {"{"}
+                count_{buffer_name}, sizeof(STREAM_{out_type}_out), TEMPARR{StaticCounter.calls_counter}, {len(event_kinds)})) {"{"}
                     {inner_code}
                     
                 {"}"}'''
@@ -810,6 +812,7 @@ def declare_arrays(scanned_kinds) -> str:
         s_kinds = [str(x) for x in kinds]
         answer += f"int TEMPARR{StaticCounter.declarations_counter}[] = {'{'}{','.join(s_kinds)}{'}'};\n"
         StaticCounter.declarations_counter+=1
+    StaticCounter.calls_counter = StaticCounter.declarations_counter
     return answer
 
 
@@ -1059,13 +1062,13 @@ int get_event_at_head(shm_arbiter_buffer *b) {"{"}
 {"}"}
     '''
 
-def print_event_name(stream_types):
+def print_event_name(stream_types, mapping):
 
     def local_build_if_from_events(events) -> str:
         answer = ""
-        for (index, event) in enumerate(events):
+        for (event, data) in events.items():
             answer += f'''
-        if (event_index == {index+2} ) {"{"}
+        if (event_index == {data['index']} ) {"{"}
             printf("{event}\\n");
             return;
         {"}"}
@@ -1077,7 +1080,7 @@ def print_event_name(stream_types):
         output_type = stream_types[event_source][1]
         code += f'''
     if(ev_src_index == {event_source_index}) {"{"}
-        {local_build_if_from_events(TypeChecker.stream_types_to_events[output_type])}
+        {local_build_if_from_events(mapping[output_type])}
         printf("No event matched! this should not happen, please report!\\n");
         return;
     {"}"}

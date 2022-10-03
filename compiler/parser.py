@@ -106,14 +106,20 @@ def p_event_declaration_list(p):
 def p_event_declaration(p):
     '''
     event_decl : ID '(' list_field_decl ')'
+               | ID '(' ')'
     '''
 
-    # Type checker
+    event_params_token = None
     params = []
-    get_parameters_types_field_decl(p[PEVENT_PARAMS_LIST], params)
-    TypeChecker.insert_into_args_table(p[PEVENT_NAME], EVENT_NAME, params)
+    if len(p) == 5:
+        event_params_token = p[PEVENT_PARAMS_LIST]
+        get_parameters_types_field_decl(p[PEVENT_PARAMS_LIST], params)
 
-    p[0] = ('event_decl', p[PEVENT_NAME], p[PEVENT_PARAMS_LIST])
+    # Type checker
+
+
+    TypeChecker.insert_into_args_table(p[PEVENT_NAME], EVENT_NAME, params)
+    p[0] = ('event_decl', p[PEVENT_NAME], event_params_token)
 
 
 def p_field_declaration_list(p):
@@ -554,10 +560,12 @@ def p_buffer_match_exp(p):
     buffer_match_exp : ID '[' listids ']' '(' list_var_or_integer ')'
                      | ID '[' ']' '(' list_var_or_integer ')'
                      | ID '[' listids ']' '(' ')'
+                     | ID '(' ')'
                      | CHOOSE choose_order listids FROM ID
                      | CHOOSE listids FROM ID
                      | event_src_ref ':' NOTHING
                      | event_src_ref ':' DONE
+                     | event_src_ref ':' INT
                      | event_src_ref ':' '|' list_event_calls
                      | event_src_ref ':' list_event_calls '|'
                      | event_src_ref ':' list_event_calls '|' list_event_calls
@@ -577,6 +585,10 @@ def p_buffer_match_exp(p):
             else:
                 arg1 = p[3]
         p[0] = ('buff_match_exp-args', p[1], arg1, arg2)
+
+    elif p[2] == "(":
+        TypeChecker.assert_symbol_type(p[1], MATCH_FUN_NAME)
+        p[0] = ('buff_match_exp-args', p[1], None, None)
     elif p[1] == "choose":
         choose_order = None
         if len(p) == 6:
@@ -629,18 +641,31 @@ def p_order_expr(p):
 def p_list_event_calls(p):
     '''
     list_event_calls : ID '(' listids ')'
+                     | ID '(' ')'
+                     | ID '(' ')' list_event_calls
                      | ID '(' listids  ')' list_event_calls
     '''
 
     # TODO: what is E^H
     TypeChecker.assert_symbol_type(p[PLIST_EV_CALL_EV_NAME], EVENT_NAME)
-    list_ids_length = get_count_list_ids(p[PLIST_EV_CALL_EV_PARAMS])
-    TypeChecker.assert_num_args_match(p[PLIST_EV_CALL_EV_NAME], list_ids_length)
-
-    if len(p) == 5:
-        p[0] = ("ev_call", p[PLIST_EV_CALL_EV_NAME], p[PLIST_EV_CALL_EV_PARAMS])
+    if len(p) == 4:
+        # ID '(' ')'
+        p[0] = ("ev_call", p[PLIST_EV_CALL_EV_NAME], None)
+    elif len(p) == 5:
+        if p[3] == ")":
+            # ID '(' ')' list_event_calls
+            p[0] = ("list_ev_calls", p[PLIST_EV_CALL_EV_NAME], None, p[4])
+        else:
+            # ID '(' listids ')'
+            p[0] = ("ev_call", p[PLIST_EV_CALL_EV_NAME], p[PLIST_EV_CALL_EV_PARAMS])
+            list_ids_length = get_count_list_ids(p[PLIST_EV_CALL_EV_PARAMS])
+            TypeChecker.assert_num_args_match(p[PLIST_EV_CALL_EV_NAME], list_ids_length)
     else:
+        assert(len(p) == 6)
+        # ID '(' listids  ')' list_event_calls
         p[0] = ("list_ev_calls", p[PLIST_EV_CALL_EV_NAME], p[PLIST_EV_CALL_EV_PARAMS], p[PLIST_EV_CALL_TAIL])
+        list_ids_length = get_count_list_ids(p[PLIST_EV_CALL_EV_PARAMS])
+        TypeChecker.assert_num_args_match(p[PLIST_EV_CALL_EV_NAME], list_ids_length)
 
 
 
@@ -685,15 +710,19 @@ def p_ccode_statement_list(p):
 def p_arbiter_rule_stmt(p):
     '''
     arbiter_rule_stmt : YIELD ID '(' expression_list ')'
+                      | YIELD ID '(' ')'
                       | SWITCH TO ID
                       | DROP INT FROM event_src_ref
                       | REMOVE ID FROM event_src_ref
                       | FIELD_ACCESS
     '''
 
-    if len(p) == 6:
-        assert(p[1] == "yield")
-        p[0] = ("yield", p[PARB_RULE_STMT_YIELD_EVENT], p[PARB_RULE_STMT_YIELD_EXPRS])
+    if p[1] == "yield":
+        if len(p) == 6:
+            p[0] = ("yield", p[PARB_RULE_STMT_YIELD_EVENT], p[PARB_RULE_STMT_YIELD_EXPRS])
+        else:
+            assert(len(p) == 5)
+            p[0] = ("yield", p[PARB_RULE_STMT_YIELD_EVENT], None)
         # TypeChecker.assert_symbol_type(p[PARB_RULE_STMT_YIELD_EVENT], EVENT_NAME)
         # count_expr_list = get_count_list_expr(p[PARB_RULE_STMT_YIELD_EXPRS])
         # TypeChecker.assert_num_args_match(p[PARB_RULE_STMT_YIELD_EVENT], count_expr_list)
@@ -716,8 +745,16 @@ def p_arbiter_rule_stmt(p):
 def p_monitor_definition(p):
     '''
     monitor_definition : MONITOR '{' monitor_rule_list '}'
+    monitor_definition : MONITOR '(' INT ')' '{' monitor_rule_list '}'
     '''
-    p[0] = ("monitor_def", p[PMONITOR_RULE_LIST])
+
+    if len(p) == 8:
+        TypeChecker.monitor_buffer_size = int(p[3])
+        monitor_rule_list = p[6]
+    else:
+        assert(len(p) == 5)
+        monitor_rule_list = p[3]
+    p[0] = ("monitor_def", monitor_rule_list)
 
 def p_monitor_rule_list(p):
     '''
@@ -733,15 +770,24 @@ def p_monitor_rule_list(p):
 def p_monitor_rule(p):
     '''
     monitor_rule : ON ID '(' listids ')' WHERE BEGIN_CCODE expression BEGIN_CCODE CCODE_TOKEN
+                 | ON ID '(' ')' WHERE BEGIN_CCODE expression BEGIN_CCODE CCODE_TOKEN
     '''
 
     # ON ID '(' listids ')' WHERE BEGIN_CCODE expression BEGIN_CCODE CCODE_TOKEN
     #  1  2  3    4      5   6       7            8          9          10
 
+    if p[4] == ')':
+        listids = None
+        expression = p[7]
+        code = p[9]
+    else:
+        listids = p[4]
+        expression = p[8]
+        code = p[10]
     TypeChecker.assert_symbol_type(p[PMONITOR_RULE_EV_NAME], EVENT_NAME)
-    TypeChecker.assert_num_args_match(p[PMONITOR_RULE_EV_NAME], get_count_list_ids(p[PMONITOR_RULE_EV_ARGS]))
-    p[0] = ("monitor_rule", p[2], p[4], p[8],
-            p[10])
+    if listids:
+        TypeChecker.assert_num_args_match(p[PMONITOR_RULE_EV_NAME], get_count_list_ids(p[PMONITOR_RULE_EV_ARGS]))
+    p[0] = ("monitor_rule", p[2], listids, expression, code)
 
 # END monitor Specification
 

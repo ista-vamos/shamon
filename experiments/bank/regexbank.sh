@@ -21,7 +21,7 @@ otherOut ".*" $'' \
 num "^\s*([0-9]+)\s*" i \
 otherIn ".*" $'' &
 sleep 0.1
-#../../monitor Out:regexrw:/bank_out In:regexrw:/bank_in &
+../../monitor Out:regexrw:/bank_out In:regexrw:/bank_in &
 wait
 rm /tmp/fifoA
 rm /tmp/fifoB

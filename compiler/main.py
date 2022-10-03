@@ -36,6 +36,7 @@ existing_buffers = get_existing_buffers(TypeChecker)
 
 TypeChecker.arbiter_output_type = arbiter_event_source
 
+
 program = f'''#include "shamon.h"
 #include "mmlib.h"
 #include "monitor.h"
@@ -151,11 +152,11 @@ shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t 
 STREAM_{arbiter_event_source}_out *arbiter_outevent;
 {declare_rule_sets(ast[2])}
 
-{print_event_name(stream_types)}
+{print_event_name(stream_types, streams_to_events_map)}
 {get_event_at_head()}
 {print_buffers_state()}
 {build_rule_set_functions(ast[2], streams_to_events_map, stream_types, existing_buffers)}
-{arbiter_code(ast[2])}
+{arbiter_code(ast[2], components)}
 
 int main(int argc, char **argv) {"{"}
 	initialize_events(); // Always call this first
@@ -168,7 +169,7 @@ int main(int argc, char **argv) {"{"}
 {event_sources_conn_code(components['event_source'])}
      // activate buffers
 {activate_buffers()}
- 	monitor_buffer = shm_monitor_buffer_create(sizeof(STREAM_{arbiter_event_source}_out), 64);
+ 	monitor_buffer = shm_monitor_buffer_create(sizeof(STREAM_{arbiter_event_source}_out), {TypeChecker.monitor_buffer_size});
  	
  		// init buffer groups
 	{init_buffer_groups()}

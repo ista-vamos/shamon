@@ -121,7 +121,8 @@ class ParseStats:
         dl, dr = None, None
         pl, pr = None, None
         sl, sr = None, None
-
+        total_left = None
+        total_right = None
         for line in out.splitlines():
             if line.startswith(b'ERROR'):
                 errs += 1
@@ -129,21 +130,24 @@ class ParseStats:
             if line.startswith(b'LEFT'):
                 parts = line.split()
                 assert len(parts) == 13, parts
+                total_left = int(parts[2])
                 pl = int(parts[4][1:])
                 dl = int(parts[6])
                 sl = int(parts[11])
             if line.startswith(b'RIGHT'):
                 parts = line.split()
                 assert len(parts) == 13, parts
+                total_right = int(parts[2])
                 pr = int(parts[4][1:])
                 dr = int(parts[6])
                 sr = int(parts[11])
         if dl is None or sl is None or pl is None or\
            dl + sl + pl == 0 or dl + sl + pl != dr + sr + pr:
             log(out)
-            lprint(f"left: {(dl, sl, pl)}, right: {(dr, sr, pr)}, errs: {errs}")
+            lprint(f"left: {total_left} {(dl, sl, pl)}, right:{total_right} {(dr, sr, pr)}, errs: {errs}")
             lprint("-- ERROR while parsing monitor output (see log.txt)--")
             lprint("Did not find right values", color=RED)
+            
             raise RuntimeError("Did not find right values")
         self.stats.append(((dl, sl, pl),(dr, sr, pr), errs))
         self.dl, self.dr = dl, dr
