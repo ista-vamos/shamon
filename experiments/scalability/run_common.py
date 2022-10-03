@@ -25,7 +25,9 @@ class ParseSource:
     def __init__(self, dbg=False):
         self.waiting = []
         self.waited = 0
+        self.sent = 0
         self.dbg = dbg
+        self.lines = []
 
     def parse(self, out, err):
         if self.dbg:
@@ -39,8 +41,10 @@ class ParseSource:
         foundwaited = False
         for line in err.splitlines():
             if b'busy waited' in line:
+                self.lines.append(line)
                 parts = line.split()
                 assert len(parts) == 10, parts
+                self.sent = int(parts[2])
                 c = int(parts[8])
                 self.waited += c
                 self.waiting.append(c)
@@ -58,23 +62,25 @@ class ParseMonitor:
         self.processed = None
         self.dropped = None
         self.dropped_times = None
+        self.lines = []
 
     def parse(self, out, err):
         for line in out.splitlines():
             if line.startswith(b'Processed '):
+                self.lines.append(line)
                 parts = line.split()
-                assert len(parts) == 3, parts
+                assert len(parts) == 9, parts
                 self.processed = int(parts[1])
-            elif line.startswith(b'Dropped '):
-                parts = line.split()
-                assert len(parts) == 7, parts
-                self.dropped_times = int(parts[1])
-                self.dropped = int(parts[5])
+                self.dropped = int(parts[4])
+                self.dropped_times = int(parts[7])
 
         if self.processed is None or\
            self.dropped is None or\
            self.dropped_times is None:
             lprint("-- ERROR while parsing monitor output (see log.txt)--")
+            log("stdout:")
             log(out)
+            log("stderr:")
+            log(err)
             raise RuntimeError("Did not find right values")
 

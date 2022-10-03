@@ -188,7 +188,7 @@ typedef struct _parsedata
     char **signatures;
     char **names;
     struct buffer *shm;
-    struct source_control *control;
+    struct event_record *events;
     regex_t re[];
 } parsedata;
 parsedata* pd;
@@ -196,7 +196,7 @@ parsedata* pd;
 int monitoring_thread(void *arg)
 {
     size_t exprs_num=pd->exprs_num;
-    struct source_control * control = pd->control;
+    struct event_record *events = pd->events;
     char ** signatures = pd->signatures;
     struct buffer * shm = pd->shm;
     regmatch_t matches[MAXMATCH+1];
@@ -263,7 +263,7 @@ int monitoring_thread(void *arg)
             }
             line[len-1] = '\0';
             for (int i = 0; i < (int)exprs_num; ++i) {
-                if (control->events[i].kind == 0)
+                if (events[i].kind == 0)
                     continue; /* monitor is not interested in this */
 
                 status = regexec(&pd->re[i], line, MAXMATCH, matches, 0);
@@ -278,7 +278,7 @@ int monitoring_thread(void *arg)
                 }
                 /* push the base info about event */
                 ++ev.base.id;
-                ev.base.kind = control->events[i].kind;
+                ev.base.kind = events[i].kind;
                 addr = buffer_partial_push(shm, addr, &ev, sizeof(ev));
 
                 /* push the arguments of the event */
@@ -422,47 +422,30 @@ int main(int argc, char **argv)
     }
 
     /* Initialize the info about this source */
-    /* FIXME: do this more user-friendly */
-    size_t control_size = sizeof(size_t) + sizeof(struct event_record)*exprs_num;
-    struct source_control *control = initialize_shared_control_buffer(shmkey, control_size);
+    struct source_control *control = source_control_define_pairwise(exprs_num,
+                                                                    (const char **)names,
+                                                                    (const char **)signatures);
     assert(control);
-    pd->control=control;
-    control->size = control_size;
-    for (int i = 0; i < (int)exprs_num; ++i) {
-        strncpy(control->events[i].name, names[i],
-                sizeof(control->events[i].name));
-#ifdef WITH_LINES
-        assert(strlen(signatures[i]) + 1 <= sizeof(control->events[i].signature));
-        control->events[i].signature[0] = 'l'; /* first param is line */
-
-        strncpy((char*)control->events[i].signature + 1,
-                signatures[i],
-                sizeof(control->events[i].signature));
-#else
-        assert(strlen(signatures[i])  <= sizeof(control->events[i].signature));
-        strncpy((char*)control->events[i].signature,
-                signatures[i],
-                sizeof(control->events[i].signature));
-#endif
-        control->events[i].kind = 0;
-        control->events[i].size = signature_get_size((unsigned char*)signatures[i]) + sizeof(struct event);
-    }
-
-
-    (void)signatures;
-    struct buffer *shm = initialize_shared_buffer(shmkey,
-                                                  compute_elem_size(signatures, exprs_num),
-                                                  control);
+    struct buffer *shm = create_shared_buffer(shmkey,
+                                              compute_elem_size(signatures, exprs_num),
+                                              control);
     assert(shm);
+    free(control);
+
     pd->shm=shm;
     fprintf(stderr, "info: waiting for the monitor to attach\n");
     buffer_wait_for_monitor(shm);
-	monitored_process proc = attach_to_process(process_id, &register_monitored_thread);
 
+    size_t num;
+    pd->events=buffer_get_avail_events(shm, &num);
+    assert(num == exprs_num);
 
-	wait_for_process(proc);
-	monitoring_active = 0;
-	printf("Processed bytes: %lu\n", processed_bytes);
+    monitored_process proc = attach_to_process(process_id, &register_monitored_thread);
+    
+    wait_for_process(proc);
+    monitoring_active = 0;
+
+    printf("Processed bytes: %lu\n", processed_bytes);
     /* Free up memory held within the regex memory */
     for (int i = 0; i < (int)exprs_num; ++i) {
         regfree(&pd->re[i]);

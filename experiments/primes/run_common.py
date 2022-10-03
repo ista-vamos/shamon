@@ -14,13 +14,13 @@ DRIO=[DRRUN, "-root",  f"{DRIOPATH}/build/",
 PRIMESPATH=f"{SHAMONPATH}/experiments/primes"
 PRIMESMONSRC=f"{SHAMONPATH}/mmtest/monprimes.c"
 EMPTYMONSRC=f"{SHAMONPATH}/mmtest/mmempty.c"
-COMPILESH=f"{SHAMONPATH}/gen/compile.sh"
+COMPILESH=f"{SHAMONPATH}/gen/compile_primes6.sh"
 
 csvlog = None
 csvlogf = None
 
 # check if the monitor is a known monitor
-assert basename(PRIMESMONSRC) in ("mmprimes.c", "monprimes.c", "mmprimes-man.c"), PRIMESMONSRC
+# assert basename(PRIMESMONSRC) in ("mmprimes.c", "monprimes.c", "mmprimes-man.c"), PRIMESMONSRC
 
 def open_csvlog(BS, ABS, NUM):
     method = "gen" if PRIMESMONSRC.endswith("mmprimes.c") else "man"

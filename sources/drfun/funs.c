@@ -36,12 +36,12 @@
  */
 
 #define SHOW_SYMBOLS 1
-#include <string.h>
-#include <unistd.h>
-#include <stdint.h>
 #include <assert.h>
-#include <sys/mman.h>
+#include <stdint.h>
+#include <string.h>
 #include <sys/file.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 // #include <immintrin.h> /* _mm_pause */
 
@@ -51,35 +51,36 @@
 #include "drreg.h"
 #include "drutil.h"
 #ifdef SHOW_SYMBOLS
-#    include "drsyms.h"
+#include "drsyms.h"
 #endif
 
 #include "buffer.h"
 #include "client.h"
 
 #ifdef WINDOWS
-#    define IF_WINDOWS(x) x
+#define IF_WINDOWS(x) x
 #else
-#    define IF_WINDOWS(x) /* nothing */
+#define IF_WINDOWS(x) /* nothing */
 #endif
 
 #include "event.h" /* shm_event_dropped */
-#include "stream-funs.h"
 #include "eventspec.h"
 #include "signatures.h"
 #include "source.h"
+#include "stream-funs.h"
 
-static void
-event_exit(void);
+static void event_exit(void);
 
-static dr_emit_flags_t
-event_app_instruction(void *drcontext, void *tag, instrlist_t *bb, instr_t *instr,
-                      bool for_trace, bool translating, void *user_data);
+static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
+                                             instrlist_t *bb, instr_t *instr,
+                                             bool for_trace, bool translating,
+                                             void *user_data);
 
 static struct buffer *shm;
 static const char *shmkey;
 
 static struct source_control *control;
+static struct event_record *events;
 unsigned long *addresses;
 static size_t events_num;
 size_t max_event_size = sizeof(shm_event_dropped);
@@ -123,8 +124,8 @@ print_address(file_t f, app_pc addr, const char *prefix)
         if (symres == DRSYM_ERROR_LINE_NOT_AVAILABLE) {
             dr_fprintf(f, " ??:0\n");
         } else {
-            dr_fprintf(f, " %s:%" UINT64_FORMAT_CODE "+" PIFX "\n", sym.file, sym.line,
-                       sym.line_offs);
+            dr_fprintf(f, " %s:%" UINT64_FORMAT_CODE "+" PIFX "\n", sym.file,
+sym.line, sym.line_offs);
         }
     } else
         dr_fprintf(f, "%s " PFX " ? ??:0\n", prefix, addr);
@@ -132,86 +133,79 @@ print_address(file_t f, app_pc addr, const char *prefix)
 }
 */
 
-static void
-find_functions(void *drcontext, const module_data_t *mod, char loaded)
-{
+static void find_functions(void *drcontext, const module_data_t *mod,
+                           char loaded) {
     (void)drcontext;
     (void)loaded;
     /*
     size_t modoffs;
     drsym_error_t sym_res = drsym_lookup_symbol(
-        mod->full_path, trace_function.get_value().c_str(), &modoffs, DRSYM_DEMANGLE);
-    if (sym_res == DRSYM_SUCCESS) {
-        app_pc towrap = mod->start + modoffs;
-        bool ok = drwrap_wrap(towrap, wrap_pre, NULL);
-        DR_ASSERT(ok);
+        mod->full_path, trace_function.get_value().c_str(), &modoffs,
+    DRSYM_DEMANGLE); if (sym_res == DRSYM_SUCCESS) { app_pc towrap = mod->start
+    + modoffs; bool ok = drwrap_wrap(towrap, wrap_pre, NULL); DR_ASSERT(ok);
         dr_fprintf(STDERR, "wrapping %s!%s\n", mod->full_path,
                    trace_function.get_value().c_str());
                    */
 
-
     /*
     drsym_enumerate_symbols(mod->full_path, enumsym, 0, 0);
 
-    dr_symbol_export_iterator_t* it = dr_symbol_export_iterator_start(mod->handle);
-    dr_symbol_export_t *sym;
-    while (dr_symbol_export_iterator_hasnext(it)) {
-        sym = dr_symbol_export_iterator_next(it);
-        dr_printf("exported symbol: %s\n", sym->name);
+    dr_symbol_export_iterator_t* it =
+    dr_symbol_export_iterator_start(mod->handle); dr_symbol_export_t *sym; while
+    (dr_symbol_export_iterator_hasnext(it)) { sym =
+    dr_symbol_export_iterator_next(it); dr_printf("exported symbol: %s\n",
+    sym->name);
     }
     dr_symbol_export_iterator_stop(it);
     */
 
     size_t off;
-    struct event_record *events = control->events;
     for (size_t i = 0; i < events_num; ++i) {
-        drsym_error_t ok = drsym_lookup_symbol(mod->full_path,
-                           events[i].name,
-                           &off,
-                           /* flags = */ DRSYM_DEMANGLE);
+        drsym_error_t ok =
+            drsym_lookup_symbol(mod->full_path, events[i].name, &off,
+                                /* flags = */ DRSYM_DEMANGLE);
         if (ok == DRSYM_ERROR_LINE_NOT_AVAILABLE || ok == DRSYM_SUCCESS) {
             addresses[i] = (size_t)mod->start + off;
-            events[i].size = signature_get_size((unsigned char *)events[i].signature) + sizeof(shm_event_funcall);
+            events[i].size =
+                signature_get_size((unsigned char *)events[i].signature) +
+                sizeof(shm_event_funcall);
             if (events[i].size > max_event_size)
                 max_event_size = events[i].size;
-            dr_printf("Found %s:%s in %s at 0x%x (size %lu)\n",
-                      events[i].name,
-                      events[i].signature,
-                      mod->full_path,
-                      addresses[i],
+            dr_printf("Found %s:%s in %s at 0x%x (size %lu)\n", events[i].name,
+                      events[i].signature, mod->full_path, addresses[i],
                       events[i].size);
         }
     }
     DR_ASSERT(max_event_size > 0);
 }
 
-DR_EXPORT void
-dr_client_main(client_id_t id, int argc, const char *argv[])
-{
+DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     (void)id;
     if (argc < 3) {
-        dr_fprintf(STDERR, "Need arguments shmkey 'fun1:[sig]' 'fun2:[sig]' ...\n");
+        dr_fprintf(STDERR,
+                   "Need arguments shmkey 'fun1:[sig]' 'fun2:[sig]' ...\n");
         DR_ASSERT(0);
     }
 
     shmkey = argv[1];
     events_num = argc - 2;
-    addresses = dr_global_alloc(events_num*sizeof(unsigned long));
+    addresses = dr_global_alloc(events_num * sizeof(unsigned long));
     DR_ASSERT(addresses);
-    control = initialize_shared_control_buffer(shmkey, sizeof(struct source_control)+sizeof(struct event_record)*events_num);
-    struct event_record *events = control->events;
+    control = malloc(sizeof(struct source_control) +
+                     sizeof(struct event_record) * events_num);
+    events = control->events;
     for (int i = 1; i < argc; ++i) {
         const char *sig = strrchr(argv[i], ':');
         if (sig) {
-           ++sig;
-           DR_ASSERT(strlen(sig) <=  sizeof(events[0].signature));
-           strncpy((char *) events[i-1].signature, sig,
-                   sizeof(events[0].signature));
-           strncpy(events[i-1].name, argv[i], sig - argv[i] - 1);
+            ++sig;
+            DR_ASSERT(strlen(sig) <= sizeof(events[0].signature));
+            strncpy((char *)events[i - 1].signature, sig,
+                    sizeof(events[0].signature));
+            strncpy(events[i - 1].name, argv[i], sig - argv[i] - 1);
         } else {
             DR_ASSERT(strlen(argv[i]) < 64 && "Too big function name");
-            strncpy(events[i-1].name, argv[i], 63);
-            events[i-1].signature[0] = '\0';
+            strncpy(events[i - 1].name, argv[i], 63);
+            events[i - 1].signature[0] = '\0';
         }
     }
 
@@ -221,10 +215,11 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
     dr_log(NULL, DR_LOG_ALL, 1, "Client 'drfun' initializing\n");
     /* also give notification to stderr */
     if (dr_is_notify_on()) {
-#    ifdef WINDOWS
-        /* ask for best-effort printing to cmd window.  must be called at init. */
+#ifdef WINDOWS
+        /* ask for best-effort printing to cmd window.  must be called at init.
+         */
         dr_enable_console_printing();
-#    endif
+#endif
         dr_fprintf(STDERR, "Client instrcalls is running\n");
     }
 
@@ -235,43 +230,37 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
     dr_register_exit_event(event_exit);
     drmgr_register_module_load_event(find_functions);
 
-    drmgr_register_bb_instrumentation_event(NULL,
-                                (void*) event_app_instruction,
-                                0);
+    drmgr_register_bb_instrumentation_event(NULL, (void *)event_app_instruction,
+                                            0);
 }
 
-static void
-event_exit(void)
-{
-    dr_printf("Looped in a busy wait for the buffer %lu times\n", waiting_for_buffer);
+static void event_exit(void) {
+    dr_printf("Looped in a busy wait for the buffer %lu times\n",
+              waiting_for_buffer);
 
 #ifdef SHOW_SYMBOLS
     if (drsym_exit() != DRSYM_SUCCESS) {
-        dr_log(NULL, DR_LOG_ALL, 1, "WARNING: error cleaning up symbol library\n");
+        dr_log(NULL, DR_LOG_ALL, 1,
+               "WARNING: error cleaning up symbol library\n");
     }
 #endif
     drmgr_exit();
     dr_printf("Releasing shared buffer\n");
     destroy_shared_buffer(shm);
-    dr_printf("Releasing shared control buffer\n");
-    dr_global_free(addresses, events_num*sizeof(unsigned long));
-    release_shared_control_buffer(shmkey, control);
+    dr_global_free(addresses, events_num * sizeof(unsigned long));
 }
 
 /* adapted from instrcalls.c */
-static app_pc
-call_get_target(instr_t *instr) {
+static app_pc call_get_target(instr_t *instr) {
     app_pc target = 0;
     opnd_t targetop = instr_get_target(instr);
     if (opnd_is_pc(targetop)) {
         if (opnd_is_far_pc(targetop)) {
-            DR_ASSERT(false &&
-                          "call_get_target: far pc not supported");
+            DR_ASSERT(false && "call_get_target: far pc not supported");
         }
         target = (app_pc)opnd_get_pc(targetop);
     } else if (opnd_is_instr(targetop)) {
-        DR_ASSERT(target != 0 &&
-                  "call_get_target: unknown target");
+        DR_ASSERT(target != 0 && "call_get_target: unknown target");
     } else {
         DR_ASSERT(false && "call_get_target: unknown target");
         target = 0;
@@ -279,20 +268,25 @@ call_get_target(instr_t *instr) {
     return target;
 }
 
-static inline void *
-call_get_arg_ptr(dr_mcontext_t *mc, int i, char o) {
+static inline void *call_get_arg_ptr(dr_mcontext_t *mc, int i, char o) {
     if (o == 'f') {
         DR_ASSERT(i < 7);
         return &mc->simd[i].u64;
     }
     DR_ASSERT(i < 6);
-    switch(i) {
-        case 0: return &mc->xdi;
-        case 1: return &mc->xsi;
-        case 2: return &mc->xdx;
-        case 3: return &mc->xcx;
-        case 4: return &mc->r8;
-        case 5: return &mc->r9;
+    switch (i) {
+    case 0:
+        return &mc->xdi;
+    case 1:
+        return &mc->xsi;
+    case 2:
+        return &mc->xdx;
+    case 3:
+        return &mc->xcx;
+    case 4:
+        return &mc->r8;
+    case 5:
+        return &mc->r9;
     }
     DR_ASSERT(0 && "Not implemented");
     return NULL;
@@ -300,10 +294,8 @@ call_get_arg_ptr(dr_mcontext_t *mc, int i, char o) {
 
 static size_t last_event_id = 0;
 
-static void
-at_call_generic(size_t fun_idx, const char *sig)
-{
-    dr_mcontext_t mc = { sizeof(mc), DR_MC_INTEGER };
+static void at_call_generic(size_t fun_idx, const char *sig) {
+    dr_mcontext_t mc = {sizeof(mc), DR_MC_INTEGER};
     dr_get_mcontext(dr_get_current_drcontext(), &mc);
     void *shmaddr;
     while (!(shmaddr = buffer_start_push(shm))) {
@@ -311,9 +303,8 @@ at_call_generic(size_t fun_idx, const char *sig)
         /* _mm_pause(); */
         /* DR_ASSERT(0 && "Buffer full"); */
     }
-    struct event_record *events = control->events;
     DR_ASSERT(fun_idx < events_num);
-    shm_event_funcall *ev = (shm_event_funcall*)shmaddr;
+    shm_event_funcall *ev = (shm_event_funcall *)shmaddr;
     ev->base.kind = events[fun_idx].kind;
     ev->base.id = ++last_event_id;
     memcpy(ev->signature, events[fun_idx].signature, sizeof(ev->signature));
@@ -323,17 +314,20 @@ at_call_generic(size_t fun_idx, const char *sig)
     int i = 0;
     for (const char *o = sig; *o; ++o) {
         switch (*o) {
-            case '_': break;
-            case 'S':
-              shmaddr = buffer_partial_push_str(shm, shmaddr, last_event_id,
-                                                *(const char **)call_get_arg_ptr(&mc, i, *o));
-              break;
-            default:
-              shmaddr = buffer_partial_push(shm, shmaddr,
-                                            call_get_arg_ptr(&mc, i, *o),
-                                            signature_op_get_size(*o));
-              /* printf(" arg %d=%ld", i, *(size_t*)call_get_arg_ptr(&mc, i, *o)); */
-              break;
+        case '_':
+            break;
+        case 'S':
+            shmaddr = buffer_partial_push_str(
+                shm, shmaddr, last_event_id,
+                *(const char **)call_get_arg_ptr(&mc, i, *o));
+            break;
+        default:
+            shmaddr =
+                buffer_partial_push(shm, shmaddr, call_get_arg_ptr(&mc, i, *o),
+                                    signature_op_get_size(*o));
+            /* printf(" arg %d=%ld", i, *(size_t*)call_get_arg_ptr(&mc, i, *o));
+             */
+            break;
         }
         ++i;
     }
@@ -343,17 +337,21 @@ at_call_generic(size_t fun_idx, const char *sig)
     /* putchar('\n'); */
 }
 
-static dr_emit_flags_t
-event_app_instruction(void *drcontext, void *tag, instrlist_t *bb, instr_t *instr,
-                      bool for_trace, bool translating, void *user_data)
-{
+static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
+                                             instrlist_t *bb, instr_t *instr,
+                                             bool for_trace, bool translating,
+                                             void *user_data) {
     (void)tag;
     (void)for_trace;
     (void)user_data;
     /* FIXME: isn't there a better place to put this callback? */
     if (!shm) {
-        shm = initialize_shared_buffer(shmkey, max_event_size, control);
+        shm = create_shared_buffer(shmkey, max_event_size, control);
         DR_ASSERT(shm);
+
+        events = buffer_get_avail_events(shm, &events_num);
+        free(control);
+
         dr_printf("Waiting for the monitor to attach\n");
         buffer_wait_for_monitor(shm);
     }
@@ -362,33 +360,35 @@ event_app_instruction(void *drcontext, void *tag, instrlist_t *bb, instr_t *inst
         return DR_EMIT_DEFAULT;
 
     if (instr_is_call_direct(instr)) {
-         app_pc target = call_get_target(instr);
-         /*
-         print_address(STDERR, target, "sym");
-         module_data_t *module = dr_lookup_module(target);
-         DR_ASSERT(target && "Do not have call target");
-         size_t off = dr_module_addr_offset(module, target);
-         dr_free_module_data(module);
-         if (off == (~(size_t)0))
-             return DR_EMIT_DEFAULT;
-         */
-         for (size_t i = 0; i < events_num; ++i) {
-             // dr_printf("   target 0x%x == 0x%x events[%lu].addr\n", target, events[i].addr, i);
-             if (target == (app_pc)addresses[i]) {
-                 if (control->events[i].kind == 0) {
-                    dr_printf("Found a call of %s, but skipping\n", control->events[i].name);
+        app_pc target = call_get_target(instr);
+        /*
+        print_address(STDERR, target, "sym");
+        module_data_t *module = dr_lookup_module(target);
+        DR_ASSERT(target && "Do not have call target");
+        size_t off = dr_module_addr_offset(module, target);
+        dr_free_module_data(module);
+        if (off == (~(size_t)0))
+            return DR_EMIT_DEFAULT;
+        */
+        for (size_t i = 0; i < events_num; ++i) {
+            // dr_printf("   target 0x%x == 0x%x events[%lu].addr\n", target,
+            // events[i].addr, i);
+            if (target == (app_pc)addresses[i]) {
+                if (events[i].kind == 0) {
+                    dr_printf("Found a call of %s, but skipping\n",
+                              events[i].name);
                     continue; // monitor has no interest in this event
-                 }
-                 dr_printf("Found a call of %s\n", control->events[i].name);
-                 dr_insert_clean_call_ex(
-                     drcontext, bb, instr, (app_pc)at_call_generic,
-                     DR_CLEANCALL_READS_APP_CONTEXT, 2,
-                     /* call target is 1st parameter */
-                     OPND_CREATE_INT64(i),
-                     /* signature is 2nd parameter */
-                     OPND_CREATE_INTPTR(control->events[i].signature));
-             }
-         }
+                }
+                dr_printf("Found a call of %s\n", events[i].name);
+                dr_insert_clean_call_ex(
+                    drcontext, bb, instr, (app_pc)at_call_generic,
+                    DR_CLEANCALL_READS_APP_CONTEXT, 2,
+                    /* call target is 1st parameter */
+                    OPND_CREATE_INT64(i),
+                    /* signature is 2nd parameter */
+                    OPND_CREATE_INTPTR(events[i].signature));
+            }
+        }
     }
 
     /* else if (instr_is_call_indirect(instr)) {

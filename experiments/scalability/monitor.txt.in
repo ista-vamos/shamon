@@ -1,0 +1,49 @@
+stream type Events
+{
+    E(n : long);
+}
+
+event source Src : Events process using FORWARD to autodrop(@BUFSIZE)
+
+globals
+$$
+size_t processed = 0;
+size_t dropped = 0;
+size_t holes_num = 0;
+$$
+
+cleanup
+$$
+printf("Processed %lu events, dropped %lu events in %lu holes\n",
+        processed, dropped, holes_num);
+$$
+
+arbiter : Events
+{
+    rule set rules
+    {
+        on Src: E(n) | where $$ true $$
+        $$
+            $yield E(n);
+        $$
+
+        on Src: hole(n) | where $$ true $$
+        $$
+            $yield hole(n);
+        $$
+    }
+}
+
+monitor
+{
+    on E(n) where $$ true $$
+    $$
+      ++processed;
+    $$
+
+    on Hole(n) where $$ true $$
+    $$
+      ++holes_num;
+      dropped += n;
+    $$
+}

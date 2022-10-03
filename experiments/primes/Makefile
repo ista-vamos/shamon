@@ -4,6 +4,7 @@ CFLAGS=-O3
 all: prepare
 
 prepare: primes primes-bad primes-java primes-python
+	python3 shm_prepare_programs.py
 
 primes: primes.c
 

@@ -5,9 +5,9 @@
 
 #include "shmbuf/buffer.h"
 #include "shmbuf/client.h"
+#include "core/signatures.h"
+#include "core/source.h"
 #include "event.h"
-#include "signatures.h"
-#include "source.h"
 
 
 static void usage_and_exit(int ret) {
@@ -42,31 +42,23 @@ int main (int argc, char *argv[]) {
             }
     }
     /* Initialize the info about this source */
-    /* FIXME: do this more user-friendly */
-    size_t control_size = sizeof(size_t) + sizeof(struct event_record);
-    struct source_control *control = initialize_shared_control_buffer(shmkey, control_size);
+    struct source_control *control = source_control_define(1, "event", "l");
     assert(control);
-    control->size = control_size;
-    strncpy(control->events[0].name, "event", 5);
-    control->events[0].signature[0] = 'l';
-    control->events[0].signature[1] = '\0';
-    control->events[0].kind = 0;
-
-    size_t event_size
-        = signature_get_size(control->events[0].signature) + sizeof(shm_event);
-    control->events[0].size = event_size;
-
+    size_t event_size = control->events[0].size;
     size_t buff_event_size = event_size < sizeof(shm_event_dropped)
                                 ? event_size : sizeof(shm_event_dropped);
-    struct buffer *shm = initialize_shared_buffer(shmkey, buff_event_size, control);
+    struct buffer *shm = create_shared_buffer(shmkey, buff_event_size, control);
     assert(shm);
+    free(control);
     fprintf(stderr, "info: waiting for the monitor to attach... ");
     buffer_wait_for_monitor(shm);
     fprintf(stderr, "done\n");
 
-    shm_event base = { .id = 0,
-                       .kind = control->events[0].kind };
+    size_t num;
+    struct event_record *events = buffer_get_avail_events(shm, &num);
+    assert(num == 1);
 
+    shm_event base = { .id = 0, .kind = events[0].kind };
     assert(base.kind != 0 && "Monitor did not set kind");
 
     void *addr;

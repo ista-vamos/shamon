@@ -20,6 +20,8 @@ else:
     print("arbiter-buffer-size is will set the size of the arbiter buffer in the monitor.")
     exit(1)
 
+EMPTY_MONITOR_PATH = f"{PRIMESPATH}/programs/empty_monitor{ABS}"
+MONITOR_PATH = f"{PRIMESPATH}/programs/monitor{ABS}"
 
 open_log()
 open_csvlog(BS, ABS, NUM)
@@ -31,8 +33,7 @@ lprint(f"-- Working directory is {WORKINGDIR} --")
 lprint(f"Enumerating primes up to {NUM}th prime...")
 lprint(f"Taking average of {repeat_num()} runs...\n")
 
-lprint("-- Compiling empty monitor --")
-compile_monitor(COMPILESH, EMPTYMONSRC, ABS)
+lprint("--  Using empty monitor: {EMPTY_MONITOR_PATH} --")
 
 ###############################################################################
 
@@ -51,7 +52,7 @@ measure("'Empty monitor C/Py for primes' DynamoRIO sources",
          Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
                  primes2, "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  "python3", f"{PRIMESPATH}/primes.py", NUM).withparser(dm_drio_time_py)],
-        [Command("./monitor", f"Left:drregex:{primes1}", f"Right:drregex:{primes2}",
+        [Command(EMPTY_MONITOR_PATH, f"Left:drregex:{primes1}", f"Right:drregex:{primes2}",
                  stdout=PIPE)])
 dm_drio_time_c.report('c-py-empty-c', msg="C program")
 dm_drio_time_py.report('c-py-empty-py', msg="Python program")
@@ -59,8 +60,7 @@ dm_drio_time_py.report('c-py-empty-py', msg="Python program")
 
 ###############################################################################
 
-lprint("-- Compiling differential monitor --")
-compile_monitor(COMPILESH, PRIMESMONSRC, ABS)
+lprint(f"-- Using differential monitor: {MONITOR_PATH} --")
 
 ###############################################################################
 
@@ -74,8 +74,8 @@ measure("'Differential monitor C/Py for primes' DynamoRIO sources",
          Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
                  primes2, "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  "python3", f"{PRIMESPATH}/primes.py", NUM).withparser(dm_drio_time_py)],
-        [Command("./monitor", f"Left:drregex:{primes1}",
-                 f"Right:drregex:{primes2}", stdout=PIPE).withparser(dm_drio_stats)])
+        [Command(MONITOR_PATH, f"P_0:drregex:{primes1}",
+                 f"P_1:drregex:{primes2}", stdout=PIPE).withparser(dm_drio_stats)])
 dm_drio_time_c.report('c-py-dm-c', msg="C program")
 dm_drio_time_py.report('c-py-dm-py', msg="Python program")
 dm_drio_stats.report('c-py-dm-stats')

@@ -1,59 +1,104 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-from tempfile import mkdtemp
+from tempfile import mkdtemp, mktemp
 from shutil import rmtree
-from os import chdir
+from os import chdir, unlink
 from measure import *
 from sys import argv
 from run_common import *
+from subprocess import run, TimeoutExpired
 
-NUM="10000000"
+NUM="1000000"
+TIMEOUT=None #10  # timeout for one experiment
+
 if len(argv) > 1:
     BS = argv[1]
     if len(argv) > 2:
         NUM=argv[2]
 else:
-    print(f"args: buffer-size [max-number (default: {NUM})]")
-    print("buffer-size is the compiled (!) size, it does not set the size.")
+    print(f"args: shm-buffer-size [max-number (default: {NUM})]")
+    print("shm-buffer-size is the compiled (!) size, it does not set the size.")
     exit(1)
 
+DIR=f"{SHAMONPATH}/experiments/scalability/"
 SOURCE_EXE=f"{SHAMONPATH}/experiments/scalability/source"
 MONITOR_EXE=f"{SHAMONPATH}/experiments/scalability/monitor"
+MONITOR_TXT_IN=f"{SHAMONPATH}/experiments/scalability/monitor.txt.in"
 
 open_log()
 csv = open_csvlog(BS, NUM)
 
-WORKINGDIR = mkdtemp(prefix="midmon.", dir="/tmp")
+WORKINGDIR = mkdtemp(prefix="vamos.", dir="/tmp")
 chdir(WORKINGDIR)
+
 lprint(f"-- Working directory is {WORKINGDIR} --")
-
 lprint(f"Sending numbers up to {NUM}th...")
-lprint(f"Taking average of {repeat_num()} runs...\n")
 
-def run_measurement(source_freq, monitor_freq, buffsize, max_consume):
+def compile_monitor_txt(buffsize):
+    lprint(f"Generating monitor with arbiter bufsize {buffsize}")
+    outname = MONITOR_TXT_IN[:-3]
+    with open(MONITOR_TXT_IN, "r") as infile:
+        with open(outname, "w") as outfile:
+            for line in infile:
+                if "@BUFSIZE" in line:
+                    line = line.replace("@BUFSIZE", str(buffsize))
+                outfile.write(line)
+    run(["make", "-C", DIR], check=True)
+
+def run_measurement(source_freq, buffsize):
     source = ParseSource()
     monitor = ParseMonitor()
-    measure(f"Source waits {source_freq} cycles, monitor waits {monitor_freq}, "
-            f"buffer has size {buffsize} and can consume at most {max_consume} "
-             "events at once",
-            [Command(SOURCE_EXE, "/ev", str(source_freq), NUM).withparser(source)],
-            [Command(MONITOR_EXE, "stream:generic:/ev",
-                     str(buffsize), str(monitor_freq), str(max_consume),
-                     stdout=PIPE).withparser(monitor)])
-    print(source.waiting, monitor.processed, monitor.dropped, monitor.dropped_times)
-    csv.writerow([source_freq, monitor_freq, buffsize, max_consume,
+    shmname = mktemp(prefix="/vamos.ev-")
+    duration =\
+    measure(f"[SHM {BS} pgs] source waits {source_freq} cyc., arbiter buffer has size {buffsize}",
+            [Command(SOURCE_EXE, shmname, str(source_freq), NUM).withparser(source)],
+            [Command(MONITOR_EXE, f"Src:generic:{shmname}",
+                     stdout=PIPE).withparser(monitor)],
+            timeout=TIMEOUT)
+    print("duration    src-wait     mon-proc     mon-drop     mon-drop-evs"),
+    print(f"{duration :<12.5f}"
+          f"{source.waiting[0] :<12}",
+          f"{monitor.processed :<12}",
+          f"{monitor.dropped :<12}",
+          f"{monitor.dropped_times :<12}")
+    wrong_values = None
+    if source.sent != int(NUM):
+        wrong_values = "source"
+    if monitor.processed + monitor.dropped != int(NUM):
+        wrong_values = "monitor"
+
+    if wrong_values:
+        for line in source.lines:
+            lprint(f"SOURCE: {line}")
+        for line in monitor.lines:
+            lprint(f"MONITOR: {line}")
+        raise RuntimeError(f"Wrong values found, is {wrong_values} buggy?")
+
+    csv.writerow([source_freq, buffsize,
                   source.waiting[0], monitor.processed,
-                  monitor.dropped, monitor.dropped_times])
+                  monitor.dropped, monitor.dropped_times, duration])
 
-for source_freq in (0, 100, 500, 1000, 5000, 10000):
-    for monitor_freq in (0, 100, 500, 1000, 5000, 10000):
-        for buffsize in (10, 100, 1000, 10000):
-            for max_consume in (1, 2, 5, 10, 50, 100, 1000, 1<<64-1):
-                run_measurement(source_freq, monitor_freq, buffsize, max_consume)
-close_log()
-close_csvlog()
+retval = 0
 
-chdir("/")
-rmtree(WORKINGDIR)
+try:
+    for buffsize in (4, 8, 16, 128, 1024, 2048):
+        compile_monitor_txt(buffsize)
 
+        for source_freq in (0, 10, 100, 1000, 10000):
+            try:
+                run_measurement(source_freq, buffsize)
+            except TimeoutExpired:
+                lprint("TIMEOUT!", color="red")
+                retval = -1
+except Exception as e:
+    lprint(str(e))
+    retval = -1
+finally:
+    close_log()
+    close_csvlog()
+
+    chdir("/")
+    rmtree(WORKINGDIR)
+
+    exit(retval)

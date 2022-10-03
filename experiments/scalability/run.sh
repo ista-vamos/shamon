@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 REP=10
 export PYTHON_OPTIMIZE=1
 #export PYTHONDONTWRITEBYTECODE=1

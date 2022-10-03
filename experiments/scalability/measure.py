@@ -3,17 +3,9 @@
 from os import environ
 from sys import argv
 from time import sleep
-from subprocess import Popen, PIPE, DEVNULL
-
-
-REPEAT_NUM=1
-
-def set_repeat_num(n):
-    global REPEAT_NUM
-    REPEAT_NUM = n
-
-def repeat_num():
-    return REPEAT_NUM
+from threading import Thread
+from time import clock_gettime, CLOCK_MONOTONIC
+from subprocess import Popen, PIPE, DEVNULL, TimeoutExpired
 
 # COLORS for printing
 RED="\033[0;31m"
@@ -80,6 +72,12 @@ class Command:
                           stdout=self.stdout, stderr=self.stderr)
         return self
 
+    def kill(self):
+        self.proc.kill()
+
+    def poll(self):
+        return self.proc.poll()
+
     def communicate(self):
         out, err = self.proc.communicate()
         if self.parser:
@@ -117,6 +115,13 @@ class PipedCommands:
             procs.append(c)
         return self
 
+    def poll(self):
+        return self.procs[-1].poll()
+
+    def kill(self):
+        for p in self.procs:
+            p.kill()
+
     def communicate(self):
         ret = None
         for proc in self.procs:
@@ -129,41 +134,65 @@ class PipedCommands:
     def __str__(self):
         return " | ".join(map(str, self.cmds))
 
-def _measure(cmds, moncmds = (), pipe=False):
+def _measure(cmds, moncmds = (), pipe=False, timeout=None):
     ts = [0] if pipe else [0]*len(cmds)
-    for i in range(REPEAT_NUM):
 
-        # --- RUN CLINETS ---
-        for cmd in cmds:
-            cmd.run()
+    start = clock_gettime(CLOCK_MONOTONIC)
+    # --- RUN CLINETS ---
+    for cmd in cmds:
+        cmd.run()
 
-        # --- RUN MONITORS ---
-        if len(moncmds) > 0:
-            sleep(0.15)
-        for c in moncmds:
-            c.run()
+    # --- RUN MONITORS ---
+   #if len(moncmds) > 0:
+   #    sleep(0.05)
+    for c in moncmds:
+        c.run()
 
-        # -- PROCESS OUTPUTS OF CLIENTS --
-        for cmd in cmds:
-            ret = cmd.communicate()
-            if ret != 0:
-                log(f"Client {cmd} had errors",
-                    f"\033[0;31mClient {cmd} had errors\033[0m")
+    # -- PROCESS OUTPUTS OF CLIENTS --
+    for cmd in cmds:
+        ret = cmd.communicate()
+        if ret != 0:
+            log(f"Client {cmd} had errors",
+                f"\033[0;31mClient {cmd} had errors\033[0m")
 
-        # -- PROCESS OUTPUTS OF MONITORS --
-        for mon in moncmds:
-            ret = mon.communicate()
-            if ret != 0:
-                log(f"Monitor {mon} had errors",
-                    f"\033[0;31mMonitor {mon} had errors\033[0m")
-                print(mon.proc)
+    # -- PROCESS OUTPUTS OF MONITORS --
+    for mon in moncmds:
+        ret = mon.communicate()
+        if ret != 0:
+            log(f"Monitor {mon} had errors",
+                f"\033[0;31mMonitor {mon} had errors\033[0m")
+            print(mon.proc)
+    end = clock_gettime(CLOCK_MONOTONIC)
+    return end - start
 
+class Finished:
+    def __init__(self):
+        self.finished = False
 
+def raise_timeout(cmds, moncmds, timeout, finished):
+    t = 0
+    while t < timeout:
+        if finished.finished:
+            # lprint("[dbg] timeout thread killed because com. finished")
+            return
+        t += 0.1
+        sleep(0.1)
 
-def measure(name, cmds, moncmds=()):
+    for c in cmds:
+        c.kill()
+    for m in moncmds:
+        m.kill()
+    lprint(f"TIMEOUT {timeout}s reached!", color=RED)
+
+def measure(name, cmds, moncmds=(), timeout=None):
     log(f"------- {name} ------",
         f"\033[0;34m------- {name} ------\033[0m")
-    _measure(cmds, moncmds)
+    finished = Finished()
+    if timeout is not None:
+        Thread(target=raise_timeout, args=(cmds, moncmds, timeout, finished), daemon=True).start()
+    duration =  _measure(cmds, moncmds)
+    finished.finished = True
+    return duration
 
 def compile_monitor(compilesh, primessrc):
     p = Popen([compilesh, primessrc], stdout=PIPE, stderr=PIPE)
@@ -177,7 +206,7 @@ def compile_monitor(compilesh, primessrc):
     if p.wait() != 0:
         log(f"-- Compiling monitor failed --",
             f"-- \033[0;31m!! Compiling monitor failed (see log) --\033[0m")
-        raise RuntimeError("Compiling monitor faile!")
+        raise RuntimeError("Compiling monitor failed!")
     else:
         lprint("-- Monitor compiled --")
 

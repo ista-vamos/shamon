@@ -4,6 +4,10 @@ if (DYNAMORIO_SOURCES)
        add_subdirectory(drsyscalls)
 endif()
 
+if (BPF_SOURCES)
+	add_subdirectory(bcc)
+endif()
+
 add_executable(sendaddr sendaddr.c)
 add_executable(regex regex.c)
 add_executable(regexd regex-drrio.c)

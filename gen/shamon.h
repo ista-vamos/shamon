@@ -4,6 +4,7 @@
 #include "utils.h"  /* sleeping */
 #include "source.h"
 #include "stream.h"
+#include "monitor.h"
 #include "arbiter.h"
 
 #include <stdbool.h>
@@ -147,10 +148,14 @@ void shm_stream_get_dropped_event(shm_stream *stream,
                                   size_t id,
                                   uint64_t n);
 
+shm_stream *shm_stream_create_from_argv(const char *name,
+                                        int argc,
+                                        char *argv[]);
+
 shm_stream *shm_stream_create(const char *name,
-                              struct source_control **control,
-                              int argc,
-                              char *argv[]);
+                              const char *spec);
+
+shm_stream *shm_stream_create_from_argv(const char *stream_name, int argc, char *argv[]);
 
 /************************************************************************
  * ARBITER BUFFER

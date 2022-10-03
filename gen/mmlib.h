@@ -1,5 +1,8 @@
 #pragma once
 #include<assert.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
 
 #define _MM_EVACCESS(n,ilen,istrt,bstrt) (ilen>n?istrt+n:bstrt+(n-ilen))
 #define __MM_BUFDROP(buf,n,tlen,flen,ilen,istrt,blen,bstrt) do{\
