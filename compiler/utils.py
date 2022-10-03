@@ -45,15 +45,16 @@ def get_count_list_ids(tree):
         return 1
 
 def get_list_ids(tree, ids):
-    if tree[0] == 'listids':
-        get_list_ids(tree[PLIST_BASE_CASE], ids)
-        get_list_ids(tree[PLIST_TAIL], ids)
-    else:
-        if type(tree) == str:
-            ids.append(tree)
+    if tree is not None:
+        if tree[0] == 'listids':
+            get_list_ids(tree[PLIST_BASE_CASE], ids)
+            get_list_ids(tree[PLIST_TAIL], ids)
         else:
-            assert(tree[0] == 'ID')
-            ids.append(tree[PLIST_DATA])
+            if type(tree) == str:
+                ids.append(tree)
+            else:
+                assert(tree[0] == 'ID')
+                ids.append(tree[PLIST_DATA])
 
 def get_list_var_or_int(tree, result):
     if tree[0] == "list_var_or_integer":
@@ -70,14 +71,15 @@ def get_count_list_expr(tree):
         return 1
 
 def get_expressions(tree, result):
-    if tree[0] == 'expr_list':
-        get_expressions(tree[PLIST_BASE_CASE], result)
-        get_expressions(tree[PLIST_TAIL], result)
-    else:
-        if tree[0] == "expr":
-            result.append(tree[PLIST_DATA])
+    if tree is not None:
+        if tree[0] == 'expr_list':
+            get_expressions(tree[PLIST_BASE_CASE], result)
+            get_expressions(tree[PLIST_TAIL], result)
         else:
-            result.append(tree)
+            if tree[0] == "expr":
+                result.append(tree[PLIST_DATA])
+            else:
+                result.append(tree)
 
 def is_primitive_type(type_ : str):
     answer = type_ == "int" or type_ == "bool" or type_ =="string" or type_ == "float"
@@ -97,8 +99,8 @@ def is_type_primitive(tree) -> bool:
 
 def get_events_names(tree, names) -> None:
     if tree[0] == "event_list":
-        get_event_sources_names(tree[PLIST_BASE_CASE], names)
-        get_event_sources_names(tree[PLIST_TAIL], names)
+        get_events_names(tree[PLIST_BASE_CASE], names)
+        get_events_names(tree[PLIST_TAIL], names)
     else:
         assert (tree[0] == "event_decl")
         names.append(tree[PLIST_DATA])
@@ -119,7 +121,8 @@ def get_events_data(tree, events_data) -> None:
     else:
         assert (tree[0] == "event_decl")
         event_args: List[Tuple[str, str]] = [] # list consists of a tuple (name_arg, type_arg)
-        get_event_args(tree[PPEVENT_PARAMS_LIST], event_args)
+        if tree[PPEVENT_PARAMS_LIST]:
+            get_event_args(tree[PPEVENT_PARAMS_LIST], event_args)
 
         data = {
             "name": tree[PPEVENT_NAME],
@@ -196,11 +199,12 @@ def are_all_events_decl_primitive(tree) -> bool:
         return are_all_events_decl_primitive(tree[PLIST_BASE_CASE]) and are_all_events_decl_primitive(tree[PLIST_TAIL])
     else:
         assert (tree[0] == 'event_decl')
-        params = []
-        get_parameters_types_field_decl(tree[PPEVENT_PARAMS_LIST], params)
-        for param in params:
-            if not param["is_primitive"]:
-                return False
+        if tree[PPEVENT_PARAMS_LIST]:
+            params = []
+            get_parameters_types_field_decl(tree[PPEVENT_PARAMS_LIST], params)
+            for param in params:
+                if not param["is_primitive"]:
+                    return False
         return True
 
 
@@ -286,7 +290,7 @@ def get_parameters_names(tree, stream_name, mapping, binded_args, index=0, strea
         get_list_ids(tree[PPLIST_EV_CALL_EV_PARAMS], ids)
         assert(len(ids) == len(mapping[tree[PPLIST_EV_CALL_EV_NAME]]['args']))
         for (arg_bind, arg) in zip(mapping[tree[PPLIST_EV_CALL_EV_NAME]]['args'], ids):
-            binded_args[arg_bind] = (stream_name, arg[0], arg[1], index, stream_index)
+            binded_args[arg] = (stream_name, tree[PPLIST_EV_CALL_EV_NAME], arg_bind[0], arg_bind[1], index, stream_index)
         get_parameters_names(tree[PPLIST_EV_CALL_TAIL], stream_name, mapping, binded_args, index+1)
     else:
         assert(tree[0] == 'ev_call')
@@ -425,8 +429,7 @@ def local_get_buffer_peeks(local_tree, type_checker, result, existing_buffers):
                 if local_tree[-1] == "done":
                     # event_src_ref ':' DONE
                     pass
-                else:
-                    assert(local_tree[-1] == "nothing")
+                elif local_tree[-1] == "nothing":
                     # event_src_ref ':' NOTHING
                     event_src_ref = local_tree[1]
                     event_src_name = event_src_ref[1]
@@ -434,6 +437,14 @@ def local_get_buffer_peeks(local_tree, type_checker, result, existing_buffers):
                         event_src_name += str(event_src_ref[2])
 
                     insert_in_result(event_src_name, 0, result, existing_buffers)
+                else:
+                    # event_src_ref ':' INT
+                    event_src_ref = local_tree[1]
+                    event_src_name = event_src_ref[1]
+                    if event_src_ref[2] is not None:
+                        event_src_name += str(event_src_ref[2])
+
+                    insert_in_result(event_src_name, local_tree[-1], result, existing_buffers)
             else:
                 assert(len(local_tree) == 4)
                 event_src_ref = local_tree[1]

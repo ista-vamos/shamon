@@ -38,6 +38,7 @@ class TypeChecker:
     buffer_group_data: Dict[str, Dict[str, Any]] = dict()
     match_fun_data: Dict[str, Dict[str, Any]] = dict()
     match_expr_funcs: List[Any] = []
+    monitor_buffer_size: int = 4
 
     @staticmethod
     def clean_checker():

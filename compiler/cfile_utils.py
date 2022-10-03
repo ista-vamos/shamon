@@ -98,7 +98,8 @@ def events_declaration_structs(tree) -> str:
         assert(tree[0] == "event_decl")
         event_name = tree[PPEVENT_NAME]
         fields = []
-        get_parameters_types_field_decl(tree[PPEVENT_PARAMS_LIST], fields)
+        if tree[PPEVENT_PARAMS_LIST]:
+            get_parameters_types_field_decl(tree[PPEVENT_PARAMS_LIST], fields)
         struct_fields = ""
         index = 0
         for data in fields:
