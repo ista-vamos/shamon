@@ -156,7 +156,7 @@ STREAM_{arbiter_event_source}_out *arbiter_outevent;
 {get_event_at_head()}
 {print_buffers_state()}
 {build_rule_set_functions(ast[2], streams_to_events_map, stream_types, existing_buffers)}
-{arbiter_code(ast[2])}
+{arbiter_code(ast[2], components)}
 
 int main(int argc, char **argv) {"{"}
 	initialize_events(); // Always call this first

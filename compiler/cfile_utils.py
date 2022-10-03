@@ -524,7 +524,7 @@ bool are_buffers_empty() {"{"}
 {"}"}
     '''
 
-def arbiter_code(tree):
+def arbiter_code(tree, components):
     assert(tree[0] == "arbiter_def")
 
     rule_set_names = []
@@ -550,6 +550,8 @@ def arbiter_code(tree):
         if(no_matches_count == no_consecutive_matches_limit) {"{"}
             printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\\n", no_consecutive_matches_limit);
             print_buffers_state();
+            // cleanup code
+            {get_pure_c_code(components, 'cleanup')}
             abort();
         {"}"}
     {"}"}
