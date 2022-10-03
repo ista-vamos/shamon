@@ -1062,13 +1062,13 @@ int get_event_at_head(shm_arbiter_buffer *b) {"{"}
 {"}"}
     '''
 
-def print_event_name(stream_types):
+def print_event_name(stream_types, mapping):
 
     def local_build_if_from_events(events) -> str:
         answer = ""
-        for (index, event) in enumerate(events):
+        for (event, data) in events.items():
             answer += f'''
-        if (event_index == {index+2} ) {"{"}
+        if (event_index == {data['index']} ) {"{"}
             printf("{event}\\n");
             return;
         {"}"}
@@ -1080,7 +1080,7 @@ def print_event_name(stream_types):
         output_type = stream_types[event_source][1]
         code += f'''
     if(ev_src_index == {event_source_index}) {"{"}
-        {local_build_if_from_events(TypeChecker.stream_types_to_events[output_type])}
+        {local_build_if_from_events(mapping[output_type])}
         printf("No event matched! this should not happen, please report!\\n");
         return;
     {"}"}

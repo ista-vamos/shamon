@@ -152,7 +152,7 @@ shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t 
 STREAM_{arbiter_event_source}_out *arbiter_outevent;
 {declare_rule_sets(ast[2])}
 
-{print_event_name(stream_types)}
+{print_event_name(stream_types, streams_to_events_map)}
 {get_event_at_head()}
 {print_buffers_state()}
 {build_rule_set_functions(ast[2], streams_to_events_map, stream_types, existing_buffers)}
