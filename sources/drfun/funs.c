@@ -331,9 +331,7 @@ static void at_call_generic(size_t fun_idx, const char *sig) {
         }
         ++i;
     }
-    if (!buffer_finish_push(shm)) {
-        DR_ASSERT(0 && "Buffer push failed");
-    }
+    buffer_finish_push(shm);
     /* putchar('\n'); */
 }
 
