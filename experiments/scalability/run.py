@@ -9,7 +9,7 @@ from sys import argv
 from run_common import *
 from subprocess import run, TimeoutExpired
 
-NUM="1000000"
+NUM="100000"
 TIMEOUT=None #10  # timeout for one experiment
 
 if len(argv) > 1:
@@ -36,7 +36,7 @@ lprint(f"-- Working directory is {WORKINGDIR} --")
 lprint(f"Sending numbers up to {NUM}th...")
 
 def compile_monitor_txt(buffsize):
-    lprint(f"Generating monitor with arbiter bufsize {buffsize}")
+    lprint(f"Generating monitor with arbiter bufsize {buffsize} ...")
     outname = MONITOR_TXT_IN[:-3]
     with open(MONITOR_TXT_IN, "r") as infile:
         with open(outname, "w") as outfile:
@@ -44,7 +44,8 @@ def compile_monitor_txt(buffsize):
                 if "@BUFSIZE" in line:
                     line = line.replace("@BUFSIZE", str(buffsize))
                 outfile.write(line)
-    run(["make", "-C", DIR], check=True)
+        with open("/tmp/compile-mon.stdout.txt", "w") as out:
+            run(["make", "-C", DIR], check=True, stdout=out)
 
 def run_measurement(source_freq, buffsize):
     source = ParseSource()
