@@ -6,6 +6,8 @@ from time import sleep
 from threading import Thread
 from time import clock_gettime, CLOCK_MONOTONIC
 from subprocess import Popen, PIPE, DEVNULL, TimeoutExpired
+from itertools import chain
+from os.path import abspath
 
 # COLORS for printing
 RED="\033[0;31m"
@@ -18,6 +20,7 @@ _debug = False
 def open_log(f='log.txt'):
     global _logf
     _logf = open(f, 'w')
+    print(f"Opened log: {abspath(f)}")
 
 def close_log():
     _logf.close()
@@ -143,10 +146,32 @@ def _measure(cmds, moncmds = (), pipe=False, timeout=None):
         cmd.run()
 
     # --- RUN MONITORS ---
-   #if len(moncmds) > 0:
-   #    sleep(0.05)
     for c in moncmds:
         c.run()
+
+    # --- wait until monitors finish ---
+    monitors = list(moncmds)
+    while monitors:
+        for proc in monitors:
+            rv = proc.poll()
+            if rv is None:
+                continue
+            monitors.remove(proc)
+            # sleep a while so that processes have time to settle...
+            # TODO: we should you poll or select
+            sleep(0.5)
+            for cmd in cmds:
+                if cmd.poll() is None:
+                    log(f"Monitor finished before client\n"
+                        f"\033[0;31mMonitor finished before client\033[0m\n")
+                    # kill other processes
+                    for p in chain(moncmds, cmds):
+                        log(f"{p.cmd}\n")
+                        p.kill()
+                        out, err = p.proc.communicate()
+                        log(f"ret: {p.proc.returncode}\nstdout: {out}\nstderr: {err}")
+                    raise RuntimeError("Failed measurement, see log.txt")
+        sleep(0.3)
 
     # -- PROCESS OUTPUTS OF CLIENTS --
     for cmd in cmds:
@@ -160,8 +185,11 @@ def _measure(cmds, moncmds = (), pipe=False, timeout=None):
         ret = mon.communicate()
         if ret != 0:
             log(f"Monitor {mon} had errors",
-                f"\033[0;31mMonitor {mon} had errors\033[0m")
-            print(mon.proc)
+                f"\033[0;31mMonitor {mon} had errors\033[0m\n")
+
+
+
+
     end = clock_gettime(CLOCK_MONOTONIC)
     return end - start
 

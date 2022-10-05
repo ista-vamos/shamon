@@ -1,7 +1,6 @@
 #!/bin/bash
 
 set -x
-set -e
 
 CURDIR="$(pwd)"
 MONITORSRC="$1"
@@ -9,6 +8,8 @@ shift  # consume the first argument in case there are some additional ones
        # for the compilation
 ARBITER_BUFSIZE="$1"
 shift
+
+set -e
 
 GENDIR=$(dirname $0)
 SHAMONDIR="$GENDIR/.."
