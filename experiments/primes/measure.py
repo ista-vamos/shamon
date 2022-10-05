@@ -5,6 +5,7 @@ from sys import argv
 from time import sleep
 from itertools import chain
 from subprocess import Popen, PIPE, DEVNULL, TimeoutExpired
+from typing import List
 
 # we repeat whole experiments with the shell script, so do not repeat the
 # experiments by default 
@@ -64,7 +65,7 @@ class Command:
     def __init__(self, exe, *args, **kwargs):
         self.cmd = [exe, *args]
         self.parser = None
-        self.proc = None
+        self.proc: Popen = None
         self.retval = None
         self.out = None
         self.err = None
@@ -88,9 +89,14 @@ class Command:
 
     def communicate(self, timeout=None):
         out, err = self.proc.communicate(timeout=timeout)
+        if self.out is None:
+            self.out, self.err = out, err
+        else:
+            if out:
+                self.out += out
+            self.err = err
         if self.parser:
-            self.parser.parse(out, err)
-        self.out, self.err = out, err
+            self.parser.parse(self.out, err)
         self.retval = self.proc.returncode
         return self.retval
 
@@ -104,54 +110,8 @@ class Command:
     def __str__(self):
         return " ".join(map(lambda s: f"'{s}'" if ' ' in s else s, self.cmd))
 
-class PipedCommands:
-    def __init__(self, *cmds, **kwargs):
-        self.cmds = [*cmds]
-        self.procs = []
 
-        # for the last command
-        self.stdout = DEVNULL
-        self.stderr = PIPE
-        if kwargs and "stdout" in kwargs:
-            self.stdout = kwargs["stdout"]
-        if kwargs and "stderr" in kwargs:
-            self.stdout = kwargs["stderr"]
-
-    def withparser(self, parser):
-        raise RuntimeError("Add parser to individual commands...")
-
-    def run(self, stdin=None):
-        log(f"PipedCommands: {' | '.join(map(str, self.cmds))}")
-        procs = self.procs
-        max_n = len(self.cmds) - 1
-        for n, c in enumerate(self.cmds):
-            c.stdout = self.stdout if n == max_n else PIPE
-            c.stderr = self.stderr if n == max_n else PIPE
-            c.run(stdin=procs[-1].proc.stdout if n > 0 else stdin)
-            procs.append(c)
-        return self
-
-    def communicate(self, timeout=None):
-        ret = None
-        for proc in self.procs:
-            ret = proc.communicate(timeout=timeout)
-            if ret != 0:
-                log(f"Subcommand '{proc}' returned {retval}\n{proc.err}",
-                    f"Subcommand '{proc}' returned {retval}", color="\033[0;31m")
-        # return value is from the last process
-        return ret
-
-    def poll(self):
-        return self.procs[-1].poll()
-
-    def kill(self):
-        for proc in self.procs:
-            proc.kill()
-
-    def __str__(self):
-        return " | ".join(map(str, self.cmds))
-
-def _measure(cmds, moncmds = (), pipe=False):
+def _measure(cmds: List[Command], moncmds: List[Command] = (), pipe=False):
     ts = [0] if pipe else [0]*len(cmds)
     for i in range(REPEAT_NUM):
 
@@ -166,11 +126,14 @@ def _measure(cmds, moncmds = (), pipe=False):
             c.run()
 
         # --- wait until monitors finish ---
-        monitors = list(moncmds)
+        monitors: List[Command] = list(moncmds)
         while monitors:
             for proc in monitors:
                 rv = proc.poll()
                 if rv is None:
+                    if proc.out == None:
+                        proc.out = b""
+                    proc.out += proc.proc.stdout.read()
                     continue
                 monitors.remove(proc)
                 for cmd in cmds:
