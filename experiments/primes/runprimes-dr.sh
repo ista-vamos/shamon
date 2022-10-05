@@ -1,22 +1,38 @@
 #!/bin/bash
 
-SOURCESDIR="$(pwd)/../../sources"
+set -e
+
+DIR=$(dirname $0)
+
+SOURCESDIR="$DIR/../../sources"
 NUM=$1
 test -z $NUM && NUM=10000
 
-DRRUN=/opt/dynamorio//build/bin64/drrun
+CMAKE_CACHE="$DIR/../../CMakeCache.txt"
+LINE=$(grep "DynamoRIO_DIR" "$CMAKE_CACHE")
+DRIOROOT="${LINE#*=}/.."
+# fallback for our machine...
+if [ ! -d $DRIOROOT ]; then
+	DRIOROOT=/opt/dynamorio/build
+fi
 
-$DRRUN -root /opt/dynamorio//build/\
+DRRUN="$DRIOROOT/bin64/drrun"
+if [ ! -x $DRRUN ]; then
+	echo "Could not find drrun"
+	exit 1
+fi
+
+$DRRUN -root $DRIOROOT \
 	-opt_cleancall 2 -opt_speed\
-	-c /opt/shamon/sources/drregex/libdrregex.so\
+	-c $SOURCESDIR/drregex/libdrregex.so\
 	/primes1 prime '#([0-9]+): ([0-9]+)' ii --\
-	./primes $NUM &
+	$DIR/primes $NUM &
 
-$DRRUN -root /opt/dynamorio//build/\
+$DRRUN -root $DRIOROOT \
 	-opt_cleancall 2 -opt_speed\
-	-c /opt/shamon/sources/drregex/libdrregex.so\
+	-c $SOURCESDIR/drregex/libdrregex.so\
 	/primes2 prime '#([0-9]+): ([0-9]+)' ii --\
-	./primes $NUM&
+	$DIR/primes $NUM&
 
 wait
 wait
