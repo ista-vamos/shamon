@@ -29,14 +29,17 @@ $$
     int left_holes = 0;
     int right_holes = 0;
 
+    bool is_compared = false;
     int process(int n, int p, int pos, int opos)
     {
+        is_compared = false;
         if(pos < opos)
         {
             int oval=0;
             if(intmap_get(&buf, n, &oval))
             {
                 compared++;
+                is_compared = true;
                 $yield NumberPair(n, oval, p);
             }
             count -= intmap_remove_upto(&buf, n);
@@ -45,6 +48,7 @@ $$
         {
             if(count<10)
             {
+                is_compared = true;
                 intmap_insert(&buf, n, p);
                 count++;
             }
@@ -53,7 +57,7 @@ $$
     }
 $$
 
-startup
+startup 
 $$
 init_intmap(&buf);
 $$
@@ -68,12 +72,15 @@ printf("LEFT: processed %d events (%d compared, %d dropped (in %d holes), %d ski
 printf("RIGHT: processed %d events (%d compared, %d dropped (in %d holes), %d skipped) \n", right_processed, compared, right_drops, right_holes, right_skipped);
 $$
 
+match fun Prio[F,S]() = choose F,S from Ps
+
 arbiter : NumberPairs
 {
     rule set rs
     {
         on P[0]: | Prime(ln, lp) , P[1]: | Prime(rn, rp) where $$ true $$
         $$
+
             if(ln == rn)
             {
                 left_processed += 1;
@@ -99,36 +106,34 @@ arbiter : NumberPairs
                 $drop 1 from P[1];
             }
         $$
+        on Prio[F,S](), F : hole(n) | where $$ count < 10 || $F.pos; <= $S.pos; $$
+        $$
+            if($F.pos; < $S.pos;)
+            {
+                
+                count -= intmap_remove_upto(&buf, $F.pos;+n);
+            }
+            $F.pos; += n;
 
-        choose F,S from Ps where $$ true $$
-        {
-            on F : hole(n) | where $$ count < 10 || $F.pos; <= $S.pos; $$
-            $$
-                if($F.pos; < $S.pos;)
-                {
-                    count -= intmap_remove_upto(&buf, $F.pos;+n);
-                }
-                $F.pos; += n;
-                if (F == EV_SOURCE_P_0) {
-                    left_processed += n;
-                    left_holes += 1;
-                    left_drops += n;
-                } else {
-                    right_processed += n;
-                    right_holes += 1;
-                    right_drops += n;
-                }
-            $$
-            on F: Prime(n, p) | where $$ count < 10 || $F.pos; <= $S.pos; $$
-            $$
-                $F.pos; = process(n, p, $F.pos;, $S.pos;);
-                if (F == EV_SOURCE_P_0) {
-                    left_processed ++;
-                } else {
-                    right_processed ++;
-                } 
-            $$
-        }
+            if (F == EV_SOURCE_P_0) {
+                left_processed += n;
+                left_holes += 1;
+                left_drops += n;
+            } else {
+                right_processed += n;
+                right_holes += 1;
+                right_drops += n;
+            }
+        $$
+        on Prio[F,S](), F: Prime(n, p) | where $$ count < 10 || $F.pos; <= $S.pos; $$
+        $$
+            $F.pos; = process(n, p, $F.pos;, $S.pos;);  
+            if (F == EV_SOURCE_P_0) {
+                left_processed ++;
+            } else {
+                right_processed ++;
+            }        
+        $$
     }
 }
 
@@ -142,4 +147,3 @@ monitor
         }
     $$
 }
-
