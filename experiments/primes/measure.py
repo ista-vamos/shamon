@@ -87,7 +87,7 @@ class Command:
                           stdout=self.stdout, stderr=self.stderr)
         return self
 
-    def communicate(self, timeout=20):
+    def communicate(self, timeout=None):
         out, err = self.proc.communicate(timeout=timeout)
         if self.out is None:
             self.out, self.err = out, err
