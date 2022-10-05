@@ -83,8 +83,6 @@ static struct source_control *control;
 static struct event_record *events;
 unsigned long *addresses;
 static size_t events_num;
-size_t max_event_size = sizeof(shm_event_dropped);
-
 static uint64_t waiting_for_buffer = 0;
 
 /*
@@ -169,14 +167,11 @@ static void find_functions(void *drcontext, const module_data_t *mod,
             events[i].size =
                 signature_get_size((unsigned char *)events[i].signature) +
                 sizeof(shm_event_funcall);
-            if (events[i].size > max_event_size)
-                max_event_size = events[i].size;
             dr_printf("Found %s:%s in %s at 0x%x (size %lu)\n", events[i].name,
                       events[i].signature, mod->full_path, addresses[i],
                       events[i].size);
         }
     }
-    DR_ASSERT(max_event_size > 0);
 }
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
@@ -344,7 +339,7 @@ static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
     (void)user_data;
     /* FIXME: isn't there a better place to put this callback? */
     if (!shm) {
-        shm = create_shared_buffer(shmkey, max_event_size, control);
+        shm = create_shared_buffer(shmkey, control);
         DR_ASSERT(shm);
 
         events = buffer_get_avail_events(shm, &events_num);

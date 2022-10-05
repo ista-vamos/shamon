@@ -163,25 +163,7 @@ char *buf_get_line(msgbuf *buf)
 	return buf_get_upto(buf, "\n");
 }
 
-static size_t compute_elem_size(char *signatures[],
-                                size_t num) {
-    size_t size, max_size = 0;
-    for (size_t i = 0; i < num; ++i) {
-        size = signature_get_size((const unsigned char*)signatures[i]) +
-                                  sizeof(struct event);
-        if (size > max_size)
-            max_size = size;
-    }
-
-    if (max_size < sizeof(shm_event_dropped))
-        max_size = sizeof(shm_event_dropped);
-
-    return max_size;
-}
-
 static size_t waiting_for_buffer = 0;
-
-
 
 typedef struct _parsedata
 {
@@ -577,12 +559,8 @@ int main(int argc, char **argv)
                                                                        (const char **)signatures_out);
     assert(control_out);
 
-    struct buffer *shm_out = create_shared_buffer(shmkey_name_out,
-                                                  compute_elem_size(signatures_out, exprs_num_out),
-                                                  control_out);
-    struct buffer *shm_in = create_shared_buffer(shmkey_name_in,
-                                                 compute_elem_size(signatures_in, exprs_num_in),
-                                                 control_in);
+    struct buffer *shm_out = create_shared_buffer(shmkey_name_out, control_out);
+    struct buffer *shm_in = create_shared_buffer(shmkey_name_in, control_in);
     assert(shm_out);
     assert(shm_in);
     free(control_out);

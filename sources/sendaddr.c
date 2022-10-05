@@ -42,8 +42,7 @@ int main(int argc, char *argv[]) {
     struct source_control *control = source_control_define(1, "addr", "p");
     assert(control);
 
-    struct buffer *shm =
-        create_shared_buffer(shmkey, control->events[0].size, control);
+    struct buffer *shm = create_shared_buffer(shmkey, control);
     assert(shm);
     free(control);
 

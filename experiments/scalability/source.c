@@ -44,10 +44,7 @@ int main (int argc, char *argv[]) {
     /* Initialize the info about this source */
     struct source_control *control = source_control_define(1, "event", "l");
     assert(control);
-    size_t event_size = control->events[0].size;
-    size_t buff_event_size = event_size < sizeof(shm_event_dropped)
-                                ? event_size : sizeof(shm_event_dropped);
-    struct buffer *shm = create_shared_buffer(shmkey, buff_event_size, control);
+    struct buffer *shm = create_shared_buffer(shmkey, control);
     assert(shm);
     free(control);
     fprintf(stderr, "info: waiting for the monitor to attach... ");

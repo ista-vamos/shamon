@@ -352,10 +352,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         exprs_num, (const char **)names, (const char **)signatures);
     assert(control);
 
-    size_t max_size = source_control_max_event_size(control);
-    if (max_size < sizeof(shm_event_dropped))
-        max_size = sizeof(shm_event_dropped);
-    shm = create_shared_buffer(shmkey, max_size, control);
+    shm = create_shared_buffer(shmkey, control);
     assert(shm);
     events = buffer_get_avail_events(shm, &events_num);
     free(control);
