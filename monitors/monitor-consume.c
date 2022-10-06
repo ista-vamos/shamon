@@ -29,7 +29,8 @@ static int buffer_manager_thrd(void *data) {
     while (!shm_arbiter_buffer_active(buffer))
         _mm_pause();
 
-    printf("Running fetch & autodrop for stream %s\n", stream->name);
+    printf("Running fetch & autodrop for stream %s\n",
+	    shm_stream_get_name(stream));
 
     const size_t ev_size = shm_stream_event_size(stream);
     void *ev, *out;
@@ -48,7 +49,8 @@ static int buffer_manager_thrd(void *data) {
 
     // TODO: we should check if the stream is finished and remove it
     // in that case
-    printf("BMM for stream %lu (%s) exits\n", stream->id, stream->name);
+    printf("BMM for stream %lu (%s) exits\n",
+	   shm_stream_id(stream), shm_stream_get_name(stream));
     thrd_exit(EXIT_SUCCESS);
 }
 

@@ -110,7 +110,11 @@ int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; ++i)
         next_id[i] = 1;
 #endif
+    size_t spinned = 0;
+    size_t old_n;
     while (shamon_is_ready(shmn)) {
+        old_n = n;
+
         while ((ev = shamon_get_next_ev(shmn, &stream))) {
             ++n;
 
@@ -161,6 +165,22 @@ int main(int argc, char *argv[]) {
             dump_args(stream, (shm_event_generic *)ev);
             printf("}\n");
             puts("--------------------");
+        }
+
+        if (n == old_n) {
+            ++spinned;
+        } else {
+            spinned = 0;
+        }
+
+        if (spinned > 1000) {
+            sleep_ns(100);
+            if (spinned > 2000) {
+                sleep_ms(10);
+                if (spinned > 2050) {
+                    sleep_ms(40);
+                }
+            }
         }
     }
     fflush(stdout);
