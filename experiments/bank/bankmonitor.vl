@@ -3,14 +3,15 @@ stream type BankOutputEvent
 	balance(account : int);
 	depositTo(account : int);
 	withdraw(account: int);
-	transferTo(fromAccount: int);
-	transferAmount(fromAccount: int);
+	transferFrom(fromAccount: int);
 	depositSuccess();
 	withdrawSuccess();
 	withdrawFail();
 	transferSuccess();
 	transferFail();
+	selectedAccount(account: int);
 	invalidAccount();
+	loggedOut();
 	numOut(num: int);
 }
 
@@ -30,8 +31,8 @@ stream type BankEvent
 	Clear();
 }
 
-event source In : BankInputEvent to autodrop(32)
-event source Out : BankOutputEvent to autodrop(32)
+event source In : BankInputEvent to autodrop(128)
+event source Out : BankOutputEvent to autodrop(128)
 
 globals
 $$
@@ -43,6 +44,7 @@ $$
     int out_ahead=0;
     int in_processed=0;
     int out_processed=0;
+    int current_account=0;
 $$
 
 startup
@@ -68,25 +70,45 @@ arbiter : BankEvent
     	on In : hole(n) | where $$ true $$
     	$$
     	    printf("In: hole(%d)\n", n);
+    	    $yield Clear();
     	$$
     	on Out : hole(n) | where $$ true $$
     	$$
     	    printf("In: hole(%d)\n", n);
-    		$yield Clear();
+    	    $yield Clear();
     	$$
 
-    	on In : numIn(n) | where $$ true $$
+    	on Out : balance(acc) numOut(amnt) | where $$ true $$
     	$$
-    	    printf("In: numIn(%d)\n", n);
-    	$$
-    	on Out : numOut(n) | where $$ true $$
-    	$$
-    	    printf("Out: numOut(%d)\n", n);
+    		$yield SawBalance(acc, amnt);
+		current_account = acc;
+    		out_ahead++;
+    		out_processed++;
     	$$
 
-    	on Out : balance(acc) |, In : numIn(amnt) | where $$ true $$
+    	on Out : selectedAccount(acc) | where $$ true $$
     	$$
-    		$yield SawBalance(acc,amnt);
+		current_account = acc;
+    	$$
+
+    	on Out : depositTo(acc) |, In : numIn(amnt) | where $$ true $$
+    	$$
+    		$yield SawDeposit(acc, amnt);
+		current_account = acc;
+    		out_ahead++;
+    		out_processed++;
+    	$$
+
+    	on Out : withdraw(acc) withdrawSuccess() |, In : numIn(amnt) | where $$ true $$
+    	$$
+    		$yield SawWithdraw(acc, amnt);
+    		out_ahead++;
+    		out_processed++;
+    	$$
+
+    	on Out : withdraw(acc) withdrawFail() |, In : numIn(amnt) | where $$ true $$
+    	$$
+    		$yield SawWithdrawFail(acc, amnt);
     		out_ahead++;
     		out_processed++;
     	$$
@@ -100,6 +122,14 @@ arbiter : BankEvent
     	$$
     		$drop 1 from Out;
     	$$
+
+    	on Out : loggedOut() | where $$ true $$
+    	$$
+	    printf("Logged out, work done!\n");
+	    done();
+    	$$
+
+
     }
 }
 
@@ -113,6 +143,14 @@ monitor(8)
 		intmap_clear(&lower_bounds);
 	$$
 	on SawBalance(account, balance) where $$ true $$
+	$$
+	        printf("MON: SawBalance(%d, %d)\n", account, balance);
+	$$
+	on SawWithdraw(account, balance) where $$ true $$
+	$$
+	        printf("MON: SawBalance(%d, %d)\n", account, balance);
+	$$
+	on SawWithdrawFail(account, balance) where $$ true $$
 	$$
 	        printf("MON: SawBalance(%d, %d)\n", account, balance);
 	$$

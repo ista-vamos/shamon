@@ -4,10 +4,13 @@ VLCC=python3 ../../compiler/main.py
 GENCC=../../gen/compile.sh
 SHAMON_LIB=../../core/libshamon-lib.so  # for dependency
 
-all: monitor bank inputs.txt inputs100.txt
+all: monitor bank inputs.txt inputs10.txt inputs100.txt
 
 inputs.txt : inputs.py
 	python $^ 100000 > $@
+
+inputs10.txt : inputs.py
+	python $^ 10 > $@
 
 inputs100.txt : inputs.py
 	python $^ 100 > $@

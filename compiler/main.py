@@ -94,9 +94,16 @@ bool are_there_events(shm_arbiter_buffer * b) {"{"}
 {"}"}
 
 {are_buffers_empty()}
+
+volatile int __work_done = 0;
+/* TODO: make a keywork from this */
+void done() {{
+    __work_done = 1;
+}}
+
 bool are_streams_done() {"{"}
     assert(count_event_streams >=0);
-    return count_event_streams == 0 && are_buffers_empty();
+    return !__work_done && count_event_streams == 0 && are_buffers_empty();
 {"}"}
 
 
