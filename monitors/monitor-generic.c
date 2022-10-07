@@ -5,6 +5,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "arbiter.h"
 #include "event.h"
@@ -59,6 +60,33 @@ static inline void dump_args(shm_stream *stream, shm_event_generic *ev) {
 
 shm_stream *create_stream(int argc, char *argv[], int arg_i,
                           const char *expected_stream_name);
+shamon *shmn;
+
+static void sig_fatal(int sig) {
+    (void)sig;
+    fprintf(stderr, "Caught signal %d\n", sig);
+    if (shmn) {
+        shamon_detach(shmn);
+    }
+}
+
+static void setup_signals() {
+    if (signal(SIGINT, sig_fatal) == SIG_ERR) {
+	perror("failed setting SIGINT handler");
+    }
+
+    if (signal(SIGABRT, sig_fatal) == SIG_ERR) {
+	perror("failed setting SIGINT handler");
+    }
+
+    if (signal(SIGIOT, sig_fatal) == SIG_ERR) {
+	perror("failed setting SIGINT handler");
+    }
+
+    if (signal(SIGSEGV, sig_fatal) == SIG_ERR) {
+	perror("failed setting SIGINT handler");
+    }
+}
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -68,8 +96,10 @@ int main(int argc, char *argv[]) {
     }
 
     shm_event *ev = NULL;
-    shamon *shmn = shamon_create(NULL, NULL);
+    shmn = shamon_create(NULL, NULL);
     assert(shmn);
+
+    setup_signals();
 
 #ifdef DUMP_STATS
     size_t total_events_num =
