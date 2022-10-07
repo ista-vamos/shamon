@@ -226,7 +226,7 @@ def get_count_events_sources():
             total_count += 1
     return total_count
 
-def event_sources_conn_code(event_sources) -> str:
+def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
 
 
     answer = ""
@@ -247,17 +247,28 @@ def event_sources_conn_code(event_sources) -> str:
         connection_kind = TypeChecker.event_sources_data[stream_name]["connection_kind"]
         assert(connection_kind[0] == "conn_kind")
         buff_size = connection_kind[2]
+        stream_type = event_source[3]
         if copies:
             for i in range(copies):
                 name = f"{stream_name}_{i}"
                 answer += f"\t// connect to event source {name}\n"
                 answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv);\n"
                 answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
+                answer += f"\t// register events in {name}\n"
+                for ev_name, attrs in streams_to_events_map[stream_type].items():
+                    if ev_name == 'hole': continue
+                    answer += f"\tif (shm_stream_register_event(EV_SOURCE_{name}, \"{ev_name}\", {attrs['index']}) < 0) {{\n"
+                    answer += f"\t\tfprintf(stderr, \"Failed registering event {ev_name} for stream {name} : {stream_type}\");\n\t}}\n"
         else:
             name = f"{stream_name}"
             answer += f"\t// connect to event source {name}\n"
             answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv);\n"
             answer += f"\tBUFFER_{stream_name} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
+            answer += f"\t// register events in {name}\n"
+            for ev_name, attrs in streams_to_events_map[stream_type].items():
+                if ev_name == 'hole': continue
+                answer += f"\tif (shm_stream_register_event(EV_SOURCE_{name}, \"{ev_name}\", {attrs['index']}) < 0) {{\n"
+                answer += f"\t\tfprintf(stderr, \"Failed registering event {ev_name} for stream {name} : {stream_type}\");\n\t}}\n"
 
     return answer
 

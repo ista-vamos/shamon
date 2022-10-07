@@ -165,7 +165,7 @@ int main(int argc, char **argv) {"{"}
 	{get_pure_c_code(components, 'startup')}
 {initialize_stream_args()}
 
-{event_sources_conn_code(components['event_source'])}
+{event_sources_conn_code(components['event_source'], streams_to_events_map)}
      // activate buffers
 {activate_buffers()}
  	monitor_buffer = shm_monitor_buffer_create(sizeof(STREAM_{arbiter_event_source}_out), {TypeChecker.monitor_buffer_size});
