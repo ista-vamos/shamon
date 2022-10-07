@@ -10,7 +10,7 @@ inputs100.txt : inputs.py
 	python $^ 100 > $@
 
 ../interact: ../interact.c
-	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@
+	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -g
 
 monitor: monitor.o shm_monitor.o shm_common.o
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -lrt -lm -lpthread
