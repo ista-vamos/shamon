@@ -9,6 +9,8 @@ stream type BankOutputEvent
 	withdrawFail();
 	transferSuccess();
 	transferFail();
+	selectAccount();
+	selectAction();
 	selectedAccount(account: int);
 	invalidAccount();
 	loggedOut();
@@ -81,25 +83,43 @@ arbiter : BankEvent
     	on Out : balance(acc) numOut(amnt) | where $$ true $$
     	$$
     		$yield SawBalance(acc, amnt);
+		$drop 1 from In; /* drop action */
 		current_account = acc;
     		out_ahead++;
     		out_processed++;
     	$$
+
+    	on Out : selectAccount() |, In: numIn(acc) | where $$ true $$
+    	$$
+	    current_account = acc;
+    	$$
+
+    	on Out : selectAction() |, In: numIn(act) | where $$ true $$
+    	$$
+    	$$
+
+    	on Out : invalidAccount() | where $$ true $$
+    	$$
+	        $drop 1 from In;
+    	$$
+
 
     	on Out : selectedAccount(acc) | where $$ true $$
     	$$
 		current_account = acc;
+		/* TODO: clear_buffers() */
     	$$
 
-    	on Out : depositTo(acc) |, In : numIn(amnt) | where $$ true $$
+    	on Out : depositTo(acc) depositSuccess() |, In : numIn(action) numIn(amnt) | where $$ true $$
     	$$
     		$yield SawDeposit(acc, amnt);
+	        $drop 1 from In; /* drop the action */
 		current_account = acc;
     		out_ahead++;
     		out_processed++;
     	$$
 
-    	on Out : withdraw(acc) withdrawSuccess() |, In : numIn(amnt) | where $$ true $$
+    	on Out : withdraw(acc) withdrawSuccess() |, In : numIn(act) numIn(amnt) | where $$ true $$
     	$$
     		$yield SawWithdraw(acc, amnt);
     		out_ahead++;
