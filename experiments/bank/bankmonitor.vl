@@ -75,7 +75,7 @@ arbiter : BankEvent
     		$yield Clear();
     	$$
 
-    	on Int : numInt(n) | where $$ true $$
+    	on In : numIn(n) | where $$ true $$
     	$$
     	    printf("In: numIn(%d)\n", n);
     	$$
@@ -84,7 +84,7 @@ arbiter : BankEvent
     	    printf("Out: numOut(%d)\n", n);
     	$$
 
-    	on Out : Balance(acc) |, In : NumberIn(amnt) | where $$ true $$
+    	on Out : balance(acc) |, In : numIn(amnt) | where $$ true $$
     	$$
     		$yield SawBalance(acc,amnt);
     		out_ahead++;

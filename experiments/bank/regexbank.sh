@@ -15,7 +15,7 @@ selectedAccount "\s*Selected account: ([0-9]+).*" i \
 invalidAccount "^Invalid account number!.*" $'' \
 num "^\s*([0-9]+)\s*$" i \
 -stdin \
-num "^\s*([0-9]+)\s*$" i -- ./bank.sh $@ 1>/dev/null &
+numIn "^\s*([0-9]+)\s*$" i -- ./bank.sh $@ 1>/dev/null &
 
 sudo $(dirname $0)/monitor Out:regex:/bank.stdout In:regex:/bank.stdin
 

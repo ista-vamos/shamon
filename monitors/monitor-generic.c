@@ -112,6 +112,7 @@ int main(int argc, char *argv[]) {
         shamon_add_stream(shmn, stream,
                           /* buffer capacity = */ 4 * 4096);
         shm_stream_register_all_events(stream);
+        shm_stream_dump_events(stream);
 #ifdef DUMP_STATS
         size_t events_num;
         shm_stream_get_avail_events(stream, &events_num);

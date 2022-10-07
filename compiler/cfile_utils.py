@@ -258,7 +258,10 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 for ev_name, attrs in streams_to_events_map[stream_type].items():
                     if ev_name == 'hole': continue
                     answer += f"\tif (shm_stream_register_event(EV_SOURCE_{name}, \"{ev_name}\", {attrs['index']}) < 0) {{\n"
-                    answer += f"\t\tfprintf(stderr, \"Failed registering event {ev_name} for stream {name} : {stream_type}\");\n\t}}\n"
+                    answer += f"\t\tfprintf(stderr, \"Failed registering event {ev_name} for stream {name} : {stream_type}\\n\");\n"
+                    answer += f"\t\tfprintf(stderr, \"Available events:\\n\");\n"
+                    answer += f"\t\tshm_stream_dump_events(EV_SOURCE_{name});\n"
+                    answer += f"\t\tabort();\n\t}}\n"
         else:
             name = f"{stream_name}"
             answer += f"\t// connect to event source {name}\n"
@@ -268,7 +271,10 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             for ev_name, attrs in streams_to_events_map[stream_type].items():
                 if ev_name == 'hole': continue
                 answer += f"\tif (shm_stream_register_event(EV_SOURCE_{name}, \"{ev_name}\", {attrs['index']}) < 0) {{\n"
-                answer += f"\t\tfprintf(stderr, \"Failed registering event {ev_name} for stream {name} : {stream_type}\");\n\t}}\n"
+                answer += f"\t\tfprintf(stderr, \"Failed registering event {ev_name} for stream {name} : {stream_type}\\n\");\n"
+                answer += f"\t\tfprintf(stderr, \"Available events:\\n\");\n"
+                answer += f"\t\tshm_stream_dump_events(EV_SOURCE_{name});\n"
+                answer += f"\t\tabort();\n\t}}\n"
 
     return answer
 

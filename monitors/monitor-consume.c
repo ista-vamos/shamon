@@ -64,6 +64,7 @@ int main(int argc, char *argv[]) {
     assert(stream && "Creating stream failed");
 
     shm_stream_register_all_events(stream);
+    shm_stream_dump_events(stream);
 
     shm_arbiter_buffer *buffer =
         shm_arbiter_buffer_create(stream, shm_stream_event_size(stream),
