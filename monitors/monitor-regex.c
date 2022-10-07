@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     shamon_add_stream(shmn, fstream,
                       /* buffer capacity = */ 4 * 4096);
 
-    stream_register_all_events(fstream);
+    shm_stream_register_all_events(fstream);
 
     // shm_kind kind;
     size_t n = 0, drp = 0, drpn = 0;

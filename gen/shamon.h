@@ -155,6 +155,10 @@ shm_stream *shm_stream_create_from_argv(const char *name,
 shm_stream *shm_stream_create(const char *name,
                               const char *spec);
 
+int shm_stream_register_event(shm_stream *, const char *name, shm_kind);
+
+
+
 shm_stream *shm_stream_create_from_argv(const char *stream_name, int argc, char *argv[]);
 
 /************************************************************************
