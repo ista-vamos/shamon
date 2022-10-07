@@ -60,8 +60,6 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    initialize_events();
-
     shm_stream *stream = create_stream(argc, argv, 1, NULL);
     assert(stream && "Creating stream failed");
 

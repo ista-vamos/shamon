@@ -20,9 +20,8 @@
 #define CHECK_IDS
 #define CHECK_IDS_ABORT
 
-static inline void dump_args(shm_stream *stream, shm_event_generic *ev) {
+static inline void dump_args(shm_stream *stream, shm_event_generic *ev, const char *signature) {
     unsigned char *p = ev->args;
-    const char *signature = shm_event_signature((shm_event *)ev);
     for (const char *o = signature; *o; ++o) {
         if (o != signature)
             printf(", ");
@@ -142,6 +141,14 @@ int main(int argc, char *argv[]) {
 #endif
     size_t spinned = 0;
     size_t old_n;
+    struct event_record *rec;
+    struct event_record unknown_rec = {
+        .size = 0,
+        .name = "unknown",
+        .signature = "",
+        .kind = 0
+    };
+
     while (shamon_is_ready(shmn)) {
         old_n = n;
 
@@ -157,10 +164,12 @@ int main(int argc, char *argv[]) {
             assert(stream_id < (size_t)argc && "OOB access");
             ++kinds_count[kind][stream_id];
 #endif
-            printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
-            printf("Event size %lu\n", shm_event_size(ev));
-            printf("Stream %lu ('%s')\n", stream_id,
-                   shm_stream_get_name(stream));
+
+            rec = shm_stream_get_event_record(stream, kind);
+            rec = rec ? rec : &unknown_rec;
+            printf("Event kind %lu ('%s')\n", kind, rec->name);
+            printf("Event size %lu\n", rec->size);
+            printf("Stream %lu ('%s')\n", stream_id, shm_stream_get_name(stream));
 
 #ifdef CHECK_IDS
             if (id != next_id[stream_id]) {
@@ -192,7 +201,7 @@ int main(int argc, char *argv[]) {
             ++next_id[stream_id];
 #endif
             printf("{");
-            dump_args(stream, (shm_event_generic *)ev);
+            dump_args(stream, (shm_event_generic *)ev, (const char *)rec->signature);
             printf("}\n");
             puts("--------------------");
         }

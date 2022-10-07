@@ -13,9 +13,8 @@
 #include "stream-drregex.h"
 #include "utils.h"
 
-static inline void dump_args(shm_stream *stream, shm_event_drregex *ev) {
+static inline void dump_args(shm_stream *stream, shm_event_drregex *ev, const char *signature) {
     unsigned char *p = ev->args;
-    const char *signature = shm_event_signature((shm_event *)ev);
     for (const char *o = signature; *o; ++o) {
         printf(", ");
         if (*o == 'S' || *o == 'L' || *o == 'M') {
@@ -72,6 +71,14 @@ int main(int argc, char *argv[]) {
     size_t n = 0, drp = 0, drpn = 0;
     size_t id, next_id = 1;
     shm_stream *stream;
+    struct event_record *rec;
+    struct event_record unknown_rec = {
+        .size = 0,
+        .name = "unknown",
+        .signature = "",
+        .kind = 0
+    };
+
     while (shamon_is_ready(shmn)) {
         while ((ev = shamon_get_next_ev(shmn, &stream))) {
             ++n;
@@ -94,11 +101,13 @@ int main(int argc, char *argv[]) {
             ++next_id;
 
             shm_kind kind = shm_event_kind(ev);
-            printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
+            rec = shm_stream_get_event_record(stream, kind);
+            rec = rec ? rec : &unknown_rec;
+            printf("Event kind %lu ('%s')\n", kind, rec->name);
             puts("--------------------");
             printf("\033[0;34mEvent id %lu\033[0m\n", shm_event_id(ev));
-            printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
-            printf("Event size %lu\n", shm_event_size(ev));
+            printf("Event kind %lu ('%s')\n", kind, rec->name);
+            printf("Event size %lu\n", rec->size);
             shm_event_drregex *reev = (shm_event_drregex *)ev;
 #ifndef DRREGEX_ONLY_ARGS
             printf("{%s, thrd: %lu, fd: %d", reev->write ? "write" : "read",
@@ -106,7 +115,7 @@ int main(int argc, char *argv[]) {
 #else
             printf("{");
 #endif
-            dump_args(stream, reev);
+            dump_args(stream, reev, (const char *)rec->signature);
             printf("}\n");
             /*
              */
