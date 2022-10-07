@@ -26,9 +26,10 @@ static inline void dump_args(shm_stream *stream, shm_event_generic *ev, const ch
         if (o != signature)
             printf(", ");
         if (*o == 'S' || *o == 'L' || *o == 'M') {
-            printf("S[%lu, %lu](%s)", (*(uint64_t *)p) >> 32,
+	    const char *str = shm_stream_get_str(stream, (*(uint64_t *)p));
+            printf("S[%lu, %lu]('%6s'%s)", (*(uint64_t *)p) >> 32,
                    (*(uint64_t *)p) & 0xffffffff,
-                   shm_stream_get_str(stream, (*(uint64_t *)p)));
+                   str, strlen(str) > 6 ? "..." : "");
             p += sizeof(uint64_t);
             continue;
         }
@@ -157,8 +158,9 @@ int main(int argc, char *argv[]) {
         while ((ev = shamon_get_next_ev(shmn, &stream))) {
             ++n;
 
+	    int ind = 5*shm_stream_id(stream);
+
             id = shm_event_id(ev);
-            printf("\033[0;34mEvent id %lu\033[0m\n", id);
             kind = shm_event_kind(ev);
             stream_id = shm_stream_id(stream);
 #ifdef DUMP_STATS
@@ -169,13 +171,13 @@ int main(int argc, char *argv[]) {
 
             rec = shm_stream_get_event_record(stream, kind);
             rec = rec ? rec : &unknown_rec;
-            printf("Event kind %lu ('%s')\n", kind, rec->name);
-            printf("Event size %lu\n", rec->size);
-            printf("Stream %lu ('%s')\n", stream_id, shm_stream_get_name(stream));
+            printf("%*s%s: ", ind, "", shm_stream_get_name(stream));
+            printf("\033[0;35m%s(\033[0;34mid: %lu, kind: %lu\033[0m",
+		   rec->name, id, kind);
 
 #ifdef CHECK_IDS
             if (id != next_id[stream_id]) {
-                printf("\033[0;31mWrong ID: %lu, should be %lu\033[0m\n", id,
+                printf("%*s\033[0;31mWrong ID: %lu, should be %lu\033[0m\n", ind, "", id,
                        next_id[stream_id]);
 #ifdef CHECK_IDS_ABORT
                 abort();
@@ -185,7 +187,7 @@ int main(int argc, char *argv[]) {
 #endif
 
             if (shm_event_is_dropped(ev)) {
-                printf("'dropped(%lu)'\n", ((shm_event_dropped *)ev)->n);
+                printf("%*s'dropped(%lu)'\n", ind, "", ((shm_event_dropped *)ev)->n);
                 drpn += ((shm_event_dropped *)ev)->n;
 #ifdef DUMP_STATS
                 assert(stream_id < (size_t)argc && "OOB access");
@@ -202,10 +204,11 @@ int main(int argc, char *argv[]) {
 #ifdef CHECK_IDS
             ++next_id[stream_id];
 #endif
-            printf("{");
-            dump_args(stream, (shm_event_generic *)ev, (const char *)rec->signature);
-            printf("}\n");
-            puts("--------------------");
+	    if (*rec->signature) {
+                printf(", ");
+                dump_args(stream, (shm_event_generic *)ev, (const char *)rec->signature);
+	    }
+            printf(")\n");
         }
 
         if (n == old_n) {
