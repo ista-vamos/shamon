@@ -682,7 +682,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                 if name in buffer_peeks_res.keys():
                     declared_streams += f"char* e1_{name}; size_t i1_{name}; char* e2_{name}; size_t i2_{name};\n" \
                               f"int count_{name} = shm_arbiter_buffer_peek(BUFFER_{name}, {buffer_peeks_res[name]}, " \
-                              f"&e1_{name}, &i1_{name}, &e2_{name}, &i2_{name});\n"
+                              f"(void**)&e1_{name}, &i1_{name}, (void**)&e2_{name}, &i2_{name});\n"
 
             permutation_streams_code += f'''
             {"{"}
@@ -955,7 +955,7 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
                     if name in buffer_peeks_res.keys():
                         declared_streams += f"char* e1_{name}; size_t i1_{name}; char* e2_{name}; size_t i2_{name};\n" \
                                             f"int count_{name} = shm_arbiter_buffer_peek(BUFFER_{name}, {buffer_peeks_res[name]}, " \
-                                            f"&e1_{name}, &i1_{name}, &e2_{name}, &i2_{name});\n"
+                                            f"(void **)&e1_{name}, &i1_{name}, (void**)&e2_{name}, &i2_{name});\n"
                 permutation_code += f'''
                 {"{"}
                     {declared_streams}
@@ -979,7 +979,7 @@ def buffer_peeks(tree, existing_buffers):
     for (buffer_name, desired_count) in buffers_to_peek.items():
         answer += f"char* e1_{buffer_name}; size_t i1_{buffer_name}; char* e2_{buffer_name}; size_t i2_{buffer_name};\n" \
                   f"int count_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, {desired_count}, " \
-                  f"&e1_{buffer_name}, &i1_{buffer_name}, &e2_{buffer_name}, &i2_{buffer_name});\n"
+                  f"(void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
 
     return answer
 
