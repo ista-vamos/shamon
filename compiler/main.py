@@ -90,12 +90,7 @@ long unsigned no_consecutive_matches_limit = 1UL<<35;
 int no_matches_count = 0;
 
 bool are_there_events(shm_arbiter_buffer * b) {"{"}
-  // we use this function to determine if arbiter is done
-  void * e1;
-  size_t i1;
-  void * e2;
-  size_t i2;
-  return shm_arbiter_buffer_peek(b, 0, & e1, & i1, & e2, & i2) > 0;
+  return shm_arbiter_buffer_size(b) > 0;
 {"}"}
 
 {are_buffers_empty()}
