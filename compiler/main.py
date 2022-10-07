@@ -159,7 +159,6 @@ STREAM_{arbiter_event_source}_out *arbiter_outevent;
 {arbiter_code(ast[2], components)}
 
 int main(int argc, char **argv) {"{"}
-	initialize_events(); // Always call this first
 	chosen_streams = (dll_node *) malloc({get_count_events_sources()}); // the maximum size this can have is the total number of event sources
 	arbiter_counter = malloc(sizeof(int));
 	*arbiter_counter = 10;
