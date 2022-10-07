@@ -13,7 +13,7 @@ transferSuccess "^Transfer successful!.*" $'' \
 transferFail "^Transfer failed!.*" $'' \
 selectedAccount "\s*Selected account: ([0-9]+).*" i \
 invalidAccount "^Invalid account number!.*" $'' \
-num "^\s*([0-9]+)\s*$" i \
+numOut "^\s*([0-9]+)\s*$" i \
 -stdin \
 numIn "^\s*([0-9]+)\s*$" i -- ./bank.sh $@ 1>/dev/null &
 

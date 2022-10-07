@@ -2,6 +2,7 @@ CPPFLAGS=
 CFLAGS=-g #-O3
 VLCC=python3 ../../compiler/main.py
 GENCC=../../gen/compile.sh
+SHAMON_LIB=../../core/libshamon-lib.so  # for dependency
 
 all: monitor bank inputs.txt inputs100.txt
 
@@ -14,8 +15,13 @@ inputs100.txt : inputs.py
 intmap.o: ../../compiler/cfiles/intmap.cpp
 	$(CXX) -c $<
 
-monitor: bankmonitor.vl intmap.o
+$(VLCC):  # empty, just a depenency for monitor
+$(GENCC):
+$(SHAMON_LIB):
+
+monitor: bankmonitor.vl intmap.o $(VLCC) $(GENCC) $(SHAMON_LIB)
 	$(VLCC) bankmonitor.vl monitor.c
+	-clang-format -i monitor.c
 	$(GENCC) monitor.c intmap.o -lstdc++
 
 bank.o : bank.c bank.h
