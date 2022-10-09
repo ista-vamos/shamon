@@ -114,16 +114,19 @@ bool check_at_least_n_events(size_t count, size_t n) {"{"}
 
 
 bool are_events_in_head(char* e1, size_t i1, char* e2, size_t i2, int count, size_t ev_size, int event_kinds[], int n_events) {"{"}
+    assert(n_events > 0);
 	if (count < n_events) {"{"}
 	    return false;
     {"}"}
-    
+
 	int i = 0;
 	while (i < i1) {"{"}
 	    shm_event * ev = (shm_event *) (e1);
 	     if (ev->kind != event_kinds[i]) {"{"}
 	        return false;
 	    {"}"}
+        if (--n_events == 0)
+            return true;
 	    i+=1;
 	    e1 += ev_size;
 	{"}"}
@@ -134,6 +137,8 @@ bool are_events_in_head(char* e1, size_t i1, char* e2, size_t i2, int count, siz
 	     if (ev->kind != event_kinds[i1+i]) {"{"}
 	        return false;
 	    {"}"}
+        if (--n_events == 0)
+            return true;
 	    i+=1;
 	    e2 += ev_size;
 	{"}"}
