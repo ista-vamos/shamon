@@ -270,8 +270,7 @@ int main(int argc, char **args)
 							if (otherAcc != NULL)
 							{
 								mprint("\e[1;1H\e[2J");
-								mprint("Transfer from Account %lu\n", cur_acc->number);
-								mprint("           to Account %lu\n", otherAcc->number);
+								mprint("Transfer from Account %lu to Account %lu\n", cur_acc->number, otherAcc->number);
 								mprint("\n");
 								mprint("Amount: ");
 								line = getLine();
@@ -322,6 +321,7 @@ int main(int argc, char **args)
 					else if (strcmp(line, "5\n") == 0)
 					{
 						cur_acc = NULL;
+						printf("Changing account.\n");
 						selectAccount(&cur_user, &cur_acc, &message);
 					}
 					else if (strcmp(line, "0\n") == 0)

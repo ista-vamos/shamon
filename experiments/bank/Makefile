@@ -22,9 +22,11 @@ $(VLCC):  # empty, just a depenency for monitor
 $(GENCC):
 $(SHAMON_LIB):
 
-monitor: bankmonitor.vl intmap.o $(VLCC) $(GENCC) $(SHAMON_LIB)
+monitor.c: bankmonitor.vl  $(VLCC)
 	$(VLCC) bankmonitor.vl monitor.c
 	-clang-format -i monitor.c
+
+monitor: monitor.c $(GENCC) intmap.o $(SHAMON_LIB)
 	$(GENCC) monitor.c intmap.o -lstdc++
 
 bank.o : bank.c bank.h

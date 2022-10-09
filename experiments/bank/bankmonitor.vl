@@ -3,23 +3,21 @@ stream type BankOutputEvent
 	balance(account : int);
 	depositTo(account : int);
 	withdraw(account: int);
-	transferFrom(fromAccount: int);
+	transfer(fromAccount: int, toAccount: int);
 	depositSuccess();
 	withdrawSuccess();
 	withdrawFail();
 	transferSuccess();
-	transferFail();
-	selectAccount();
-	selectAction();
 	selectedAccount(account: int);
-	invalidAccount();
-	loggedOut();
+	readInput();
+	login();
 	numOut(num: int);
 }
 
 stream type BankInputEvent
 {
 	numIn(num : int);
+	otherIn();
 }
 
 stream type BankEvent
@@ -43,7 +41,6 @@ $$
     intmap upper_bounds;
     intmap lower_bounds;
     int in_ahead=0;
-    int out_ahead=0;
     int in_processed=0;
     int out_processed=0;
     int current_account=0;
@@ -58,7 +55,6 @@ $$
 
 cleanup
 $$
-printf("\nin_ahead: %i, out_ahead: %i\n", in_ahead, out_ahead);
 printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
 destroy_intmap(&balances);
 destroy_intmap(&upper_bounds);
@@ -76,79 +72,67 @@ arbiter : BankEvent
     	$$
     	on Out : hole(n) | where $$ true $$
     	$$
-    	    printf("In: hole(%d)\n", n);
+    	    printf("Out: hole(%d)\n", n);
     	    $yield Clear();
     	$$
 
-    	on Out : balance(acc) numOut(amnt) | where $$ true $$
+    	on Out : balance(acc) numOut(amnt) |, In: numIn(action) | where $$ true $$
     	$$
+    	      printf("balance on %d is %d\n", acc, amnt);
+		assert(action == 3);
     		$yield SawBalance(acc, amnt);
-		$drop 1 from In; /* drop action */
 		current_account = acc;
-    		out_ahead++;
-    		out_processed++;
-    	$$
-
-    	on Out : selectAccount() |, In: numIn(acc) | where $$ true $$
-    	$$
-	    current_account = acc;
-    	$$
-
-    	on Out : selectAction() |, In: numIn(act) | where $$ true $$
-    	$$
-    	$$
-
-    	on Out : invalidAccount() | where $$ true $$
-    	$$
-	        $drop 1 from In;
-    	$$
-
-
-    	on Out : selectedAccount(acc) | where $$ true $$
-    	$$
-		current_account = acc;
-		/* TODO: clear_buffers() */
     	$$
 
     	on Out : depositTo(acc) depositSuccess() |, In : numIn(action) numIn(amnt) | where $$ true $$
     	$$
+	        assert(action == 1);
     		$yield SawDeposit(acc, amnt);
-	        $drop 1 from In; /* drop the action */
 		current_account = acc;
-    		out_ahead++;
-    		out_processed++;
     	$$
 
     	on Out : withdraw(acc) withdrawSuccess() |, In : numIn(act) numIn(amnt) | where $$ true $$
     	$$
+		assert(act == 2);
     		$yield SawWithdraw(acc, amnt);
-    		out_ahead++;
-    		out_processed++;
     	$$
 
-    	on Out : withdraw(acc) withdrawFail() |, In : numIn(amnt) | where $$ true $$
+    	on Out : withdraw(acc) withdrawFail() |, In : numIn(act) numIn(amnt) | where $$ true $$
     	$$
+	        assert(act == 2);
     		$yield SawWithdrawFail(acc, amnt);
-    		out_ahead++;
-    		out_processed++;
     	$$
 
-    	on In : 1 where $$ true $$
+    	on Out : transfer(from_, to_) transferSuccess() |, In : numIn(acc) numIn(amnt) | where $$ true $$
     	$$
-    		$drop 1 from In;
-    	$$
-
-    	on Out : 1 where $$ true $$
-    	$$
-    		$drop 1 from Out;
+    		$yield SawTransfer(from_, to_, amnt);
     	$$
 
-    	on Out : loggedOut() | where $$ true $$
+    	on Out : transfer(from_, to_) selectedAccount(acc) |, In : numIn(acc) numIn(amnt) | where $$ true $$
     	$$
-	    printf("Logged out, work done!\n");
-	    done();
+    		$yield SawTransferFail(from_, to_, amnt);
     	$$
 
+    	on Out : selectedAccount(acc) | where $$ true $$
+    	$$
+		current_account = acc;
+    	$$
+
+	on Out : login() |, In: 2 where $$ true $$
+	$$
+	    printf("Login\n");
+	    $drop 2 from In;
+	$$
+
+	on Out : readInput() |, In: 1 where $$ true $$
+	$$
+	    $drop 1 from In;
+	$$
+
+	on Out : numOut(n) | where $$ true $$
+	$$
+	    printf("Discarding numOut(%d)\n", n);
+	$$
 
     }
 }
