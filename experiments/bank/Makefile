@@ -4,16 +4,7 @@ VLCC=python3 ../../compiler/main.py
 GENCC=../../gen/compile.sh
 SHAMON_LIB=../../core/libshamon-lib.so  # for dependency
 
-all: monitor bank inputs.txt inputs10.txt inputs100.txt
-
-inputs.txt : inputs.py
-	python $^ 100000 > $@
-
-inputs10.txt : inputs.py
-	python $^ 10 > $@
-
-inputs100.txt : inputs.py
-	python $^ 100 > $@
+all: monitor bank interact
 
 intmap.o: ../../compiler/cfiles/intmap.cpp
 	$(CXX) -c $<
@@ -21,6 +12,9 @@ intmap.o: ../../compiler/cfiles/intmap.cpp
 $(VLCC):  # empty, just a depenency for monitor
 $(GENCC):
 $(SHAMON_LIB):
+
+interact: interact.c
+	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -g
 
 monitor.c: bankmonitor.vl  $(VLCC)
 	$(VLCC) bankmonitor.vl monitor.c

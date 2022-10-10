@@ -31,8 +31,8 @@ stream type BankEvent
 	Clear();
 }
 
-event source In : BankInputEvent to autodrop(128)
-event source Out : BankOutputEvent to autodrop(128)
+event source In : BankInputEvent to autodrop(1024)
+event source Out : BankOutputEvent to autodrop(1024)
 
 globals
 $$
@@ -184,7 +184,7 @@ arbiter : BankEvent
     }
 }
 
-monitor(8)
+monitor(128)
 {
 	on Clear() where $$ true $$
 	$$
