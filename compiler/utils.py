@@ -1,9 +1,9 @@
 # general utils
-from typing import List, Tuple, Dict, Any, Optional, Set
+from typing import List, Tuple, Dict, Any, Set
 from parser_indices import *
 
 
-def get_components_dict(tree, answer):
+def get_components_dict(tree: Tuple, answer: Dict[str, List[Tuple]]) -> None:
     if tree[0] == "components":
         get_components_dict(tree[1], answer)
         get_components_dict(tree[2], answer)
@@ -13,9 +13,8 @@ def get_components_dict(tree, answer):
             answer[name] = []
 
         answer[name].append(tree)
-    return answer
 
-def get_name_with_args(tree):
+def get_name_with_args(tree: Tuple) -> (Tuple, List[str]):
     if tree[0] == "name-with-args":
         args = []
         if tree[2][0] == 'listids':
@@ -26,7 +25,7 @@ def get_name_with_args(tree):
     else:
         return tree, []
 
-def get_name_args_count(tree):
+def get_name_args_count(tree: Tuple) -> (Tuple, int):
     if tree[0] == "name-with-args":
         args = []
         if tree[2][0] == 'listids':
@@ -37,14 +36,14 @@ def get_name_args_count(tree):
     else:
         return tree, 0
 
-def get_count_list_ids(tree):
+def get_count_list_ids(tree: Tuple) -> int:
     if tree[0] == 'listids':
         return 1 + get_count_list_ids(tree[PLIST_TAIL])
     else:
         assert(tree[0] == 'ID')
         return 1
 
-def get_list_ids(tree, ids):
+def get_list_ids(tree: Tuple[str], ids: List[str]) -> None:
     if tree is not None:
         if tree[0] == 'listids':
             get_list_ids(tree[PLIST_BASE_CASE], ids)
@@ -56,21 +55,21 @@ def get_list_ids(tree, ids):
                 assert(tree[0] == 'ID')
                 ids.append(tree[PLIST_DATA])
 
-def get_list_var_or_int(tree, result):
+def get_list_var_or_int(tree: Tuple, result: List[str]) -> None:
     if tree[0] == "list_var_or_integer":
         get_list_ids(tree[1], result)
         get_list_ids(tree[2], result)
     else:
         result.append(tree)
 
-def get_count_list_expr(tree):
+def get_count_list_expr(tree: Tuple) -> int:
     if tree[0] == 'expr_list':
         return 1 + get_count_list_expr(tree[PLIST_TAIL])
     else:
         assert(tree[0] == 'expr')
         return 1
 
-def get_expressions(tree, result):
+def get_expressions(tree: Tuple, result: List[str]):
     if tree is not None:
         if tree[0] == 'expr_list':
             get_expressions(tree[PLIST_BASE_CASE], result)
@@ -81,12 +80,12 @@ def get_expressions(tree, result):
             else:
                 result.append(tree)
 
-def is_primitive_type(type_ : str):
+def is_primitive_type(type_ : str) -> bool:
     answer = type_ == "int" or type_ == "bool" or type_ =="string" or type_ == "float"
     answer = answer or type_ == "double"
     return answer
 
-def is_type_primitive(tree) -> bool:
+def is_type_primitive(tree: Tuple) -> bool:
     if tree[0] == 'type':
         return is_primitive_type(tree[PTYPE_DATA])
     else:
@@ -97,7 +96,7 @@ def is_type_primitive(tree) -> bool:
 # event streams utils
 
 
-def get_events_names(tree, names) -> None:
+def get_events_names(tree: Tuple, names: List[str]) -> None:
     if tree[0] == "event_list":
         get_events_names(tree[PLIST_BASE_CASE], names)
         get_events_names(tree[PLIST_TAIL], names)
@@ -105,7 +104,7 @@ def get_events_names(tree, names) -> None:
         assert (tree[0] == "event_decl")
         names.append(tree[PLIST_DATA])
 
-def get_event_args(tree, event_args: List[Tuple[str, str]]):
+def get_event_args(tree: Tuple, event_args: List[Tuple[str, str]]) -> None:
     if tree[0] == "list_field_decl":
         get_event_args(tree[PLIST_BASE_CASE], event_args)
         get_event_args(tree[PLIST_TAIL], event_args)
@@ -114,7 +113,7 @@ def get_event_args(tree, event_args: List[Tuple[str, str]]):
         event_args.append((tree[PPFIELD_NAME], tree[PPFIELD_TYPE][PTYPE_DATA]))
 
 
-def get_events_data(tree, events_data) -> None:
+def get_events_data(tree: Tuple, events_data: List[Dict[str, str]]) -> None:
     if tree[0] == "event_list":
         get_events_data(tree[PLIST_BASE_CASE], events_data)
         get_events_data(tree[PLIST_TAIL], events_data)
@@ -131,7 +130,7 @@ def get_events_data(tree, events_data) -> None:
         events_data.append(data)
 
 
-def get_stream_to_events_mapping(stream_types) -> Dict[str, Any]:
+def get_stream_to_events_mapping(stream_types: List[Tuple]) -> Dict[str, Any]:
     mapping = dict()
     for tree in stream_types:
         assert(tree[0] == "stream_type")
@@ -148,7 +147,7 @@ def get_stream_to_events_mapping(stream_types) -> Dict[str, Any]:
         mapping[stream_type] = mapping_events
     return mapping
 
-def get_stream_types(event_sources) -> Dict[str, Any]:
+def get_stream_types(event_sources: Tuple) -> Dict[str, Any]:
     mapping = dict()
     for tree in event_sources:
         assert(tree[0] == "event_source")
@@ -171,7 +170,7 @@ def get_stream_types(event_sources) -> Dict[str, Any]:
 
 
 
-def get_parameters_types_field_decl(tree, params):
+def get_parameters_types_field_decl(tree: Tuple, params: List[Dict[str, Tuple]]) -> None:
     assert (len(tree) == 3)
     if tree[0] == 'list_field_decl':
         get_parameters_types_field_decl(tree[PLIST_BASE_CASE], params)
@@ -181,7 +180,7 @@ def get_parameters_types_field_decl(tree, params):
         params.append({"name": tree[1], "type": tree[PPFIELD_TYPE][1], "is_primitive" : is_type_primitive(tree[PPFIELD_TYPE])})
 
 
-def get_parameters_names_field_decl(tree, params):
+def get_parameters_names_field_decl(tree: Tuple, params: List[str]) -> None:
     assert (len(tree) == 3)
     if tree[0] == 'list_field_decl':
         get_parameters_names_field_decl(tree[PLIST_BASE_CASE], params)
@@ -190,12 +189,12 @@ def get_parameters_names_field_decl(tree, params):
         assert (tree[0] == 'field_decl')
         params.append(tree[PPFIELD_NAME])
 
-def get_event_src_name(tree) -> str:
+def get_event_src_name(tree: Tuple) -> str:
     assert(tree[0] == "event-decl")
     name, _ = get_name_with_args(tree[1])
     return name
 
-def are_all_events_decl_primitive(tree) -> bool:
+def are_all_events_decl_primitive(tree: Tuple) -> bool:
     if tree[0] == 'event_list':
         return are_all_events_decl_primitive(tree[PLIST_BASE_CASE]) and are_all_events_decl_primitive(tree[PLIST_TAIL])
     else:
@@ -210,7 +209,7 @@ def are_all_events_decl_primitive(tree) -> bool:
 
 
 # Performance Layer utils
-def get_event_sources_names(event_sources, names) -> None:
+def get_event_sources_names(event_sources: Tuple, names: List[str]) -> None:
     for tree in event_sources:
         assert(tree[0] == 'event_source')
         event_src_declaration = tree[2]
@@ -218,7 +217,7 @@ def get_event_sources_names(event_sources, names) -> None:
         name, _ = get_name_with_args(event_src_declaration[1])
         names.append(name)
 
-def get_event_sources_copies(event_sources):
+def get_event_sources_copies(event_sources: Tuple) -> List[Tuple[str, int]]:
     result = []
     for tree in event_sources:
         assert (tree[0] == 'event_source')
@@ -231,7 +230,7 @@ def get_event_sources_copies(event_sources):
         result.append((name, copies))
     return result
 
-def get_buffer_sizes(tree, buff_sizes) -> None:
+def get_buffer_sizes(tree: Tuple, buff_sizes: List[str]) -> None:
     if tree[0] == 'event_sources':
         get_buffer_sizes(tree[PLIST_BASE_CASE], buff_sizes)
         get_buffer_sizes(tree[PLIST_TAIL], buff_sizes)
@@ -243,7 +242,7 @@ def get_buffer_sizes(tree, buff_sizes) -> None:
             raise Exception("Connection kind infinite and blocking not implemented!")
         buff_sizes.append(connection_kind[PPCONN_KIND_INT])
 
-def get_out_names(tree, out_names) -> None:
+def get_out_names(tree: Tuple, out_names: List[str]) -> None:
     if tree[0] == 'event_sources':
         get_out_names(tree[PLIST_BASE_CASE], out_names)
         get_out_names(tree[PLIST_TAIL], out_names)
@@ -252,7 +251,7 @@ def get_out_names(tree, out_names) -> None:
         out_names.append(tree[PPEVENT_SOURCE_OUTPUT_TYPE])
 
 
-def get_rule_set_names(tree, names) -> None:
+def get_rule_set_names(tree: Tuple, names: List[str]) -> None:
     if tree[0] == 'arb_rule_set_l':
         get_rule_set_names(tree[PLIST_BASE_CASE], names)
         get_rule_set_names(tree[PLIST_TAIL], names)
@@ -260,7 +259,7 @@ def get_rule_set_names(tree, names) -> None:
         assert(tree[0] == 'arbiter_rule_set')
         names.append(tree[PPARB_RULE_SET_NAME])
 
-def get_count_events_from_list_calls(tree) -> int:
+def get_count_events_from_list_calls(tree: Tuple) -> int:
     assert(tree[0] != "|")
     if tree[0] == "list_ev_calls":
         return 1 + get_count_events_from_list_calls(tree[PPLIST_EV_CALL_TAIL])
@@ -268,7 +267,7 @@ def get_count_events_from_list_calls(tree) -> int:
         assert(tree[0] == "ev_call")
         return 1
 
-def get_event_kinds(tree, kinds, mapping) -> None:
+def get_event_kinds(tree: Tuple, kinds: List[int], mapping: Dict[str, Dict]) -> None:
     assert(tree[0] != "|")
 
     if tree[0] == "list_ev_calls":
@@ -281,7 +280,7 @@ def get_event_kinds(tree, kinds, mapping) -> None:
         else:
             kinds.append(mapping[tree[PPLIST_EV_CALL_EV_NAME]]["index"])
 
-def get_event_kinds_enums(tree, kinds, mapping) -> None:
+def get_event_kinds_enums(tree: Tuple, kinds: List[str], mapping: Dict[str, Dict]) -> None:
     assert(tree[0] != "|")
 
     kinds.append(mapping[tree[PPLIST_EV_CALL_EV_NAME]]["enum"])
@@ -289,11 +288,12 @@ def get_event_kinds_enums(tree, kinds, mapping) -> None:
         get_event_kinds_enums(tree[PPLIST_EV_CALL_TAIL], kinds, mapping)
 
 
-def get_arbiter_event_source(tree) -> str:
+def get_arbiter_event_source(tree: Tuple) -> str:
     assert(tree[0] == 'arbiter_def')
     return tree[PPARBITER_OUTPUT_TYPE]
 
-def get_parameters_names(tree, stream_name, mapping, binded_args, index=0, stream_index=None):
+def get_parameters_names(tree: Tuple, stream_name: str, mapping: Dict[str, Dict], binded_args: Dict[str, Tuple],
+                         index: int=0, stream_index: int=None) -> None:
     if tree[0] == 'list_ev_calls':
         ids = []
         get_list_ids(tree[PPLIST_EV_CALL_EV_PARAMS], ids)
@@ -311,7 +311,9 @@ def get_parameters_names(tree, stream_name, mapping, binded_args, index=0, strea
 
 
 
-def get_buff_math_binded_args(tree, stream_types, mapping, binded_args, buffer_group_data, match_fun_data) -> None:
+def get_buff_math_binded_args(tree: Tuple, stream_types: Dict[str, Tuple[int, int]], mapping: Dict[str, Dict],
+                              binded_args:  Dict[str, Tuple], buffer_group_data: Dict[str, Dict],
+                              match_fun_data: Dict[str, Dict]) -> None:
     if tree[0] == 'l_buff_match_exp':
         get_buff_math_binded_args(tree[PLIST_BASE_CASE], stream_types, mapping, binded_args, buffer_group_data, match_fun_data)
         get_buff_math_binded_args(tree[PLIST_TAIL], stream_types, mapping, binded_args, buffer_group_data, match_fun_data)
@@ -344,14 +346,15 @@ def get_buff_math_binded_args(tree, stream_types, mapping, binded_args, buffer_g
                     stream_types[arg] = (t, t)
 
 
-def get_events_count(tree):
+def get_events_count(tree: Tuple) -> int:
     if tree[0] == 'list_ev_calls':
         return 1 + get_events_count(tree[PPLIST_EV_CALL_TAIL])
     else:
         assert(tree[0] == 'ev_call')
         return 1
 
-def get_num_events_to_retrieve(tree, events_to_retrieve, match_fun_data) -> None:
+def get_num_events_to_retrieve(tree: Tuple, events_to_retrieve: Dict[str, int],
+                               match_fun_data: Dict[str, Dict]) -> None:
     if tree[0] == 'l_buff_match_exp':
         get_num_events_to_retrieve(tree[PLIST_BASE_CASE], events_to_retrieve, match_fun_data)
         get_num_events_to_retrieve(tree[PLIST_TAIL], events_to_retrieve, match_fun_data)
@@ -373,7 +376,7 @@ def get_num_events_to_retrieve(tree, events_to_retrieve, match_fun_data) -> None
 
 
 
-def get_count_drop_events_from_l_buff(tree, answer):
+def get_count_drop_events_from_l_buff(tree: Tuple, answer: Dict[str, int]) -> None:
     if tree[0] == "l_buff_match_exp":
         get_count_drop_events_from_l_buff(tree[1], answer)
         get_count_drop_events_from_l_buff(tree[2], answer)
@@ -398,7 +401,7 @@ def get_count_drop_events_from_l_buff(tree, answer):
         else:
             assert(tree[0] == "buff_match_exp-choose" or tree[0] == "buff_match_exp-args")
 
-def get_existing_buffers(type_checker) -> List[str]:
+def get_existing_buffers(type_checker: Any) -> List[str]:
     '''
     :param type_checker:  TypeChecker object (cannot import it in this file because of recursive imports)
     :return:
@@ -414,7 +417,7 @@ def get_existing_buffers(type_checker) -> List[str]:
 
     return answer
 
-def insert_in_result(buffer_name, count, result, existing_buffers):
+def insert_in_result(buffer_name: str, count: int, result: Dict[str, int], existing_buffers: Set[str]):
     assert(count > -1)
 
     if buffer_name in existing_buffers:
@@ -423,7 +426,8 @@ def insert_in_result(buffer_name, count, result, existing_buffers):
         else:
             result[buffer_name] = count
 
-def local_get_buffer_peeks(local_tree, type_checker, result, existing_buffers):
+def local_get_buffer_peeks(local_tree: Tuple, type_checker: Any, result: Dict[str, int], existing_buffers: Set[str]) \
+        -> None:
     if local_tree[0] ==  "l_buff_match_exp":
         local_get_buffer_peeks(local_tree[1], type_checker, result, existing_buffers)
         local_get_buffer_peeks(local_tree[2], type_checker, result, existing_buffers)
@@ -467,7 +471,7 @@ def local_get_buffer_peeks(local_tree, type_checker, result, existing_buffers):
 
                 insert_in_result(event_src_name, local_count, result, existing_buffers)
 
-def get_buffers_and_peeks(tree, result, type_checker, existing_buffers):
+def get_buffers_and_peeks(tree: Tuple, result: Dict[str, int], type_checker: Any, existing_buffers: Set[str]) -> None:
     '''
     :param tree: tree of arbiter_rules of a rule set
     :param result: dictionary that maps a buffer_name to the number of events that it needs to process
@@ -490,7 +494,7 @@ def get_buffers_and_peeks(tree, result, type_checker, existing_buffers):
             get_buffers_and_peeks(tree[-1], result, type_checker, existing_buffers)
 
 
-def get_first_const_rule_set_name(tree) -> str:
+def get_first_const_rule_set_name(tree: Tuple) -> str:
     assert (tree[0] == "arbiter_def")
 
     rule_set_names = []
