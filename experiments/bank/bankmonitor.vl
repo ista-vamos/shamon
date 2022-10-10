@@ -67,13 +67,13 @@ arbiter : BankEvent
     {
     	on In : hole(n) | where $$ true $$
     	$$
-    	    printf("In: hole(%d)\n", n);
     	    $yield Clear();
+	    ++in_processed;
     	$$
     	on Out : hole(n) | where $$ true $$
     	$$
-    	    printf("Out: hole(%d)\n", n);
     	    $yield Clear();
+	    ++out_processed;
     	$$
 
     	on Out : balance(acc) numOut(amnt) |, In: numIn(action) | where $$ true $$
@@ -81,6 +81,8 @@ arbiter : BankEvent
 		assert(action == 3);
     		$yield SawBalance(acc, amnt);
 		current_account = acc;
+		out_processed += 2;
+	        ++in_processed;
     	$$
 
     	on Out : depositTo(acc) depositSuccess() |, In : numIn(action) numIn(amnt) | where $$ true $$
@@ -88,49 +90,63 @@ arbiter : BankEvent
 	        assert(action == 1);
     		$yield SawDeposit(acc, amnt);
 		current_account = acc;
+		out_processed += 2;
+	        in_processed += 2;
     	$$
 
     	on Out : withdraw(acc) withdrawSuccess() |, In : numIn(act) numIn(amnt) | where $$ true $$
     	$$
 		assert(act == 2);
     		$yield SawWithdraw(acc, amnt);
+		out_processed += 2;
+	        in_processed += 2;
     	$$
 
     	on Out : withdraw(acc) withdrawFail() |, In : numIn(act) numIn(amnt) | where $$ true $$
     	$$
 	        assert(act == 2);
     		$yield SawWithdrawFail(acc, amnt);
+		out_processed += 2;
+	        in_processed += 2;
     	$$
 
     	on Out : transfer(from_, to_) transferSuccess() |, In : numIn(acc) numIn(amnt) | where $$ true $$
     	$$
     		$yield SawTransfer(from_, to_, amnt);
+		out_processed += 2;
+	        in_processed += 2;
     	$$
 
     	on Out : transfer(from_, to_) selectedAccount(acc) |, In : numIn(acc) numIn(amnt) | where $$ true $$
     	$$
     		$yield SawTransferFail(from_, to_, amnt);
+		out_processed += 2;
+	        in_processed += 2;
     	$$
 
     	on Out : selectedAccount(acc) | where $$ true $$
     	$$
 		current_account = acc;
+		++out_processed;
     	$$
 
 	on Out : login() |, In: 2 where $$ true $$
 	$$
-	    printf("Login\n");
 	    $drop 2 from In;
+	    ++out_processed;
+	    in_processed += 2;
 	$$
 
 	on Out : readInput() |, In: 1 where $$ true $$
 	$$
 	    $drop 1 from In;
+	    ++out_processed;
+	    ++in_processed;
 	$$
 
 	on Out : numOut(n) | where $$ true $$
 	$$
-	    printf("Discarding numOut(%d)\n", n);
+	    ++out_processed;
 	$$
 
     }
@@ -151,10 +167,18 @@ monitor(8)
 	$$
 	on SawWithdraw(account, balance) where $$ true $$
 	$$
-	        printf("MON: SawBalance(%d, %d)\n", account, balance);
+	        printf("MON: SawWithdraw(%d, %d)\n", account, balance);
 	$$
 	on SawWithdrawFail(account, balance) where $$ true $$
 	$$
-	        printf("MON: SawBalance(%d, %d)\n", account, balance);
+	        printf("MON: SawWithdrawFail(%d, %d)\n", account, balance);
+	$$
+	on SawTransfer(from_, to_, amount) where $$ true $$
+	$$
+	        printf("MON: SawTransfer(%d, %d, %d)\n", from_, to_, amount);
+	$$
+	on SawTransferFail(from_, to_, amount) where $$ true $$
+	$$
+	        printf("MON: SawTransferFail(%d, %d, %d)\n", from_, to_, amount);
 	$$
 }
