@@ -227,14 +227,22 @@ def get_count_events_sources():
             total_count += 1
     return total_count
 
+def stream_type_from_ev_source(event_source):
+    stream_type = event_source[3]
+    if isinstance(stream_type, tuple):
+        assert stream_type[0] == "name-with-args", stream_type
+        stream_type = stream_type[1]
+    assert isinstance(stream_type, str)
+    return stream_type
+
+
 def events_enum_kinds(event_sources, streams_to_events_map) -> str:
     answer = ""
     for event_source in event_sources:
         assert event_source[0] == "event_source"
-        stream_type = event_source[3]
-        if stream_type[0] == "name-with-args":
-            stream_type = stream_type[1]
+        stream_type = stream_type_from_ev_source(event_source)
         answer += f"enum {stream_type}_kinds {{\n"
+        assert stream_type in streams_to_events_map, stream_type
         for ev_name, attrs in streams_to_events_map[stream_type].items():
             answer += f"{attrs['enum']} = {attrs['index']},\n"
         answer += "};"
@@ -261,9 +269,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
         connection_kind = TypeChecker.event_sources_data[stream_name]["connection_kind"]
         assert(connection_kind[0] == "conn_kind")
         buff_size = connection_kind[2]
-        stream_type = event_source[3]
-        if stream_type[0] == "name-with-args":
-            stream_type = stream_type[1]
+        stream_type = stream_type_from_ev_source(event_source)
         if copies:
             for i in range(copies):
                 name = f"{stream_name}_{i}"
