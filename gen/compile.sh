@@ -5,6 +5,10 @@ set -x
 CURDIR="$(pwd)"
 
 set -e
+if [ $# -eq 0 ]; then
+	echo "Need the source file of the monitor"
+	exit 1
+fi
 
 GENDIR=$(dirname $0)
 SHAMONDIR="$GENDIR/.."
@@ -31,4 +35,4 @@ LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
            $SHAMONDIR/streams/libshamon-streams.a"
 
 test -z $CC && CC=cc
-${CC} $CFLAGS $CPPFLAGS -o $CURDIR/monitor $@ $LIBRARIES $LDFLAGS
+${CC} $CFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC $@ $LIBRARIES $LDFLAGS -DSHMBUF_ARBITER_BUFSIZE=$ARBITER_BUFSIZE
