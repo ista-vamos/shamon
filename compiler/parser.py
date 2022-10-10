@@ -735,7 +735,7 @@ def p_arbiter_rule_stmt(p):
     else:
         assert(p[1] == "switch")
         p[0] = ("switch", p[PARB_RULE_STMT_SWITCH_ARB_RULE])
-        TypeChecker.assert_symbol_type(p[3], ARBITER_RULE_SET)
+        # TypeChecker.assert_symbol_type(p[3], ARBITER_RULE_SET)
 
 
 # END arbiter Specification
