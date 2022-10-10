@@ -552,6 +552,7 @@ int RULE_SET_working() {
             shm_monitor_buffer_write_finish(monitor_buffer);
 
             ++in_holes;
+	    printf("Resetting...\n");
 	    current_rule_set = 1;
 
             shm_arbiter_buffer_drop(BUFFER_In, 1);
@@ -583,6 +584,7 @@ int RULE_SET_working() {
 
             ++out_holes;
 	    current_rule_set = 1;
+	    printf("Resetting...\n");
 
             shm_arbiter_buffer_drop(BUFFER_Out, 1);
 
@@ -1051,6 +1053,7 @@ int RULE_SET_resetting() {
 
             if (n == 1 || n == 0) {
 
+	        printf("Reset done\n");
 		current_rule_set = 0;
 
                 shm_arbiter_buffer_drop(BUFFER_Out, 2);

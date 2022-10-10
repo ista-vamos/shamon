@@ -104,10 +104,13 @@ void done() {{
     __work_done = 1;
 }}
 
-static
-bool are_streams_done() {"{"}
+static bool are_streams_done() {"{"}
     assert(count_event_streams >=0);
     return count_event_streams == 0 && are_buffers_empty() || __work_done;
+{"}"}
+
+static bool is_stream_done(shm_stream *s) {"{"}
+    return !shm_stream_is_ready(s);
 {"}"}
 
 

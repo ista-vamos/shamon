@@ -45,6 +45,7 @@ $$
     int out_processed=0;
     int in_holes=0;
     int out_holes=0;
+    int resetting_cnt = 0;
 $$
 
 startup
@@ -58,6 +59,7 @@ cleanup
 $$
 printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
 printf("\nin_holes: %i, out_holes: %i\n", in_holes, out_holes);
+fflush(stdout);
 destroy_intmap(&balances);
 destroy_intmap(&upper_bounds);
 destroy_intmap(&lower_bounds);
@@ -71,6 +73,7 @@ arbiter : BankEvent
     	$$
     	    $yield Clear();
 	    ++in_holes;
+	    printf("In: Hole(%d)\n", n);
             $switch to resetting;
     	$$
 
@@ -78,6 +81,7 @@ arbiter : BankEvent
     	$$
     	    $yield Clear();
 	    ++out_holes;
+	    printf("Out: Hole(%d)\n", n);
             $switch to resetting;
     	$$
 
@@ -140,6 +144,7 @@ arbiter : BankEvent
 	    $drop 2 from In;
 	    ++out_processed;
 	    in_processed += 2;
+	    printf("Login\n");
 	$$
 
 	on Out : readInput() |, In: 1 where $$ true $$
@@ -156,9 +161,25 @@ arbiter : BankEvent
     }
 
     rule set resetting {
-	on Out : login() readInput() |, In: otherIn() otherIn() numIn(n) | where $$ n == 1 || n == 0 $$
+	on Out: login() readInput() |,
+	   In : otherIn() otherIn() numIn(n) | where $$ n == 1 || n == 0 $$
 	$$
 	    $switch to working;
+	    printf("Working back!\n");
+	    resetting_cnt = 0;
+	$$
+
+	on Out : | login() where $$ true $$
+	$$
+            if (++resetting_cnt > 500) {
+		$drop 1 from Out;
+		resetting_cnt = 0;
+            }
+	$$
+
+	on Out : 1 where $$ true $$
+	$$
+	    $drop 1 from Out;
 	$$
     }
 }
@@ -167,12 +188,14 @@ monitor(8)
 {
 	on Clear() where $$ true $$
 	$$
+		printf("Clear()\n");
 		intmap_clear(&balances);
 		intmap_clear(&upper_bounds);
 		intmap_clear(&lower_bounds);
 	$$
 	on SawBalance(account, balance) where $$ true $$
 	$$
+		printf("SawBalance(%d, %d)\n", account, balance);
 		int old_value=0;
 		if(intmap_get(&balances, account, &old_value))
 		{
@@ -205,6 +228,7 @@ monitor(8)
 	$$
 	on SawDeposit(account,amount) where $$ true $$
 	$$
+		printf("SawDeposit(%d, %d)\n", account, amount);
 		int old_value=0;
 		if(intmap_get(&balances, account, &old_value))
 		{
@@ -228,6 +252,7 @@ monitor(8)
 	$$
 	on SawWithdraw(account, amount) where $$ true $$
 	$$
+		printf("SawWithdraw(%d, %d)\n", account, amount);
 		int old_value=0;
 		if(intmap_get(&balances, account, &old_value))
 		{
@@ -270,6 +295,7 @@ monitor(8)
 	$$
 	on SawWithdrawFail(account, amount) where $$ true $$
 	$$
+		printf("SawWithdrawFail(%d, %d)\n", account, amount);
 		int old_value=0;
 		if(intmap_get(&balances, account, &old_value))
 		{
@@ -304,6 +330,7 @@ monitor(8)
 	$$
 	on SawTransfer(from_, to_, amount) where $$ true $$
 	$$
+		printf("SawTransfer(%d, %d, %d)\n", from_, to_, amount);
 		int old_value=0;
 		if(intmap_get(&balances, to_, &old_value))
 		{
@@ -366,6 +393,7 @@ monitor(8)
 	$$
 	on SawTransferFail(from_, to_, amount) where $$ true $$
 	$$
+		printf("SawTransferFail(%d, %d, %d)\n", from_, to_, amount);
 		int old_value=0;
 		if(intmap_get(&balances, from_, &old_value))
 		{
