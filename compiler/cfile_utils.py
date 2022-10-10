@@ -2,7 +2,7 @@
 from typing import Type
 from utils import *
 from parser_indices import *
-from type_checker import TypeChecker
+from type_checker import TypeChecker, ARBITER_RULE_SET
 from itertools import permutations
 
 
@@ -763,6 +763,7 @@ def construct_arb_rule_outevent(mapping, output_ev_source, output_event, raw_arg
 def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
     if tree[0] == "switch":
         switch_rule_name = tree[PPARB_RULE_STMT_SWITCH_ARB_RULE]
+        TypeChecker.assert_symbol_type(switch_rule_name, ARBITER_RULE_SET)
         return f"RULE_SET_{switch_rule_name}();\n"
     if tree[0] == "yield":
         return f'''
