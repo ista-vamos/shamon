@@ -232,6 +232,8 @@ def events_enum_kinds(event_sources, streams_to_events_map) -> str:
     for event_source in event_sources:
         assert event_source[0] == "event_source"
         stream_type = event_source[3]
+        if stream_type[0] == "name-with-args":
+            stream_type = stream_type[1]
         answer += f"enum {stream_type}_kinds {{\n"
         for ev_name, attrs in streams_to_events_map[stream_type].items():
             answer += f"{attrs['enum']} = {attrs['index']},\n"
@@ -260,6 +262,8 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
         assert(connection_kind[0] == "conn_kind")
         buff_size = connection_kind[2]
         stream_type = event_source[3]
+        if stream_type[0] == "name-with-args":
+            stream_type = stream_type[1]
         if copies:
             for i in range(copies):
                 name = f"{stream_name}_{i}"
