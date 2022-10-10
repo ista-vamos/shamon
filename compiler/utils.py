@@ -495,4 +495,4 @@ def get_first_const_rule_set_name(tree) -> str:
 
     rule_set_names = []
     get_rule_set_names(tree[PPARBITER_RULE_SET_LIST], rule_set_names)
-    return f"CONST_RULE_SET_{rule_set_names[0]}"
+    return f"SWITCH_TO_RULE_SET_{rule_set_names[0]}"

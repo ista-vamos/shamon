@@ -766,7 +766,7 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
     if tree[0] == "switch":
         switch_rule_name = tree[PPARB_RULE_STMT_SWITCH_ARB_RULE]
         TypeChecker.assert_symbol_type(switch_rule_name, ARBITER_RULE_SET)
-        return f"current_rule_set = CONST_RULE_SET_{switch_rule_name};\n"
+        return f"current_rule_set = SWITCH_TO_RULE_SET_{switch_rule_name};\n"
     if tree[0] == "yield":
         return f'''
         arbiter_outevent = (STREAM_{TypeChecker.arbiter_output_type}_out *)shm_monitor_buffer_write_ptr(monitor_buffer);
@@ -1167,5 +1167,5 @@ def declare_const_rule_set_names(tree):
 
     ans = ""
     for (index, name) in enumerate(rule_set_names):
-        ans += f"int CONST_RULE_SET_{name} = {index};\n"
+        ans += f"const int SWITCH_TO_RULE_SET_{name} = {index};\n"
     return ans
