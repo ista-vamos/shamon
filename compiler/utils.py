@@ -138,13 +138,14 @@ def get_stream_to_events_mapping(stream_types) -> Dict[str, Any]:
         assert(len(tree) == 5)
         events_data = []
         get_events_data(tree[-1], events_data)
-        assert(tree[PPSTREAM_TYPE_NAME] not in mapping.keys())
+        stream_type = tree[PPSTREAM_TYPE_NAME]
+        assert(stream_type not in mapping.keys())
         mapping_events = {}
         for (index, data) in enumerate(events_data):
-            data.update({'index': index+2})
+            data.update({'index': index+2, 'enum' : f"{stream_type.upper()}_{data['name'].upper()}"})
             mapping_events[data['name']] = data
-        mapping_events['hole'] = {'index': 1, 'args':[('n', 'int')]}
-        mapping[tree[PPSTREAM_TYPE_NAME]] = mapping_events
+        mapping_events['hole'] = {'index': 1, 'args':[('n', 'int')], 'enum': f'{stream_type.upper()}_HOLE'}
+        mapping[stream_type] = mapping_events
     return mapping
 
 def get_stream_types(event_sources) -> Dict[str, Any]:
@@ -279,6 +280,14 @@ def get_event_kinds(tree, kinds, mapping) -> None:
             kinds.append(1)
         else:
             kinds.append(mapping[tree[PPLIST_EV_CALL_EV_NAME]]["index"])
+
+def get_event_kinds_enums(tree, kinds, mapping) -> None:
+    assert(tree[0] != "|")
+
+    kinds.append(mapping[tree[PPLIST_EV_CALL_EV_NAME]]["enum"])
+    if tree[0] == "list_ev_calls":
+        get_event_kinds_enums(tree[PPLIST_EV_CALL_TAIL], kinds, mapping)
+
 
 def get_arbiter_event_source(tree) -> str:
     assert(tree[0] == 'arbiter_def')

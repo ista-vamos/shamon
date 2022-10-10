@@ -52,6 +52,7 @@ struct _EVENT_hole
 typedef struct _EVENT_hole EVENT_hole;
 {stream_type_structs(components["stream_type"])}
 {stream_type_args_structs(components["stream_type"])}
+{events_enum_kinds(components["event_source"], streams_to_events_map)}
 
 {instantiate_stream_args()}
 int *arbiter_counter;

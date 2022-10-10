@@ -91,6 +91,7 @@ struct _{tree[1]}_ARGS {"{"}
 typedef struct  _{tree[1]}_ARGS  {tree[1]}_ARGS;
             '''
     return answer
+
 def events_declaration_structs(tree) -> str:
     if tree[0] == "event_list":
         return events_declaration_structs(tree[PLIST_BASE_CASE]) + "\n"+ events_declaration_structs(tree[PLIST_TAIL])
@@ -226,6 +227,17 @@ def get_count_events_sources():
             total_count += 1
     return total_count
 
+def events_enum_kinds(event_sources, streams_to_events_map) -> str:
+    answer = ""
+    for event_source in event_sources:
+        assert event_source[0] == "event_source"
+        stream_type = event_source[3]
+        answer += f"enum {stream_type}_kinds {{\n"
+        for ev_name, attrs in streams_to_events_map[stream_type].items():
+            answer += f"{attrs['enum']} = {attrs['index']},\n"
+        answer += "};"
+    return answer
+
 def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
 
 
@@ -257,7 +269,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 answer += f"\t// register events in {name}\n"
                 for ev_name, attrs in streams_to_events_map[stream_type].items():
                     if ev_name == 'hole': continue
-                    answer += f"\tif (shm_stream_register_event(EV_SOURCE_{name}, \"{ev_name}\", {attrs['index']}) < 0) {{\n"
+                    answer += f"\tif (shm_stream_register_event(EV_SOURCE_{name}, \"{ev_name}\", {attrs['enum']}) < 0) {{\n"
                     answer += f"\t\tfprintf(stderr, \"Failed registering event {ev_name} for stream {name} : {stream_type}\\n\");\n"
                     answer += f"\t\tfprintf(stderr, \"Available events:\\n\");\n"
                     answer += f"\t\tshm_stream_dump_events(EV_SOURCE_{name});\n"
@@ -270,7 +282,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             answer += f"\t// register events in {name}\n"
             for ev_name, attrs in streams_to_events_map[stream_type].items():
                 if ev_name == 'hole': continue
-                answer += f"\tif (shm_stream_register_event(EV_SOURCE_{name}, \"{ev_name}\", {attrs['index']}) < 0) {{\n"
+                answer += f"\tif (shm_stream_register_event(EV_SOURCE_{name}, \"{ev_name}\", {attrs['enum']}) < 0) {{\n"
                 answer += f"\t\tfprintf(stderr, \"Failed registering event {ev_name} for stream {name} : {stream_type}\\n\");\n"
                 answer += f"\t\tfprintf(stderr, \"Available events:\\n\");\n"
                 answer += f"\t\tshm_stream_dump_events(EV_SOURCE_{name});\n"
@@ -363,7 +375,7 @@ def build_drop_funcs_conds(tree, stream_name, mapping) -> str:
         creates_at_most = tree[2]
         if creates_at_most is not None:
             raise Exception("creates at most not implemented in stream processors")
-        return f'''if (e->kind == {mapping[tree[event_name]]["index"]}) {"{"}
+        return f'''if (e->kind == {mapping[tree[event_name]]["enum"]}) {"{"}
         {process_performance_match(tree[-1])}
     {"}"}
         '''
@@ -430,7 +442,7 @@ def build_switch_performance_match(tree, mapping_in, mapping_out, level) -> str:
             assert(performance_action[0] == "perf_act_forward")
             event_out_name = performance_action[PPPERF_ACTION_FORWARD_EVENT]
             return f'''
-{tabs}(outevent->head).kind = {mapping_out[performance_action[PPPERF_ACTION_FORWARD_EVENT]]["index"]};
+{tabs}(outevent->head).kind = {mapping_out[performance_action[PPPERF_ACTION_FORWARD_EVENT]]["enum"]};
 {tabs}(outevent->head).id = (inevent->head).id;
 {declare_performance_layer_args(performance_action[PPPERF_ACTION_FORWARD_EVENT], 
                                 mapping_in[performance_action[PPPERF_ACTION_FORWARD_EVENT]], 
@@ -456,7 +468,7 @@ def get_stream_switch_cases(ast, mapping_in, mapping_out, level) -> str:
         tabs_plus1 = "\t" * (level+1)
         assert(ast[0] == 'perf_layer_rule')
         return f'''
-{tabs}case {mapping_in[ast[PPPERF_LAYER_EVENT]]["index"]}:
+{tabs}case {mapping_in[ast[PPPERF_LAYER_EVENT]]["enum"]}:
 {build_switch_performance_match(ast[-1], mapping_in, mapping_out, level=level+1)}
 {tabs_plus1}break;'''
 
@@ -618,10 +630,10 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             assert(len(tree) == 4)
             event_kinds = []
             if tree[PPBUFFER_MATCH_ARG1] != "|":
-                get_event_kinds(tree[PPBUFFER_MATCH_ARG1], event_kinds, mapping[out_type])
+                get_event_kinds_enums(tree[PPBUFFER_MATCH_ARG1], event_kinds, mapping[out_type])
 
             if tree[PPBUFFER_MATCH_ARG2] != "|":
-                get_event_kinds(tree[PPBUFFER_MATCH_ARG2], event_kinds, mapping[out_type])
+                get_event_kinds_enums(tree[PPBUFFER_MATCH_ARG2], event_kinds, mapping[out_type])
             if not is_scan:
 
                 StaticCounter.calls_counter-=1
