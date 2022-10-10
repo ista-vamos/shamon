@@ -561,7 +561,7 @@ def arbiter_code(tree, components):
 
     rule_set_invocations = ""
     for name in rule_set_names:
-        rule_set_invocations += f"\t\tif (current_rule_set == CONST_RULE_SET_{name}) {'{'} \n" \
+        rule_set_invocations += f"\t\tif (current_rule_set == SWITCH_TO_RULE_SET_{name}) {'{'} \n" \
                                 f"\t\t\trule_sets_match_count += RULE_SET_{name}();\n" \
                                 f"\t\t{'}'}\n"
 
