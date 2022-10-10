@@ -78,7 +78,6 @@ arbiter : BankEvent
 
     	on Out : balance(acc) numOut(amnt) |, In: numIn(action) | where $$ true $$
     	$$
-    	      printf("balance on %d is %d\n", acc, amnt);
 		assert(action == 3);
     		$yield SawBalance(acc, amnt);
 		current_account = acc;

@@ -95,24 +95,26 @@ bool are_there_events(shm_arbiter_buffer * b) {"{"}
 
 {are_buffers_empty()}
 
-volatile int __work_done = 0;
+static int __work_done = 0;
 /* TODO: make a keywork from this */
 void done() {{
     __work_done = 1;
 }}
 
+static
 bool are_streams_done() {"{"}
     assert(count_event_streams >=0);
-    return !__work_done && count_event_streams == 0 && are_buffers_empty();
+    return count_event_streams == 0 && are_buffers_empty() || __work_done;
 {"}"}
 
 
+static inline
 bool check_at_least_n_events(size_t count, size_t n) {"{"}
     // count is the result after calling shm_arbiter_buffer_peek
 	return count >= n;
 {"}"}
 
-
+static
 bool are_events_in_head(char* e1, size_t i1, char* e2, size_t i2, int count, size_t ev_size, int event_kinds[], int n_events) {"{"}
     assert(n_events > 0);
 	if (count < n_events) {"{"}
@@ -146,6 +148,7 @@ bool are_events_in_head(char* e1, size_t i1, char* e2, size_t i2, int count, siz
 	return true;
 {"}"}
 
+static inline
 shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t size_event, int element_index) {"{"}
 	if (element_index < i1) {"{"}
 		return (shm_event *) (e1 + (element_index*size_event));
