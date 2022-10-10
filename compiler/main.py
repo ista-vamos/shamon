@@ -77,6 +77,7 @@ atomic_int count_event_streams = {get_count_events_sources()};
 // declare arbiter thread
 thrd_t ARBITER_THREAD;
 {declare_const_rule_set_names(ast[2])}
+{declare_rule_set_counters(ast[2])}
 int current_rule_set = {get_first_const_rule_set_name(ast[2])};
 
 {declare_arbiter_buffers(components, ast)}
@@ -153,6 +154,32 @@ bool are_events_in_head(char* e1, size_t i1, char* e2, size_t i2, int count, siz
 
 	return true;
 {"}"}
+
+static void
+print_buffer_prefix(shm_arbiter_buffer *b, size_t n_events, char* e1, size_t i1, char* e2, size_t i2) {"{"}
+    const size_t ev_size = shm_arbiter_buffer_elem_size(b);
+    int n = 0;
+	int i = 0;
+	while (i < i1) {"{"}
+	    shm_event * ev = (shm_event *) (e1);
+        fprintf(stderr, "  %d: {{id: %lu, kind: %lu}}\\n", n,
+                shm_event_id(ev), shm_event_kind(ev));
+        if (--n_events == 0)
+            return;
+	    i+=1;
+	    e1 += ev_size;
+	{"}"}
+
+	i = 0;
+	while (i < i2) {"{"}
+	    shm_event * ev = (shm_event *) e2;
+        if (--n_events == 0)
+            return;
+	    i+=1;
+	    e2 += ev_size;
+	{"}"}
+{"}"}
+
 
 static inline
 shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t size_event, int element_index) {"{"}

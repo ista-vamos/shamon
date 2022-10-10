@@ -1026,6 +1026,39 @@ def buffer_peeks(tree, existing_buffers):
 
     return answer
 
+def check_progress(rule_set_name, tree, existing_buffers):
+    buffers_to_peek = dict() # maps buffer_name to the number of elements we want to retrieve from the buffer
+    get_buffers_and_peeks(tree, buffers_to_peek, TypeChecker, existing_buffers)
+
+    answer = "_Bool ok = 1;\n"
+    n = 0
+    for (buffer_name, desired_count) in buffers_to_peek.items():
+        answer += f"if (count_{buffer_name} >= {desired_count}) {{"
+        n += 1
+    answer += "\tok = 0;\n"
+    answer += "}"*n
+
+    answer += "if (ok == 0) {\n"
+
+    for (buffer_name, desired_count) in buffers_to_peek.items():
+        answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\");\n"
+        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {desired_count}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
+    answer += "fprintf(stderr, \"No rule matched even though there was enough events, NO PROGRESS!\\n\");"
+    answer += "assert(0);"
+    answer += "}\n"
+
+    answer += f"if (++RULE_SET_{rule_set_name}_nomatch_cnt > 5000) {{\
+        \tRULE_SET_{rule_set_name}_nomatch_cnt = 0;"
+    answer += f"\tfprintf(stderr, \"\\033[31mRule set '{rule_set_name}' cycles long time without progress\\033[0m\\n\");"
+    for (buffer_name, desired_count) in buffers_to_peek.items():
+        answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
+        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {desired_count}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
+    answer += "fprintf(stderr, \"Seems all rules are waiting for some events that are not coming\\n\");"
+    answer += "}\n"
+
+    return answer
+
+
 def build_rule_set_functions(tree, mapping, stream_types, existing_buffers):
     def local_explore_rule_list(local_tree) -> str:
         if local_tree[0] == "arb_rule_list":
@@ -1043,6 +1076,7 @@ def build_rule_set_functions(tree, mapping, stream_types, existing_buffers):
             return f"int RULE_SET_{rule_set_name}() {'{'}\n" \
                    f"{buffer_peeks(local_tree[2], existing_buffers)}" \
                    f"{local_explore_rule_list(local_tree[2])}" \
+                   f"{check_progress(rule_set_name, local_tree[2], existing_buffers)}" \
                    f"\treturn 0;\n" \
                    f"{'}'}"
 
@@ -1146,6 +1180,7 @@ void print_event_name(int ev_src_index, int event_index) {"{"}
 {"}"}
     '''
 
+
 def print_buffers_state():
     code = ""
     for (event_source_index, (event_source, data)) in enumerate(TypeChecker.event_sources_data.items()):
@@ -1178,4 +1213,15 @@ def declare_const_rule_set_names(tree):
     ans = ""
     for (index, name) in enumerate(rule_set_names):
         ans += f"const int SWITCH_TO_RULE_SET_{name} = {index};\n"
+    return ans
+
+def declare_rule_set_counters(tree):
+    assert (tree[0] == "arbiter_def")
+
+    rule_set_names = []
+    get_rule_set_names(tree[PPARBITER_RULE_SET_LIST], rule_set_names)
+
+    ans = ""
+    for (index, name) in enumerate(rule_set_names):
+        ans += f"static size_t RULE_SET_{name}_nomatch_cnt = 0;\n"
     return ans
