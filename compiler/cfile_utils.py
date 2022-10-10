@@ -561,13 +561,15 @@ def arbiter_code(tree, components):
 
     rule_set_invocations = ""
     for name in rule_set_names:
-        rule_set_invocations += f"\trule_sets_match_count += RULE_SET_{name}();\n"
+        rule_set_invocations += f"\t\tif (rule_sets_match_count == 0) {'{'} \n" \
+                                f"\t\t\trule_sets_match_count += RULE_SET_{name}();\n" \
+                                f"\t\t{'}'}\n"
 
     return f'''int arbiter() {"{"}
     
     while (!are_streams_done()) {"{"}
         int rule_sets_match_count = 0;
-    {rule_set_invocations}
+{rule_set_invocations}
         if(rule_sets_match_count == 0) {"{"}
             // increment counter of no consecutive matches
             no_matches_count++;
