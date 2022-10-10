@@ -488,3 +488,11 @@ def get_buffers_and_peeks(tree, result, type_checker, existing_buffers):
         else:
             assert(tree[0] == "arbiter_rule2")
             get_buffers_and_peeks(tree[-1], result, type_checker, existing_buffers)
+
+
+def get_first_const_rule_set_name(tree) -> str:
+    assert (tree[0] == "arbiter_def")
+
+    rule_set_names = []
+    get_rule_set_names(tree[PPARBITER_RULE_SET_LIST], rule_set_names)
+    return f"CONST_RULE_SET_{rule_set_names[0]}"

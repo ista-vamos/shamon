@@ -561,7 +561,7 @@ def arbiter_code(tree, components):
 
     rule_set_invocations = ""
     for name in rule_set_names:
-        rule_set_invocations += f"\t\tif (rule_sets_match_count == 0) {'{'} \n" \
+        rule_set_invocations += f"\t\tif (current_rule_set == CONST_RULE_SET_{name}) {'{'} \n" \
                                 f"\t\t\trule_sets_match_count += RULE_SET_{name}();\n" \
                                 f"\t\t{'}'}\n"
 
@@ -766,7 +766,7 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
     if tree[0] == "switch":
         switch_rule_name = tree[PPARB_RULE_STMT_SWITCH_ARB_RULE]
         TypeChecker.assert_symbol_type(switch_rule_name, ARBITER_RULE_SET)
-        return f"RULE_SET_{switch_rule_name}();\n"
+        return f"current_rule_set = CONST_RULE_SET_{switch_rule_name};\n"
     if tree[0] == "yield":
         return f'''
         arbiter_outevent = (STREAM_{TypeChecker.arbiter_output_type}_out *)shm_monitor_buffer_write_ptr(monitor_buffer);
@@ -1158,3 +1158,14 @@ void print_buffers_state() {"{"}
     
 '''
 
+
+def declare_const_rule_set_names(tree):
+    assert (tree[0] == "arbiter_def")
+
+    rule_set_names = []
+    get_rule_set_names(tree[PPARBITER_RULE_SET_LIST], rule_set_names)
+
+    ans = ""
+    for (index, name) in enumerate(rule_set_names):
+        ans += f"int CONST_RULE_SET_{name} = {index};\n"
+    return ans

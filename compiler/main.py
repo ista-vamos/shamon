@@ -76,6 +76,8 @@ atomic_int count_event_streams = {get_count_events_sources()};
 
 // declare arbiter thread
 thrd_t ARBITER_THREAD;
+{declare_const_rule_set_names(ast[2])}
+int current_rule_set = {get_first_const_rule_set_name(ast[2])};
 
 {declare_arbiter_buffers(components, ast)}
 
