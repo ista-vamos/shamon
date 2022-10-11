@@ -42,6 +42,7 @@ program = f'''#include "shamon.h"
 #include "monitor.h"
 #include "./compiler/cfiles/compiler_utils.h"
 #include <threads.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdatomic.h>
 
@@ -201,7 +202,29 @@ STREAM_{arbiter_event_source}_out *arbiter_outevent;
 {build_rule_set_functions(ast[2], streams_to_events_map, stream_types, existing_buffers)}
 {arbiter_code(ast[2], components)}
 
+{define_signal_handlers(components["event_source"])}
+
+static void setup_signals() {{
+    if (signal(SIGINT, sig_handler) == SIG_ERR) {{
+	perror("failed setting SIGINT handler");
+    }}
+
+    if (signal(SIGABRT, sig_handler) == SIG_ERR) {{
+	perror("failed setting SIGINT handler");
+    }}
+
+    if (signal(SIGIOT, sig_handler) == SIG_ERR) {{
+	perror("failed setting SIGINT handler");
+    }}
+
+    if (signal(SIGSEGV, sig_handler) == SIG_ERR) {{
+	perror("failed setting SIGINT handler");
+    }}
+}}
+
 int main(int argc, char **argv) {"{"}
+    setup_signals();
+
 	chosen_streams = (dll_node *) malloc({get_count_events_sources()}); // the maximum size this can have is the total number of event sources
 	arbiter_counter = malloc(sizeof(int));
 	*arbiter_counter = 10;

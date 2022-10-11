@@ -209,6 +209,22 @@ def declare_event_sources(event_sources):
             answer += f"shm_stream *EV_SOURCE_{name};\n"
     return answer
 
+def define_signal_handlers(event_sources):
+    event_srcs_names = []
+    get_event_sources_names(event_sources, event_srcs_names)
+    answer = "static void sig_handler(int sig) {\n"\
+             "\tprintf(\"signal %d caught...\", sig);"
+    for name in event_srcs_names:
+        if TypeChecker.event_sources_data[name]["copies"]:
+            for  i in range(TypeChecker.event_sources_data[name]["copies"]):
+                answer += f"\tshm_stream_detach(EV_SOURCE_{name}_{i});\n"
+        else:
+            answer += f"\tshm_stream_detach(EV_SOURCE_{name});\n"
+    answer += "\t__work_done = 1;\n}"
+    return answer
+
+
+
 def declare_event_sources_flags(ast):
     assert (ast[0] == "main_program")
     event_srcs_names = []
