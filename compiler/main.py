@@ -167,7 +167,7 @@ print_buffer_prefix(shm_arbiter_buffer *b, size_t n_events, int cnt, char* e1, s
 	int i = 0;
 	while (i < i1) {"{"}
 	    shm_event * ev = (shm_event *) (e1);
-        fprintf(stderr, "  %d: {{id: %lu, kind: %lu}}\\n", n,
+        fprintf(stderr, "  %d: {{id: %lu, kind: %lu}}\\n", ++n,
                 shm_event_id(ev), shm_event_kind(ev));
         if (--n_events == 0)
             return;
@@ -178,6 +178,8 @@ print_buffer_prefix(shm_arbiter_buffer *b, size_t n_events, int cnt, char* e1, s
 	i = 0;
 	while (i < i2) {"{"}
 	    shm_event * ev = (shm_event *) e2;
+        fprintf(stderr, "  %d: {{id: %lu, kind: %lu}}\\n", ++n,
+                shm_event_id(ev), shm_event_kind(ev));
         if (--n_events == 0)
             return;
 	    i+=1;
