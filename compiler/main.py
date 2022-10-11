@@ -157,7 +157,11 @@ bool are_events_in_head(char* e1, size_t i1, char* e2, size_t i2, int count, siz
 {"}"}
 
 static void
-print_buffer_prefix(shm_arbiter_buffer *b, size_t n_events, char* e1, size_t i1, char* e2, size_t i2) {"{"}
+print_buffer_prefix(shm_arbiter_buffer *b, size_t n_events, int cnt, char* e1, size_t i1, char* e2, size_t i2) {"{"}
+    if (cnt == 0) {{
+        fprintf(stderr, " empty\\n");
+        return;
+    }}
     const size_t ev_size = shm_arbiter_buffer_elem_size(b);
     int n = 0;
 	int i = 0;

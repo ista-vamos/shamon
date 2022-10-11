@@ -1058,7 +1058,7 @@ def check_progress(rule_set_name, tree, existing_buffers):
 
     for (buffer_name, desired_count) in buffers_to_peek.items():
         answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\");\n"
-        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {desired_count}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
+        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {desired_count}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
     answer += "fprintf(stderr, \"No rule matched even though there was enough events, NO PROGRESS!\\n\");"
     answer += "assert(0);"
     answer += "}\n"
@@ -1068,7 +1068,7 @@ def check_progress(rule_set_name, tree, existing_buffers):
     answer += f"\tfprintf(stderr, \"\\033[31mRule set '{rule_set_name}' cycles long time without progress\\033[0m\\n\");"
     for (buffer_name, desired_count) in buffers_to_peek.items():
         answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
-        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {desired_count}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
+        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {desired_count}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
     answer += "fprintf(stderr, \"Seems all rules are waiting for some events that are not coming\\n\");"
     answer += "}\n"
 
