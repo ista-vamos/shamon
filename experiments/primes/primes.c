@@ -106,17 +106,30 @@ int main(int argc, char **argv)
 {
 	struct timespec begin, end;
 	int target=10;
+	int repeat=0;
 	int interactive=0;
-	if(argc>1)
+	int argcnt=argc-1;
+	int rcount=0;
+	while(argcnt>0)
 	{
-		if(strcmp(argv[1],"-i")==0)
+		if(strcmp(argv[argc-argcnt],"-i")==0)
 		{
 			interactive=1;
 		}
+		else if(strcmp(argv[argc-argcnt],"-r")==0)
+		{
+			argcnt--;
+			repeat=atoi(argv[argc-argcnt]);
+		}
 		else
 		{
-			target=atoi(argv[1]);
+			target=atoi(argv[argc-argcnt]);
 		}
+		argcnt--;
+	}
+	if(repeat==0)
+	{
+		repeat=target;
 	}
 	if(interactive)
 	{
@@ -193,18 +206,33 @@ int main(int argc, char **argv)
 				last=newnode;
 				count++;
 				printf("#%lu: %lu\n", count, current);
+				rcount++;
+				if(rcount==repeat)
+				{
+					rcount=0;
+					curnode=base.next;
+					while(curnode!=NULL)
+					{
+						last=curnode;
+						curnode=curnode->next;
+						free(last);
+					}
+					last=&base;
+					last->next=NULL;
+					current=2;
+				}
 			}
 			current++;
 		}
 
-                if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end) == -1) {
-                	perror("clock_gettime");
-                        return 1;
-                }
-                long seconds = end.tv_sec - begin.tv_sec;
-                long nanoseconds = end.tv_nsec - begin.tv_nsec;
-                double elapsed = seconds + nanoseconds*1e-9;
-                fprintf(stderr, "time: %lf seconds.\n", elapsed);
+		if (clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end) == -1) {
+			perror("clock_gettime");
+				return 1;
+		}
+		long seconds = end.tv_sec - begin.tv_sec;
+		long nanoseconds = end.tv_nsec - begin.tv_nsec;
+		double elapsed = seconds + nanoseconds*1e-9;
+		fprintf(stderr, "time: %lf seconds.\n", elapsed);
 	}
 }
 
