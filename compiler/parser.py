@@ -611,7 +611,7 @@ def p_buffer_match_exp(p):
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1], p[PBUFFER_MATCH_ARG2])
     else:
         TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
-        p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1], p[PBUFFER_MATCH_ARG3])
+        p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1],'|',p[PBUFFER_MATCH_ARG3])
 
 def p_event_src_ref(p):
     '''

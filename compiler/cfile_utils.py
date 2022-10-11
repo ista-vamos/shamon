@@ -655,7 +655,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
             return []
 
         else:
-            assert(len(tree) == 4)
+            # assert(len(tree) == 4)
             event_kinds = []
             if tree[PPBUFFER_MATCH_ARG1] != "|":
                 get_event_kinds_enums(tree[PPBUFFER_MATCH_ARG1], event_kinds, mapping[out_type])

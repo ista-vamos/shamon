@@ -387,6 +387,7 @@ def get_count_drop_events_from_l_buff(tree: Tuple, answer: Dict[str, int]) -> No
             event_source_name = event_src_ref[1]
             stream_index = event_src_ref[2]
             count = 0
+
             if len(tree) > 3:
                 for i in range(2, len(tree)):
 
@@ -459,7 +460,7 @@ def local_get_buffer_peeks(local_tree: Tuple, type_checker: Any, result: Dict[st
 
                     insert_in_result(event_src_name, local_tree[-1], result, existing_buffers)
             else:
-                assert(len(local_tree) == 4)
+                # assert(len(local_tree) == 4)
                 event_src_ref = local_tree[1]
                 event_src_name = event_src_ref[1]
                 if event_src_ref[2] is not None:
