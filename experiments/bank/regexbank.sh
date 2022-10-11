@@ -17,24 +17,25 @@ BANK_PID=$!
 
 echo "Bank PID: $BANK_PID"
 
-sudo $LIBBPF_TOOLS/readwrite /bank \
+sudo $LIBBPF_TOOLS/readwrite -t /bank \
 balance "\s*Current balance on Account ([0-9]+):\s*" i \
-depositTo "\s*Deposit to Account ([0-9]+).*" i \
-withdraw "\s*Withdraw from Account ([0-9]+).*" i \
-transfer "\s*Transfer from Account ([0-9]+) to Account ([0-9]+).*" ii \
-depositSuccess "^Deposit successful!.*" $'' \
-depositFail "^Deposit amount must be positive!.*" $'' \
-withdrawSuccess "^Withdrawal successful!.*" $'' \
-withdrawFail "^Withdrawal failed!.*" $'' \
-transferSuccess "^Transfer successful!.*" $'' \
+depositTo "\s*Deposit to Account ([0-9]+)" i \
+withdraw "\s*Withdraw from Account ([0-9]+)" i \
+transfer "\s*Transfer from Account ([0-9]+) to Account ([0-9]+)" ii \
+depositSuccess "^Deposit successful!" $'' \
+depositFail "^Deposit amount must be positive!" $'' \
+withdrawSuccess "^Withdrawal successful!" $'' \
+withdrawFail "^Withdrawal failed!" $'' \
+transferSuccess "^Transfer successful!" $'' \
 selectedAccount "\s*Selected account: ([0-9]+).*" i \
-readInput "\s*Select account no.*|Select Action:.*|Press ENTER.*|Transfer from Account [0-9]+:.*|Receiving Account:.*|Changing account..*|.*Logged out!$" $'' \
 numOut "^\s*([0-9]+)\s*$" i \
-login ".*Login:.*" $'' \
+logout "Logged out!" $'' \
 -stdin \
 numIn "^\s*([0-9]+)\s*$" i \
-otherIn ".*" $'' -- -p $BANK_PID 2> source-log.txt &
+otherIn ".*[^\s].*" $'' -- -p $BANK_PID 2> source-log.txt &
 SRC_PID=$!
+
+#readInput "Select account no.|Select Action:|Press ENTER|Transfer from Account [0-9]+:|Receiving Account:|Changing account|Logged out!$" $'' \
 
 echo "-- Starting the monitor --"
 sudo $MONITOR Out:regex:/bank.stdout In:regex:/bank.stdin&
@@ -55,4 +56,7 @@ wait $MON_PID
 
 rm -f /tmp/fifo{A,B}
 
+if grep -q "DROPPED" source-log.txt; then
+	echo -e "\033[31mWARNING: Source dropped some events!\033[0m"
+fi
 

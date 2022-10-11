@@ -1063,7 +1063,7 @@ def check_progress(rule_set_name, tree, existing_buffers):
     answer += "assert(0);"
     answer += "}\n"
 
-    answer += f"if (++RULE_SET_{rule_set_name}_nomatch_cnt > 5000) {{\
+    answer += f"if (++RULE_SET_{rule_set_name}_nomatch_cnt > 1000000) {{\
         \tRULE_SET_{rule_set_name}_nomatch_cnt = 0;"
     answer += f"\tfprintf(stderr, \"\\033[31mRule set '{rule_set_name}' cycles long time without progress\\033[0m\\n\");"
     for (buffer_name, desired_count) in buffers_to_peek.items():
