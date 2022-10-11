@@ -58,4 +58,4 @@ wait $MON_PID
 
 rm -f /tmp/fifo{A,B}
 
-grep 'Errors generated' interact.log
+cat interact.log
