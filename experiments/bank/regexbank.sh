@@ -35,8 +35,6 @@ numIn "^\s*([0-9]+)\s*$" i \
 otherIn ".*[^\s].*" $'' -- -p $BANK_PID 2> source-log.txt &
 SRC_PID=$!
 
-#readInput "Select account no.|Select Action:|Press ENTER|Transfer from Account [0-9]+:|Receiving Account:|Changing account|Logged out!$" $'' \
-
 echo "-- Starting the monitor --"
 sudo $MONITOR Out:regex:/bank.stdout In:regex:/bank.stdin&
 MON_PID=$!
@@ -50,7 +48,7 @@ tail -n 1000 -f source-log.txt | while read line; do
 done
 
 echo "-- Starting interact --"
-cat /tmp/fifoB | ./interact inputs.last.txt > /tmp/fifoA &
+cat /tmp/fifoB | ./interact inputs.last.txt interact.log >/tmp/fifoA &
 
 wait $MON_PID
 
@@ -60,3 +58,4 @@ if grep -q "DROPPED" source-log.txt; then
 	echo -e "\033[31mWARNING: Source dropped some events!\033[0m"
 fi
 
+grep 'Errors generated' interact.log

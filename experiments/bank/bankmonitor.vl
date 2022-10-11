@@ -73,9 +73,7 @@ arbiter : BankEvent
 	$$
 	    if (tin < tout){
 		$drop 1 from In;
-		/*printf("Algn: Drop In\n");*/
 	    } else {
-		printf("Aligned\n");
 		current_account = acc;
 		$drop 1 from Out;
 		$switch to working;
@@ -88,9 +86,7 @@ arbiter : BankEvent
 	$$
 	    if (tin < tout){
 		$drop 1 from In;
-		/*printf("Algn: Drop In\n");*/
 	    } else {
-		printf("Aligned\n");
 		current_account = acc;
 		$drop 1 from Out;
 		$switch to working;
@@ -132,7 +128,6 @@ arbiter : BankEvent
     	$$
     	    $yield Clear();
 	    ++in_holes;
-	    printf("In: Hole(%d)\n", n);
             $switch to aligning;
     	$$
 
@@ -140,7 +135,6 @@ arbiter : BankEvent
     	$$
     	    $yield Clear();
 	    ++out_holes;
-	    printf("Out: Hole(%d)\n", n);
             $switch to aligning;
     	$$
 
@@ -232,7 +226,6 @@ arbiter : BankEvent
 
 	on Out : logout(t) | where $$ true $$
 	$$
-	    printf("Log out!\n");
 	    $switch to aligning;
 	$$
     }
