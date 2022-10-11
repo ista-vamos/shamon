@@ -5,7 +5,9 @@ shift
 
 LIBBPF_TOOLS=$HOME/src/bcc/libbpf-tools/
 MONITOR=$(dirname $0)/monitor
-#MONITOR=$(dirname $0)/../../monitors/monitor-generic
+if [ $(basename "$0") == "regexbank-dump.sh" ]; then
+	MONITOR=$(dirname $0)/../../monitors/monitor-generic
+fi
 
 rm -f /tmp/fifo{A,B}
 mkfifo /tmp/fifo{A,B}
