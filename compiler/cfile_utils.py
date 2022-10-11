@@ -657,7 +657,6 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         else:
             # assert(len(tree) == 4)
             event_kinds = []
-            print(tree)
             for i in range(2, len(tree)):
                 if tree[i] != "|":
                     get_event_kinds_enums(tree[i], event_kinds, mapping[out_type])
