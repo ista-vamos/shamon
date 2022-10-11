@@ -39,6 +39,8 @@ static inline void dump_args(shm_stream *stream, shm_event_generic *ev, const ch
             printf("%f", *((float *)p));
         } else if (*o == 'd') {
             printf("%lf", *((double *)p));
+	} else if (*o == 't') {
+            printf("\033[31m%lu\033[0m", *((uint64_t *)p));
         } else {
             switch (size) {
             case 1:
