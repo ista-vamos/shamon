@@ -159,14 +159,13 @@ arbiter : BankEvent
                 $switch to aligning;
     	$$
 
-    	on Out : transfer(t2, from_, to_) | selectedAccount(t4, acc),
+    	on Out : transfer(t2, from_, to_) selectedAccount(t4, acc) |,
 	   In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) | where $$ true $$
     	$$
 		assert(action == 4);
     		$yield SawTransferFail(from_, to_, amnt);
 		out_processed += 2;
 	        in_processed += 3;
-                $switch to aligning;
     	$$
 
     	on Out : depositTo(t2, acc) depositSuccess(t4) |,
@@ -235,14 +234,14 @@ monitor(128)
 {
 	on Clear() where $$ true $$
 	$$
-		printf("Clear()\n");
+		//printf("Clear()\n");
 		intmap_clear(&balances);
 		intmap_clear(&upper_bounds);
 		intmap_clear(&lower_bounds);
 	$$
 	on SawBalance(account, balance) where $$ true $$
 	$$
-		printf("SawBalance(%d, %d)\n", account, balance);
+		//printf("SawBalance(%d, %d)\n", account, balance);
 		int old_value=0;
 		if(intmap_get(&balances, account, &old_value))
 		{
@@ -275,7 +274,7 @@ monitor(128)
 	$$
 	on SawDeposit(account,amount) where $$ true $$
 	$$
-		printf("SawDeposit(%d, %d)\n", account, amount);
+		//printf("SawDeposit(%d, %d)\n", account, amount);
 		int old_value=0;
 		if(intmap_get(&balances, account, &old_value))
 		{
@@ -299,7 +298,7 @@ monitor(128)
 	$$
 	on SawWithdraw(account, amount) where $$ true $$
 	$$
-		printf("SawWithdraw(%d, %d)\n", account, amount);
+		//printf("SawWithdraw(%d, %d)\n", account, amount);
 		int old_value=0;
 		if(intmap_get(&balances, account, &old_value))
 		{
@@ -342,7 +341,7 @@ monitor(128)
 	$$
 	on SawWithdrawFail(account, amount) where $$ true $$
 	$$
-		printf("SawWithdrawFail(%d, %d)\n", account, amount);
+		//printf("SawWithdrawFail(%d, %d)\n", account, amount);
 		int old_value=0;
 		if(intmap_get(&balances, account, &old_value))
 		{
@@ -377,7 +376,7 @@ monitor(128)
 	$$
 	on SawTransfer(from_, to_, amount) where $$ true $$
 	$$
-		printf("SawTransfer(%d, %d, %d)\n", from_, to_, amount);
+		//printf("SawTransfer(%d, %d, %d)\n", from_, to_, amount);
 		int old_value=0;
 		if(intmap_get(&balances, to_, &old_value))
 		{
@@ -440,7 +439,7 @@ monitor(128)
 	$$
 	on SawTransferFail(from_, to_, amount) where $$ true $$
 	$$
-		printf("SawTransferFail(%d, %d, %d)\n", from_, to_, amount);
+		//printf("SawTransferFail(%d, %d, %d)\n", from_, to_, amount);
 		int old_value=0;
 		if(intmap_get(&balances, from_, &old_value))
 		{
