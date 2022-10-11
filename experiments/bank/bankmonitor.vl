@@ -197,7 +197,6 @@ arbiter : BankEvent
            where $$ true $$
         $$
             assert(action == 1);
-            $yield SawDeposit(acc, amnt);
             current_account = acc;
             out_processed += 2;
             in_processed += 2;

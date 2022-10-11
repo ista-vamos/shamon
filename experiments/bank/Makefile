@@ -4,7 +4,7 @@ VLCC=python3 ../../compiler/main.py
 GENCC=../../gen/compile.sh
 SHAMON_LIB=../../core/libshamon-lib.so  # for dependency
 
-all: monitor bank interact
+all: monitor-vamos monitor-tessla bank interact
 
 intmap.o: ../../compiler/cfiles/intmap.cpp
 	$(CXX) -c $<
@@ -20,8 +20,17 @@ monitor.c: bankmonitor.vl  $(VLCC)
 	$(VLCC) bankmonitor.vl monitor.c
 	-clang-format -i monitor.c
 
-monitor: monitor.c $(GENCC) intmap.o $(SHAMON_LIB)
+monitor-vamos: monitor.c $(GENCC) intmap.o $(SHAMON_LIB)
 	$(GENCC) monitor.c intmap.o -lstdc++
+	mv monitor monitor-vamos
+
+monitor-tessla.c: bankmonitor-tessla.vl  $(VLCC)
+	$(VLCC) bankmonitor-tessla.vl monitor-tessla.c
+	-clang-format -i monitor-tessla.c
+
+monitor-tessla: monitor-tessla.c $(GENCC) intmap.o $(SHAMON_LIB)
+	$(GENCC) monitor-tessla.c intmap.o -lstdc++
+	mv monitor monitor-tessla
 
 bank.o : bank.c bank.h
 	$(CC) -c $< $(CFLAGS) $(CPPFLAGS) -o $@

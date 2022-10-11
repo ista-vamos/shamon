@@ -10,13 +10,13 @@ DRRUN="$DRIOPATH/build/bin64/drrun\
 	-root $DRIOPATH/build/\
 	-c ../../sources/drregex/libdrregex.so"
 
-MONITOR=$(dirname $0)/monitor-vamos
+MONITOR=$(dirname $0)/monitor-tessla
 if [ $(basename "$0") == "regexbank-dump.sh" ]; then
 	MONITOR=$(dirname $0)/../../monitors/monitor-generic
 fi
 
-rm -f /tmp/fifo{A,B}
-mkfifo /tmp/fifo{A,B}
+rm -f /tmp/fifo{A,B} /tmp/tessla.in
+mkfifo /tmp/fifo{A,B} /tmp/tessla.in
 
 python inputs.py $NUM > inputs.last.txt
 
@@ -52,8 +52,12 @@ done
 echo "-- Starting interact --"
 cat /tmp/fifoB | ./interact inputs.last.txt interact.log >/tmp/fifoA &
 
-wait $MON_PID
+echo "-- Starting TeSSLa -- "
+java -jar /opt/vamos/tessla/target/scala-2.13/tessla-assembly-1.2.4.jar interpreter --base-time 1ns spec.tessla /tmp/tessla.in
+TESSLA_PID=$!
 
-rm -f /tmp/fifo{A,B}
+wait $TESSLA_PID
+
+rm -f /tmp/fifo{A,B} /tmp/tessla.in
 
 cat interact.log

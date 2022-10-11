@@ -1,0 +1,16 @@
+in ubound: Events[(Int, Int)]
+in lbound: Events[(Int, Int)]
+in change: Events[(Int, Int)]
+in reset:  Events[Unit]
+in check_atleast: Events[(Int, Int)]
+in check_less: Events[(Int, Int)]
+
+def s3lb = merge(filter(lbound, lbound._1 == 100003)._2, 0) + filter(change, change._1 == 100003)._2
+
+def s3error = s3lb < 0 || s3lb < filter(check_atleast, check_atleast._1 == 100003)._2
+
+out s3error
+out check_atleast
+out s3lb
+out reset
+
