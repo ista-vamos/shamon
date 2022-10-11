@@ -42,7 +42,7 @@ int main (int argc, char *argv[]) {
             }
     }
     /* Initialize the info about this source */
-    struct source_control *control = source_control_define(1, "event", "l");
+    struct source_control *control = source_control_define(1, "E", "l");
     assert(control);
     struct buffer *shm = create_shared_buffer(shmkey, control);
     assert(shm);
