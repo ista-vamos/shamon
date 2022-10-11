@@ -45,6 +45,7 @@ $$
     int out_processed=0;
     int in_holes=0;
     int out_holes=0;
+    int errors=0;
 $$
 
 startup
@@ -57,7 +58,8 @@ $$
 cleanup
 $$
 printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
-printf("\nin_holes: %i, out_holes: %i\n", in_holes, out_holes);
+printf("in_holes: %i, out_holes: %i\n", in_holes, out_holes);
+printf("Errors found: %d\n", errors);
 fflush(stdout);
 destroy_intmap(&balances);
 destroy_intmap(&upper_bounds);
@@ -73,8 +75,10 @@ arbiter : BankEvent
 	$$
 	    if (tin < tout){
 		$drop 1 from In;
+		++in_processed;
 	    } else {
 		current_account = acc;
+		++out_processed;
 		$drop 1 from Out;
 		$switch to working;
 	    }
@@ -86,8 +90,10 @@ arbiter : BankEvent
 	$$
 	    if (tin < tout){
 		$drop 1 from In;
+		++in_processed;
 	    } else {
 		current_account = acc;
+		++out_processed;
 		$drop 1 from Out;
 		$switch to working;
 	    }
@@ -113,11 +119,13 @@ arbiter : BankEvent
 
 	on Out : 1, In : 1 where $$ true $$
 	$$
+	    ++out_processed;
 	    $drop 1 from Out;
 	$$
 
 	on Out : done, In : 1 where $$ true $$
 	$$
+	    ++in_processed;
 	    $drop 1 from In;
 	$$
     }
@@ -128,6 +136,7 @@ arbiter : BankEvent
     	$$
     	    $yield Clear();
 	    ++in_holes;
+	    ++in_processed;
             $switch to aligning;
     	$$
 
@@ -135,6 +144,7 @@ arbiter : BankEvent
     	$$
     	    $yield Clear();
 	    ++out_holes;
+	    ++out_processed;
             $switch to aligning;
     	$$
 
@@ -150,7 +160,8 @@ arbiter : BankEvent
     	$$
 
     	on Out : transfer(t2, from_, to_) transferSuccess(t4) |,
-	   In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) | where $$ true $$
+	   In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) |
+	   where $$ true $$
     	$$
 		assert(action == 4);
     		$yield SawTransfer(from_, to_, amnt);
@@ -160,7 +171,8 @@ arbiter : BankEvent
     	$$
 
     	on Out : transfer(t2, from_, to_) selectedAccount(t4, acc) |,
-	   In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) | where $$ true $$
+	   In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) |
+	   where $$ true $$
     	$$
 		assert(action == 4);
     		$yield SawTransferFail(from_, to_, amnt);
@@ -169,7 +181,8 @@ arbiter : BankEvent
     	$$
 
     	on Out : depositTo(t2, acc) depositSuccess(t4) |,
-	   In  : numIn(t1, action) numIn(t3, amnt) | where $$ true $$
+	   In  : numIn(t1, action) numIn(t3, amnt) |
+	   where $$ true $$
     	$$
 	        assert(action == 1);
     		$yield SawDeposit(acc, amnt);
@@ -180,7 +193,8 @@ arbiter : BankEvent
     	$$
 
     	on Out : depositTo(t2, acc) depositFail(t4) |,
-	   In  : numIn(t1, action) numIn(t3, amnt) | where $$ true $$
+	   In  : numIn(t1, action) numIn(t3, amnt) |
+	   where $$ true $$
     	$$
 	        assert(action == 1);
     		$yield SawDeposit(acc, amnt);
@@ -191,7 +205,8 @@ arbiter : BankEvent
     	$$
 
     	on Out : withdraw(t2, acc) withdrawSuccess(t4) |,
-	   In  : numIn(t1, act) numIn(t3, amnt) | where $$ true $$
+	   In  : numIn(t1, act) numIn(t3, amnt) |
+	   where $$ true $$
     	$$
 		assert(act == 2);
     		$yield SawWithdraw(acc, amnt);
@@ -201,7 +216,8 @@ arbiter : BankEvent
     	$$
 
     	on Out : withdraw(t2, acc) withdrawFail(t4) |,
-	   In  : numIn(t1, act) numIn(t3, amnt) | where $$ true $$
+	   In  : numIn(t1, act) numIn(t3, amnt) |
+	   where $$ true $$
     	$$
 	        assert(act == 2);
     		$yield SawWithdrawFail(acc, amnt);
@@ -225,6 +241,7 @@ arbiter : BankEvent
 
 	on Out : logout(t) | where $$ true $$
 	$$
+	    ++out_processed;
 	    $switch to aligning;
 	$$
     }
@@ -247,6 +264,7 @@ monitor(128)
 		{
 			if(old_value != balance)
 			{
+				++errors;
 				printf("Mismatched balance on account #%i: Expected %i, but got %i\n", account, old_value, balance);
 				intmap_insert(&balances, account, balance);
 			}
@@ -257,6 +275,7 @@ monitor(128)
 			{
 				if(balance>old_value)
 				{
+					++errors;
 					printf("Mismatched balance on account #%i: Expected at most %i, but got %i\n", account, old_value, balance);
 				}
 				intmap_remove(&upper_bounds, account);
@@ -265,6 +284,7 @@ monitor(128)
 			{
 				if(balance<old_value)
 				{
+					++errors;
 					printf("Mismatched balance on account #%i: Expected at least %i, but got %i\n", account, old_value, balance);
 				}
 				intmap_remove(&lower_bounds, account);
@@ -308,6 +328,7 @@ monitor(128)
 			}
 			else
 			{
+				++errors;
 				printf("Withdrawal of %i from account #%i should have failed based on balance %i\n", amount, account, old_value);
 				intmap_remove(&balances, account);
 			}
@@ -322,6 +343,7 @@ monitor(128)
 				}
 				else
 				{
+					++errors;
 					printf("Withdrawal of %i from account #%i should have failed based on upper balance bound %i\n", amount, account, old_value);
 					intmap_remove(&upper_bounds, account);
 				}
@@ -347,6 +369,7 @@ monitor(128)
 		{
 			if(old_value >= amount)
 			{
+				++errors;
 				printf("Withdrawal of %i from account #%i should have succeeded based on balance %i\n", amount, account, old_value);
 				intmap_remove(&balances, account);
 			}
@@ -368,6 +391,7 @@ monitor(128)
 			{
 				if(old_value >= amount)
 				{
+					++errors;
 					printf("Withdrawal of %i from account #%i should have succeeded based on lower balance bound %i\n", amount, account, old_value);
 					intmap_remove(&lower_bounds, account);
 				}
@@ -406,6 +430,7 @@ monitor(128)
 			}
 			else
 			{
+				++errors;
 				printf("Transfer of %i from account #%i should have failed based on balance %i\n", amount, from_, old_value);
 				intmap_remove(&balances, from_);
 			}
@@ -420,6 +445,7 @@ monitor(128)
 				}
 				else
 				{
+					++errors;
 					printf("Transfer of %i from account #%i should have failed based on upper balance bound %i\n", amount, from_, old_value);
 					intmap_remove(&upper_bounds, from_);
 				}
@@ -445,6 +471,7 @@ monitor(128)
 		{
 			if(old_value >= amount)
 			{
+				++errors;
 				printf("Transfer of %i from account #%i should have succeeded based on balance %i\n", amount, from_, old_value);
 				intmap_remove(&balances, from_);
 			}
@@ -466,6 +493,7 @@ monitor(128)
 			{
 				if(old_value >= amount)
 				{
+					++errors;
 					printf("Transfer of %i from account #%i should have succeeded based on lower balance bound %i\n", amount, from_, old_value);
 					intmap_remove(&lower_bounds, from_);
 				}
