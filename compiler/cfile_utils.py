@@ -1056,7 +1056,7 @@ def check_progress(rule_set_name, tree, existing_buffers):
     answer += "if (ok == 0) {\n"
 
     for (buffer_name, desired_count) in buffers_to_peek.items():
-        answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\");\n"
+        answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
         answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {desired_count}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
     answer += "fprintf(stderr, \"No rule matched even though there was enough events, NO PROGRESS!\\n\");"
     answer += "assert(0);"
