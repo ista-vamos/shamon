@@ -106,7 +106,7 @@ arbiter : NumberPairs
                 $drop 1 from P[1];
             }
         $$
-        on Prio[F,S](), F : hole(n) | where $$ count < 10 || $F.pos; < $S.pos; $$
+        on Prio[F,S](), F : hole(n) | where $$ count < 10 || $F.pos; <= $S.pos; $$
         $$
             if($F.pos; < $S.pos;)
             {
@@ -125,7 +125,7 @@ arbiter : NumberPairs
                 right_drops += n;
             }
         $$
-        on Prio[F,S](), F: Prime(n, p) | where $$ count < 10 || $F.pos; < $S.pos; $$
+        on Prio[F,S](), F: Prime(n, p) | where $$ count < 10 || $F.pos; <= $S.pos; $$
         $$
             $F.pos; = process(n, p, $F.pos;, $S.pos;);  
             if (F == EV_SOURCE_P_0) {
@@ -143,7 +143,7 @@ monitor
     $$
         if(n!=m)
         {
-          printf("Error at index %i: %i is not equal to %i\n", i, n, m);
+          printf("ERROR at index %i: %i is not equal to %i\n", i, n, m);
         }
     $$
 }
