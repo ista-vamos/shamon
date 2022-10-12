@@ -56,10 +56,10 @@ dm_drio_consume_time_c1 = ParseTime()
 dm_drio_consume_time_c2 = ParseTime()
 measure("'Empty monitor C/C for primes' DynamoRIO sources",
         [Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
-                 primes1, "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
+                 primes1, "Prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_consume_time_c1),
          Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
-                 primes2, "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
+                 primes2, "Prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_consume_time_c2)],
         [Command(EMPTY_MONITOR_PATH, f"Left:drregex:{primes1}", f"Right:drregex:{primes2}",
                  stdout=PIPE)])
@@ -85,10 +85,10 @@ dm_drio_time_c2 = ParseTime()
 dm_drio_stats2 = ParseStats()
 measure("'Differential monitor C/C for primes' DynamoRIO sources",
         [Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
-                 primes1, "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
+                 primes1, "Prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_time_c1),
          Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
-                 primes2, "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
+                 primes2, "Prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_time_c2)],
         [Command(MONITOR_PATH, f"P_0:drregex:{primes1}", f"P_1:drregex:{primes2}",
                  stdout=PIPE).withparser(dm_drio_stats2)])
@@ -102,10 +102,10 @@ dm_drio_bad_time_c2 = ParseTime()
 dm_drio_bad_stats2 = ParseStats()
 measure("'Differential monitor C/C for primes' DynamoRIO sources, 10% errors",
         [Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
-                 primes1, "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
+                 primes1, "Prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_bad_time_c1),
          Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
-                 primes2, "prime", "#([0-9]+): ([0-9]+)", "ii", "--",
+                 primes2, "Prime", "#([0-9]+): ([0-9]+)", "ii", "--",
                  f"{PRIMESPATH}/primes-bad", NUM, str(int(NUM)/10)).withparser(dm_drio_bad_time_c2)],
         [Command(MONITOR_PATH, f"P_0:drregex:{primes1}",
                  f"P_1:drregex:{primes2}", stdout=PIPE).withparser(dm_drio_bad_stats2)])
