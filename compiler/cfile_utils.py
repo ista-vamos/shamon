@@ -643,7 +643,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                     {inner_code}
                     {"}"}'''
                 elif tree[PPBUFFER_MATCH_ARG1] == "done":
-                    return f'''if (is_stream_done(EV_SOURCE_{stream_name})) {"{"}
+                    return f'''if (count_{stream_name} == 0 && is_stream_done(EV_SOURCE_{stream_name})) {"{"}
                         {inner_code}
                     {"}"}
                     '''
