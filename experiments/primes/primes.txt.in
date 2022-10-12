@@ -39,7 +39,8 @@ $$
                 compared++;
                 $yield NumberPair(n, oval, p);
             }
-            count -= intmap_remove_upto(&buf, n);
+            int removed=intmap_remove_upto(&buf, n);
+            count -= removed;
         }
         else
         {
@@ -66,6 +67,7 @@ int right_skipped = left_processed - compared - right_drops;
 printf("LEFT: processed %d events (%d compared, %d dropped (in %d holes), %d skipped) \n", left_processed, compared, left_drops, left_holes, left_skipped);
 
 printf("RIGHT: processed %d events (%d compared, %d dropped (in %d holes), %d skipped) \n", right_processed, compared, right_drops, right_holes, right_skipped);
+
 $$
 
 arbiter : NumberPairs
@@ -82,7 +84,8 @@ arbiter : NumberPairs
                 $yield NumberPair(ln, lp, rp);
                 $drop 1 from P[0];
                 $drop 1 from P[1];
-                intmap_clear(&buf);
+                int removed=intmap_clear(&buf);
+                count-=removed;
                 $P[0].pos; = ln + 1;
                 $P[1].pos; = rn + 1;
             }
@@ -106,7 +109,8 @@ arbiter : NumberPairs
             $$
                 if($F.pos; < $S.pos;)
                 {
-                    count -= intmap_remove_upto(&buf, $F.pos;+n);
+                    int removed = intmap_remove_upto(&buf, $F.pos;+n);
+                    count -= removed;
                 }
                 $F.pos; += n;
                 if (F == EV_SOURCE_P_0) {

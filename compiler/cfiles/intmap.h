@@ -17,7 +17,9 @@ void intmap_insert(intmap* m, int key, int value); // inserts an element with ke
 
 int intmap_get(intmap *m,int key, int *value); // returns 1 when the element is found, otherwise 0. Writes the value of element with key n in result
 
-void intmap_clear(intmap *m); //removes all entries
+int intmap_clear(intmap *m); //removes all entries
+
+int intmap_size(intmap *m) ; //returns size
 
 #ifdef __cplusplus
 }
