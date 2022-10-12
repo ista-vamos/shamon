@@ -41,7 +41,10 @@ client.o : client.c bank.h common.h
 bank: client.o bank.o
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -lpthread
 
-clean:
-	-rm *.o monitor bank inputs.txt inputs100.txt *.o
+experiments: interact
+	./experiments.sh
 
-.PHONY: clean all
+clean:
+	-rm *.o monitor-vamos monitor-tessla bank interact *.o
+
+.PHONY: clean all experiments

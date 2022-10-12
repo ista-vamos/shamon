@@ -59,7 +59,14 @@ int intmap_get(intmap *m, int key, int *result) {
     return false;
 }
 
-void intmap_clear(intmap *m) {
+int intmap_clear(intmap *m) {
     map_type *cpp_map = static_cast<map_type*>(m->data_structure);
-    cpp_map->erase(cpp_map->begin(), cpp_map->end());
+    int cursize=cpp_map->size();
+    cpp_map->clear();
+    return cursize;
+}
+
+int intmap_size(intmap *m) {
+    map_type *cpp_map = static_cast<map_type*>(m->data_structure);
+    return cpp_map->size();
 }
