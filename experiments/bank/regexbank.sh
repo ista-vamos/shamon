@@ -8,7 +8,7 @@ shift
 DRIOPATH="/opt/vamos/dynamorio/"
 DRRUN="$DRIOPATH/build/bin64/drrun\
 	-root $DRIOPATH/build/\
-	-c ../../sources/drregex/libdrregex.so"
+	-c ../../sources/drregex/libdrregex-mt.so"
 
 MONITOR=$(dirname $0)/monitor-vamos
 if [ $(basename "$0") == "regexbank-dump.sh" ]; then
