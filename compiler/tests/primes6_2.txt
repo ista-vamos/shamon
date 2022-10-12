@@ -8,7 +8,7 @@ stream type NumberPairs
     NumberPair(i : int, n : int, m : int);
 }
 
-event source P[2] : Primes(0) process using FORWARD to autodrop(8)
+event source P[2] : Primes(0) process using FORWARD to autodrop(1024)
 
 buffer group Ps : Primes order by pos includes P[all]
 
@@ -18,6 +18,17 @@ $$
     intmap buf;
     int count = 0;
 
+    int left_drops = 0;
+    int right_drops = 0;
+    
+    int left_processed = 0;
+    int right_processed = 0;
+
+    int compared = 0;
+    
+    int left_holes = 0;
+    int right_holes = 0;
+
     int process(int n, int p, int pos, int opos)
     {
         if(pos < opos)
@@ -25,6 +36,7 @@ $$
             int oval=0;
             if(intmap_get(&buf, n, &oval))
             {
+                compared++;
                 $yield NumberPair(n, oval, p);
             }
             count -= intmap_remove_upto(&buf, n);
@@ -49,6 +61,11 @@ $$
 cleanup
 $$
 destroy_intmap(&buf);
+int left_skipped = left_processed - compared - left_drops;
+int right_skipped = left_processed - compared - right_drops;
+printf("LEFT: processed %d events (%d compared, %d dropped (in %d holes), %d skipped) \n", left_processed, compared, left_drops, left_holes, left_skipped);
+
+printf("RIGHT: processed %d events (%d compared, %d dropped (in %d holes), %d skipped) \n", right_processed, compared, right_drops, right_holes, right_skipped);
 $$
 
 arbiter : NumberPairs
@@ -59,6 +76,9 @@ arbiter : NumberPairs
         $$
             if(ln == rn)
             {
+                left_processed += 1;
+                right_processed += 1;
+                compared++;
                 $yield NumberPair(ln, lp, rp);
                 $drop 1 from P[0];
                 $drop 1 from P[1];
@@ -68,11 +88,13 @@ arbiter : NumberPairs
             }
             else if($P[0].pos;<$P[1].pos;)
             {
+                left_processed += 1;
                 $P[0].pos; = process(ln, lp, $P[0].pos;, $P[1].pos;);
                 $drop 1 from P[0];
             }
             else
             {
+                right_processed += 1;
                 $P[1].pos; = process(rn, rp, $P[1].pos;, $P[0].pos;);
                 $drop 1 from P[1];
             }
@@ -80,17 +102,31 @@ arbiter : NumberPairs
 
         choose F,S from Ps where $$ true $$
         {
-            on F : hole(n) | where $$ count < 10 || $F.pos; < $S.pos; $$
+            on F : hole(n) | where $$ count < 10 || $F.pos; <= $S.pos; $$
             $$
                 if($F.pos; < $S.pos;)
                 {
                     count -= intmap_remove_upto(&buf, $F.pos;+n);
                 }
                 $F.pos; += n;
+                if (F == EV_SOURCE_P_0) {
+                    left_processed += n;
+                    left_holes += 1;
+                    left_drops += n;
+                } else {
+                    right_processed += n;
+                    right_holes += 1;
+                    right_drops += n;
+                }
             $$
-            on F: Prime(n, p) | where $$ count < 10 || $F.pos; < $S.pos; $$
+            on F: Prime(n, p) | where $$ count < 10 || $F.pos; <= $S.pos; $$
             $$
                 $F.pos; = process(n, p, $F.pos;, $S.pos;);
+                if (F == EV_SOURCE_P_0) {
+                    left_processed ++;
+                } else {
+                    right_processed ++;
+                } 
             $$
         }
     }
@@ -102,7 +138,7 @@ monitor
     $$
         if(n!=m)
         {
-          printf("Error at index %i: %i is not equal to %i\n", i, n, m);
+          printf("ERROR at index %i: %i is not equal to %i\n", i, n, m);
         }
     $$
 }
