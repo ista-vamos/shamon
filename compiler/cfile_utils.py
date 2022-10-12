@@ -652,7 +652,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                     {inner_code}
                     {"}"}'''
                 elif tree[PPBUFFER_MATCH_ARG1] == "done":
-                    return f'''if (is_stream_done(EV_SOURCE_{stream_name})) {"{"}
+                    return f'''if (count_{stream_name} == 0 && is_stream_done(EV_SOURCE_{stream_name})) {"{"}
                         {inner_code}
                     {"}"}
                     '''
@@ -1065,18 +1065,20 @@ def check_progress(rule_set_name, tree, existing_buffers):
     answer += "if (ok == 0) {\n"
 
     for (buffer_name, desired_count) in buffers_to_peek.items():
-        answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\");\n"
-        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {desired_count}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
+        answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
+        answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, &e1_{buffer_name}, &i1_{buffer_name}, &e2_{buffer_name}, &i2_{buffer_name});\n"
+        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
     answer += "fprintf(stderr, \"No rule matched even though there was enough events, NO PROGRESS!\\n\");"
     answer += "assert(0);"
     answer += "}\n"
 
-    answer += f"if (++RULE_SET_{rule_set_name}_nomatch_cnt > 1000000) {{\
+    answer += f"if (++RULE_SET_{rule_set_name}_nomatch_cnt > 8000000) {{\
         \tRULE_SET_{rule_set_name}_nomatch_cnt = 0;"
     answer += f"\tfprintf(stderr, \"\\033[31mRule set '{rule_set_name}' cycles long time without progress\\033[0m\\n\");"
     for (buffer_name, desired_count) in buffers_to_peek.items():
         answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
-        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {desired_count}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
+        answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, &e1_{buffer_name}, &i1_{buffer_name}, &e2_{buffer_name}, &i2_{buffer_name});\n"
+        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
     answer += "fprintf(stderr, \"Seems all rules are waiting for some events that are not coming\\n\");"
     answer += "}\n"
 
