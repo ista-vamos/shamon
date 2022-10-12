@@ -138,7 +138,7 @@ monitor
     $$
         if(n!=m)
         {
-          printf("Error at index %i: %i is not equal to %i\n", i, n, m);
+          printf("ERROR at index %i: %i is not equal to %i\n", i, n, m);
         }
     $$
 }
