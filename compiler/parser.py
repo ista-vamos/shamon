@@ -353,11 +353,16 @@ def p_event_source_tail(p):
 def p_connection_kind(p):
     '''
     connection_kind : AUTODROP '(' INT ')'
+                    | AUTODROP '(' INT ',' INT ')'
                     | BLOCKING '(' INT ')'
                     | INFINITE
     '''
-    if len(p) == 0:
+    if len(p) == 2:
         p[0] = ('conn_kind', p[PCONN_KIND_NAME], None)
+    elif len(p) == 7:
+        # AUTODROP '(' INT ',' INT ')'
+        #    1      2   3   4   5   6
+        p[0] = ('conn_kind', p[PCONN_KIND_NAME], p[PCONN_KIND_INT], p[5])
     else:
         p[0] = ('conn_kind', p[PCONN_KIND_NAME], p[PCONN_KIND_INT])
 # END performance layer specifications
