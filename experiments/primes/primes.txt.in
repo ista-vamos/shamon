@@ -105,7 +105,16 @@ arbiter : NumberPairs
 
         choose F,S from Ps where $$ true $$
         {
-            on F : hole(n) | where $$ count < 10 || $F.pos; <= $S.pos; $$
+            on F: Prime(n, p) | where $$ count < 10 || $F.pos; <= $S.pos; $$
+            $$
+                $F.pos; = process(n, p, $F.pos;, $S.pos;);
+                if (F == EV_SOURCE_P_0) {
+                    left_processed ++;
+                } else {
+                    right_processed ++;
+                } 
+            $$
+            on F : hole(n) | where $$ true $$
             $$
                 if($F.pos; < $S.pos;)
                 {
@@ -122,15 +131,6 @@ arbiter : NumberPairs
                     right_holes += 1;
                     right_drops += n;
                 }
-            $$
-            on F: Prime(n, p) | where $$ count < 10 || $F.pos; <= $S.pos; $$
-            $$
-                $F.pos; = process(n, p, $F.pos;, $S.pos;);
-                if (F == EV_SOURCE_P_0) {
-                    left_processed ++;
-                } else {
-                    right_processed ++;
-                } 
             $$
         }
     }
