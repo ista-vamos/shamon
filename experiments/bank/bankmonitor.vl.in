@@ -227,15 +227,6 @@ arbiter : BankEvent
             $switch to aligning;
         $$
 
-        on Out : transfer(t2, f, t) |,
-           In  : numIn(t0, action) otherIn(t1) | where $$ true $$
-        $$
-	    /* some In event is not matching */
-            $switch to aligning;
-        $$
-
-
-
         on Out : transfer(t2, from_, to_) selectedAccount(t4, acc) |,
            In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) |
            where $$ true $$
@@ -260,6 +251,20 @@ arbiter : BankEvent
         on Out : transfer(t2, f, t) | hole(n) where $$ true $$
         $$
 	    ++out_processed;
+            $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) |,
+           In  : numIn(t0, action) | hole(n) where $$ true $$
+        $$
+	    /* some In event is not matching */
+            $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) |,
+           In  : numIn(t0, action) otherIn(t1) | where $$ true $$
+        $$
+	    /* some In event is not matching */
             $switch to aligning;
         $$
 
@@ -386,6 +391,7 @@ arbiter : BankEvent
             $switch to aligning;
         $$
     }
+
 }
 
 
