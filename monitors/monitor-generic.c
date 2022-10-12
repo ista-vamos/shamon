@@ -67,12 +67,15 @@ shm_stream *create_stream(int argc, char *argv[], int arg_i,
                           const char *expected_stream_name);
 shamon *shmn;
 
+sig_atomic_t __run = 1;
+
 static void sig_fatal(int sig) {
     (void)sig;
     fprintf(stderr, "Caught signal %d\n", sig);
     if (shmn) {
         shamon_detach(shmn);
     }
+    __run = 0;
 }
 
 static void setup_signals() {
@@ -157,7 +160,7 @@ int main(int argc, char *argv[]) {
         .kind = 0
     };
 
-    while (shamon_is_ready(shmn)) {
+    while (__run && shamon_is_ready(shmn)) {
         old_n = n;
 
         while ((ev = shamon_get_next_ev(shmn, &stream))) {

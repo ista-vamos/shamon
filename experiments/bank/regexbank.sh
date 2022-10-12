@@ -16,6 +16,8 @@ if [ $(basename "$0") == "regexbank-dump.sh" ]; then
 fi
 
 rm -f /tmp/fifo{A,B}
+rm -f /dev/shm/bank.{stdin,stdout}
+
 mkfifo /tmp/fifo{A,B}
 
 python3 inputs.py $NUM > inputs.last.txt
