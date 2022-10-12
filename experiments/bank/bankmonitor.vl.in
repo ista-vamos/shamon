@@ -31,8 +31,8 @@ stream type BankEvent
     Clear();
 }
 
-event source In : BankInputEvent to autodrop(4)
-event source Out : BankOutputEvent to autodrop(4)
+event source In : BankInputEvent to autodrop(@BUFSIZE)
+event source Out : BankOutputEvent to autodrop(@BUFSIZE)
 
 globals
 $$
@@ -151,13 +151,13 @@ arbiter : BankEvent
 	   $$
 
         on Out : | transfer(tout, from_, to_),
-           In  : | numIn(tin, action) numIn(tin2, account)
+           In  : | numIn(tin, action)
 	   where $$ true $$
 	   $$
-	       if (tout == tin + 4 && tout == tin2 + 1) {
+	       if (tout == tin + 4) {
 		   assert(action == 4);
 	           $switch to working;
-	       } else if (tout > tin) {
+	       } else if (tout > tin + 4) {
                    ++in_processed;
 		   $drop 1 from In;
 	       } else {
@@ -186,58 +186,7 @@ arbiter : BankEvent
 	    ++in_processed;
 	$$
 
-        on Out : | balance(tout, account),
-           In  : otherIn(tin) | where $$ true $$
-	$$
-	    if (tout < tin) {
-                $drop 1 from Out;
-                $switch to aligning;
-	    }
-	$$
-
-        on Out : | withdraw(tout, account),
-           In  : otherIn(tin) | where $$ true $$
-	$$
-	    if (tout < tin) {
-                $drop 1 from Out;
-                $switch to aligning;
-	    }
-	$$
-
-        on Out : | depositTo(tout, account),
-           In  : otherIn(tin) | where $$ true $$
-	$$
-	    if (tout < tin) {
-                $drop 1 from Out;
-                $switch to aligning;
-	    }
-	$$
-
-        on Out : | transfer(tout, from_, to_),
-           In  : otherIn(tin) | where $$ true $$
-	$$
-	    if (tout < tin) {
-                $drop 1 from Out;
-                $switch to aligning;
-	    }
-	$$
-
-        on Out : | transfer(tout, from_, to_),
-           In  : numIn(tin1, n) otherIn(tin) | where $$ true $$
-	$$
-	    if (tout < tin1) {
-                $drop 1 from Out;
-                $switch to aligning;
-	    }
-	$$
-
-        on Out : | transfer(tout, from_, to_),
-           In  : numIn(tin1, n) | hole(n) where $$ true $$
-	$$
-	$$
-
-        on Out : | transfer(tout, from_, to_),
-           In  : otherIn(tin1) | hole(n) where $$ true $$
+        on Out : 1, In  : otherIn(tin) | where $$ true $$
 	$$
 	$$
 
@@ -269,14 +218,23 @@ arbiter : BankEvent
         $$
 
         on Out : transfer(t2, f, t) transferSuccess(t4) |,
-           In  : numIn(t0, action) numIn(t1, acc) | hole(n)
-	   where $$ true $$
+           In  : 3 where $$ true $$
         $$
-	    /* the last in event is a hole */
+	    /* some In event is not matching */
 	    in_processed += 2;
 	    out_processed += 2;
+	    $drop 1 from In; /* drop the number */
             $switch to aligning;
         $$
+
+        on Out : transfer(t2, f, t) |,
+           In  : numIn(t0, action) otherIn(t1) | where $$ true $$
+        $$
+	    /* some In event is not matching */
+            $switch to aligning;
+        $$
+
+
 
         on Out : transfer(t2, from_, to_) selectedAccount(t4, acc) |,
            In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) |
@@ -290,12 +248,12 @@ arbiter : BankEvent
         $$
 
         on Out : transfer(t2, f, t) selectedAccount(t4, acc) |,
-           In  : numIn(t0, action) numIn(t1, acc) | hole(n)
-	   where $$ true $$
+           In  : 3 where $$ true $$
         $$
-	    /* the last in event is a hole */
+	    /* some In event is not matching */
 	    in_processed += 2;
 	    out_processed += 2;
+	    $drop 1 from In; /* drop the number */
             $switch to aligning;
         $$
 
@@ -304,7 +262,6 @@ arbiter : BankEvent
 	    ++out_processed;
             $switch to aligning;
         $$
-
 
         on Out : balance(t2, acc) numOut(t3, amnt) |,
            In  : numIn(t1, action) | where $$ true $$
@@ -431,11 +388,12 @@ arbiter : BankEvent
     }
 }
 
+
 monitor(128)
 {
     on Clear() where $$ true $$
     $$
-	printf("Clear()\n");
+	// printf("Clear()\n");
         intmap_clear(&balances);
         intmap_clear(&upper_bounds);
         intmap_clear(&lower_bounds);
@@ -443,7 +401,7 @@ monitor(128)
 
     on SawBalance(account, balance) where $$ true $$
     $$
-        printf("SawBalance(%d, %d)\n", account, balance);
+        // printf("SawBalance(%d, %d)\n", account, balance);
         int old_value=0;
         if(intmap_get(&balances, account, &old_value))
         {
@@ -486,7 +444,7 @@ monitor(128)
 
     on SawDeposit(account,amount) where $$ true $$
     $$
-        printf("SawDeposit(%d, %d)\n", account, amount);
+        // printf("SawDeposit(%d, %d)\n", account, amount);
         int old_value=0;
         if(intmap_get(&balances, account, &old_value))
         {
@@ -511,7 +469,7 @@ monitor(128)
 
     on SawWithdraw(account, amount) where $$ true $$
     $$
-        printf("SawWithdraw(%d, %d)\n", account, amount);
+        // printf("SawWithdraw(%d, %d)\n", account, amount);
         int old_value=0;
         if(intmap_get(&balances, account, &old_value))
         {
@@ -560,7 +518,7 @@ monitor(128)
 
     on SawWithdrawFail(account, amount) where $$ true $$
     $$
-        printf("SawWithdrawFail(%d, %d)\n", account, amount);
+        // printf("SawWithdrawFail(%d, %d)\n", account, amount);
         int old_value=0;
         if(intmap_get(&balances, account, &old_value))
         {
@@ -601,7 +559,7 @@ monitor(128)
 
     on SawTransfer(from_, to_, amount) where $$ true $$
     $$
-        printf("SawTransfer(%d, %d, %d)\n", from_, to_, amount);
+        // printf("SawTransfer(%d, %d, %d)\n", from_, to_, amount);
         int old_value=0;
         if(intmap_get(&balances, to_, &old_value))
         {
@@ -669,7 +627,7 @@ monitor(128)
     $$
     on SawTransferFail(from_, to_, amount) where $$ true $$
     $$
-        printf("SawTransferFail(%d, %d, %d)\n", from_, to_, amount);
+        // printf("SawTransferFail(%d, %d, %d)\n", from_, to_, amount);
         int old_value=0;
         if(intmap_get(&balances, from_, &old_value))
         {
