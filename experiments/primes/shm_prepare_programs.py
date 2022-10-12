@@ -2,7 +2,7 @@ import os
 from subprocess import run, TimeoutExpired
 
 # generate shamon programs with different buffer size
-for buffsize in [4, 16, 128, 1024]:
+for buffsize in [128, 256, 512, 1024, 2048]:
     file = open("./primes.txt.in", "r")
     outfile = open(f"./programs/primes_{buffsize}.txt", "w")
     for line in file:
@@ -17,7 +17,7 @@ assert("/".join(CURRENT_PATH.split("/")[-3:]) == 'shamon/experiments/primes') # 
 COMPILER_PATH = f"{CURRENT_PATH}/../../compiler/main.py"
 
 # compile shamon programs into c programs
-for buffsize in [4, 16, 128, 1024]:
+for buffsize in [128,256, 512, 1024, 2048]:
     run(["python3", COMPILER_PATH, f"{CURRENT_PATH}/programs/primes_{buffsize}.txt", f"{CURRENT_PATH}/programs/monitor_{buffsize}.c"], check=True)
 
 
@@ -25,7 +25,7 @@ for buffsize in [4, 16, 128, 1024]:
 run(["g++", "-c", f"{CURRENT_PATH}/../../compiler/cfiles/intmap.cpp" ], check=True)
 
 COMPILE_SCRIPT= f"{CURRENT_PATH}/../../gen/compile_primes6.sh"
-for buffsize in [4, 16, 128, 1024]:
+for buffsize in [128,256, 512, 1024,2048]:
     # compile c files
     run(["bash", COMPILE_SCRIPT, f"{CURRENT_PATH}/programs/monitor_{buffsize}.c" ], check=True)
 
@@ -36,7 +36,7 @@ for buffsize in [4, 16, 128, 1024]:
 # compile empty monitor
 
 COMPILE_SCRIPT= f"{CURRENT_PATH}/../../gen/compile.sh"
-for buffsize in [4, 16, 128, 1024]:
+for buffsize in [128, 256, 512,1024,2048]:
     # compile c files
     new_env = os.environ.copy()
     new_env["ARBITER_BUFSIZE"] = str(buffsize)
