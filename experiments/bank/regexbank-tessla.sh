@@ -18,7 +18,7 @@ fi
 rm -f /tmp/fifo{A,B} /tmp/tessla.in
 mkfifo /tmp/fifo{A,B} /tmp/tessla.in
 
-python inputs.py $NUM > inputs.last.txt
+python3 inputs.py $NUM > inputs.last.txt
 
 $DRRUN -t /bank \
 balance "\s*Current balance on Account ([0-9]+):\s*" i \

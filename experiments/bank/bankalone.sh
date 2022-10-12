@@ -8,7 +8,7 @@ shift
 rm -f /tmp/fifo{A,B}
 mkfifo /tmp/fifo{A,B}
 
-python inputs.py $NUM > inputs.last.txt
+python3 inputs.py $NUM > inputs.last.txt
 
 $(dirname $0)/bank $@ < /tmp/fifoA  > /tmp/fifoB 2>source-log.txt&
 BANK_PID=$!

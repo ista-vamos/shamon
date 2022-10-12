@@ -2,7 +2,7 @@
 
 set -e
 
-NUM=10000
+NUM=100000
 SHM_BUFSIZE=$1
 shift
 

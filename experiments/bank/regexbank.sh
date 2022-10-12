@@ -18,7 +18,7 @@ fi
 rm -f /tmp/fifo{A,B}
 mkfifo /tmp/fifo{A,B}
 
-python inputs.py $NUM > inputs.last.txt
+python3 inputs.py $NUM > inputs.last.txt
 
 # we can start it a bit before as it is waiting for the connection
 echo "-- Starting the monitor --"
