@@ -70,161 +70,193 @@ arbiter : BankEvent
     rule set aligning {
         on Out : hole(n) | where $$ true $$
         $$
+            $yield Clear();
             ++out_holes;
             ++out_processed;
         $$
 
-        on Out : | selectedAccount(tout, acc) where $$ true $$
-        $$
-            $switch to aligning_finish;
-        $$
+        on Out : | balance(t, a)     where $$ true $$  $$ $switch to align_in; $$
+        on Out : | depositTo(t, a)   where $$ true $$  $$ $switch to align_in; $$
+        on Out : | withdraw(t, a)    where $$ true $$  $$ $switch to align_in; $$
+        on Out : | transfer(t, s, r) where $$ true $$  $$ $switch to align_in; $$
 
         on Out : 1 where $$ true $$
-        $$
-            ++out_processed;
-            $drop 1 from Out;
-        $$
+	$$
+	    ++out_processed;
+	    $drop 1 from Out;
+	$$
 
-        on Out : done where $$ true $$
-        $$
-            $switch to aligning_finish;
-        $$
+        on Out : done where $$ true $$ $$ $switch to align_in; $$
     }
 
-    rule set aligning_finish {
-        on Out : | selectedAccount(tout, acc),
-           In  : | numIn(tin, n)
-           where $$ true $$
-        $$
-            if (tin < tout){
-                $drop 1 from In;
-                printf("aligning, dropped In id %lu\n", shm_event_id((shm_event*)e1_In));
-                ++in_processed;
-            } else {
-                printf("Aligned, Out: %lu, In: %lu\n", tout, tin);
-                ++out_processed;
-                $drop 1 from Out;
-                $switch to working;
-            }
-        $$
+    rule set align_in {
+        on Out : | balance(tout, account),
+           In  : | numIn(tin, action)
+	   where $$ true $$
+	   $$
+	       if (tout == tin + 1) {
+		   assert(action == 3);
+	           $switch to working;
+	       } else if (tout > tin) {
+                   ++in_processed;
+		   $drop 1 from In;
+	       } else {
+		   /* the event is incomplete, there must have been some hole,
+		      try once more */
+		   assert(in_holes > 0);
+                   ++out_processed;
+		   $drop 1 from Out;
+		   $switch to aligning;
+	       }
+	   $$
 
-        on Out : | selectedAccount(tout, acc),
-           In  : | otherIn(tin)
-           where $$ true $$
-        $$
-            if (tin < tout){
-                $drop 1 from In;
-                printf("aligning, dropped In id %lu\n", shm_event_id((shm_event*)e1_In));
-                ++in_processed;
-            } else {
-                printf("Aligned, Out: %lu, In: %lu\n", tout, tin);
-                ++out_processed;
-                $drop 1 from Out;
-                $switch to working;
-            }
-        $$
+        on Out : | depositTo(tout, account),
+           In  : | numIn(tin, action)
+	   where $$ true $$
+	   $$
+	       if (tout == tin + 1) {
+		   assert(action == 1);
+	           $switch to working;
+	       } else if (tout > tin) {
+                   ++in_processed;
+		   $drop 1 from In;
+	       } else {
+		   /* the event is incomplete, there must have been some hole,
+		      try once more */
+		   assert(in_holes > 0);
+                   ++out_processed;
+		   $drop 1 from Out;
+		   $switch to aligning;
+	       }
+	   $$
 
-        on Out : | selectedAccount(tout, acc),
-           In  : | hole(n) numIn(tin, num)
-           where $$ true $$
-        $$
-            ++in_holes;
-            if (tin < tout){ /* we're still fine */
-                $drop 2 from In;
-                in_processed += 2;
-            } else {
-                ++out_processed;
-                in_processed += 2;
+        on Out : | withdraw(tout, account),
+           In  : | numIn(tin, action)
+	   where $$ true $$
+	   $$
+	       if (tout == tin + 1) {
+		   assert(action == 2);
+	           $switch to working;
+	       } else if (tout > tin) {
+                   ++in_processed;
+		   $drop 1 from In;
+	       } else {
+		   /* the event is incomplete, there must have been some hole,
+		      try once more */
+		   assert(in_holes > 0);
+                   ++out_processed;
+		   $drop 1 from Out;
+		   $switch to aligning;
+	       }
+	   $$
+
+        on Out : | transfer(tout, from_, to_),
+           In  : | numIn(tin, action) numIn(tin2, account)
+	   where $$ true $$
+	   $$
+	       if (tout == tin + 4 && tout == tin2 + 1) {
+		   assert(action == 4);
+	           $switch to working;
+	       } else if (tout > tin) {
+                   ++in_processed;
+		   $drop 1 from In;
+	       } else {
+		   /* the event is incomplete, there must have been some hole,
+		      try once more */
+		   assert(in_holes > 0);
+                   ++out_processed;
+		   $drop 1 from Out;
+		   $switch to aligning;
+	       }
+	   $$
+
+        on Out : | logout(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | numOut(t, n) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | selectedAccount(t, a) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | depositSuccess(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | depositFail(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | withdrawSuccess(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | withdrawFail(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | transferSuccess(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+
+	on Out : 1, In: hole(n) | where $$ true $$
+	$$
+            $yield Clear();
+	    ++in_holes;
+	    ++in_processed;
+	$$
+
+        on Out : | balance(tout, account),
+           In  : otherIn(tin) | where $$ true $$
+	$$
+	    if (tout < tin) {
                 $drop 1 from Out;
-                $drop 2 from In;
                 $switch to aligning;
-            }
-        $$
+	    }
+	$$
 
-        on Out : | selectedAccount(tout, acc),
-           In  : | hole(n) otherIn(tin)
-           where $$ true $$
-        $$
-            ++in_holes;
-            if (tin < tout){ /* we're still fine */
-                $drop 2 from In;
-                in_processed += 2;
-            } else {
-                ++out_processed;
-                in_processed += 2;
+        on Out : | withdraw(tout, account),
+           In  : otherIn(tin) | where $$ true $$
+	$$
+	    if (tout < tin) {
                 $drop 1 from Out;
-                $drop 2 from In;
                 $switch to aligning;
-            }
-        $$
+	    }
+	$$
 
-        on Out : selectedAccount(tout, acc) |,
-           In  : hole(n) |
-           where $$ true $$
-        $$
-           /* maybe we could try to wait a few iterations if some events come
-              after the hole? ... */
-           ++in_holes;
-           ++out_processed;
-           ++in_processed;
-           $switch to aligning;
-        $$
+        on Out : | depositTo(tout, account),
+           In  : otherIn(tin) | where $$ true $$
+	$$
+	    if (tout < tin) {
+                $drop 1 from Out;
+                $switch to aligning;
+	    }
+	$$
 
-        on Out : | balance(t, a) where $$ true $$
-        $$
-            /* this can happen only after a hole */
-            assert(out_holes > 0 && "Balance when aligning");
-        $$
+        on Out : | transfer(tout, from_, to_),
+           In  : otherIn(tin) | where $$ true $$
+	$$
+	    if (tout < tin) {
+                $drop 1 from Out;
+                $switch to aligning;
+	    }
+	$$
 
-        on Out : | transfer(t, frm, t_) where $$ true $$
-        $$
-            /* this can happen only after a hole */
-            assert(out_holes > 0 && "Transfer when aligning");
-        $$
+        on Out : | transfer(tout, from_, to_),
+           In  : numIn(tin1, n) otherIn(tin) | where $$ true $$
+	$$
+	    if (tout < tin1) {
+                $drop 1 from Out;
+                $switch to aligning;
+	    }
+	$$
 
-        on Out : | withdraw(t, frm) where $$ true $$
-        $$
-            /* this can happen only after a hole */
-            assert(out_holes > 0 && "Withdraw when aligning");
-        $$
+        on Out : | transfer(tout, from_, to_),
+           In  : numIn(tin1, n) | hole(n) where $$ true $$
+	$$
+	$$
+
+        on Out : | transfer(tout, from_, to_),
+           In  : otherIn(tin1) | hole(n) where $$ true $$
+	$$
+	$$
 
         on Out : done, In : 1 where $$ true $$
         $$
             ++in_processed;
             $drop 1 from In;
         $$
+
+        on Out : 1, In : done where $$ true $$
+        $$
+            ++out_processed;
+            $drop 1 from Out;
+	    $switch to aligning;
+        $$
     }
 
     rule set working
     {
-        on In : hole(n) | where $$ true $$
-        $$
-            printf("In: hole(%d)\n", n);
-            $yield Clear();
-            ++in_holes;
-            ++in_processed;
-            $switch to aligning;
-        $$
-
-        on Out : hole(n) | where $$ true $$
-        $$
-            printf("Out: hole(%d)\n", n);
-            $yield Clear();
-            ++out_holes;
-            ++out_processed;
-            $switch to aligning;
-        $$
-
-        on Out : balance(t2, acc) numOut(t3, amnt) |,
-           In  : numIn(t1, action) | where $$ true $$
-        $$
-            assert(action == 3);
-            $yield SawBalance(acc, amnt);
-            out_processed += 2;
-            ++in_processed;
-            $switch to aligning;
-        $$
-
         on Out : transfer(t2, from_, to_) transferSuccess(t4) |,
            In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) |
            where $$ true $$
@@ -236,6 +268,16 @@ arbiter : BankEvent
             $switch to aligning;
         $$
 
+        on Out : transfer(t2, f, t) transferSuccess(t4) |,
+           In  : numIn(t0, action) numIn(t1, acc) | hole(n)
+	   where $$ true $$
+        $$
+	    /* the last in event is a hole */
+	    in_processed += 2;
+	    out_processed += 2;
+            $switch to aligning;
+        $$
+
         on Out : transfer(t2, from_, to_) selectedAccount(t4, acc) |,
            In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) |
            where $$ true $$
@@ -244,6 +286,40 @@ arbiter : BankEvent
             $yield SawTransferFail(from_, to_, amnt);
             out_processed += 2;
             in_processed += 3;
+	    $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) selectedAccount(t4, acc) |,
+           In  : numIn(t0, action) numIn(t1, acc) | hole(n)
+	   where $$ true $$
+        $$
+	    /* the last in event is a hole */
+	    in_processed += 2;
+	    out_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) | hole(n) where $$ true $$
+        $$
+	    ++out_processed;
+            $switch to aligning;
+        $$
+
+
+        on Out : balance(t2, acc) numOut(t3, amnt) |,
+           In  : numIn(t1, action) | where $$ true $$
+        $$
+            assert(action == 3);
+            $yield SawBalance(acc, amnt);
+            out_processed += 2;
+            ++in_processed;
+            $switch to aligning;
+        $$
+
+        on Out : balance(t2, acc) | hole(n) where $$ true $$
+        $$
+            ++out_processed;
+            $switch to aligning;
         $$
 
         on Out : depositTo(t2, acc) depositSuccess(t4) |,
@@ -251,6 +327,8 @@ arbiter : BankEvent
            where $$ true $$
         $$
             assert(action == 1);
+	    assert(t2 == t1 + 1);
+	    assert(t3 == t2 + 1);
             $yield SawDeposit(acc, amnt);
             out_processed += 2;
             in_processed += 2;
@@ -264,6 +342,33 @@ arbiter : BankEvent
             assert(action == 1);
             out_processed += 2;
             in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : depositTo(t2, acc) depositFail(t4) |,
+           In  : numIn(t1, action) | hole(n)
+           where $$ true $$
+        $$
+            assert(action == 1);
+            out_processed += 2;
+            in_processed += 1;
+            $switch to aligning;
+        $$
+
+        on Out : depositTo(t2, acc) depositSuccess(t4) |,
+           In  : numIn(t1, action) | hole(n)
+           where $$ true $$
+        $$
+            assert(action == 1);
+            out_processed += 2;
+            in_processed += 1;
+            $switch to aligning;
+        $$
+
+        on Out : depositTo(t2, acc) | hole(n)
+           where $$ true $$
+        $$
+            ++out_processed;
             $switch to aligning;
         $$
 
@@ -289,24 +394,40 @@ arbiter : BankEvent
             $switch to aligning;
         $$
 
-    on Out : numOut(t, n) |, In: 1 where $$ true $$
-    $$
-        /* just align again -- if numOut does not follow any
-           interesting event, it is garbage (likely
-           from selecting a different account )*/
-        $switch to aligning;
-    $$
+        on Out : withdraw(t2, acc) withdrawSuccess(t4) |,
+           In  : numIn(t1, act) | hole(n)
+           where $$ true $$
+        $$
+            out_processed += 2;
+            in_processed += 1;
+            $switch to aligning;
+        $$
 
-    on Out : selectedAccount(t, acc) | where $$ true $$
-    $$
-        assert(0 && "Should not happen");
-    $$
+        on Out : withdraw(t2, acc) withdrawFail(t4) |,
+           In  : numIn(t1, act) | hole(n)
+           where $$ true $$
+        $$
+            out_processed += 2;
+            in_processed += 1;
+            $switch to aligning;
+        $$
 
-    on Out : logout(t) | where $$ true $$
-    $$
-        ++out_processed;
-        $switch to aligning;
-    $$
+        on Out : withdraw(t2, acc) | hole(n)
+           where $$ true $$
+        $$
+            ++out_processed;
+            $switch to aligning;
+        $$
+
+	on In : done where $$ true $$
+	$$
+            $switch to aligning;
+	$$
+
+        on Out : done where $$ true $$
+        $$
+            $switch to aligning;
+        $$
     }
 }
 
@@ -314,6 +435,7 @@ monitor(128)
 {
     on Clear() where $$ true $$
     $$
+	printf("Clear()\n");
         intmap_clear(&balances);
         intmap_clear(&upper_bounds);
         intmap_clear(&lower_bounds);
@@ -321,6 +443,7 @@ monitor(128)
 
     on SawBalance(account, balance) where $$ true $$
     $$
+        printf("SawBalance(%d, %d)\n", account, balance);
         int old_value=0;
         if(intmap_get(&balances, account, &old_value))
         {
@@ -363,6 +486,7 @@ monitor(128)
 
     on SawDeposit(account,amount) where $$ true $$
     $$
+        printf("SawDeposit(%d, %d)\n", account, amount);
         int old_value=0;
         if(intmap_get(&balances, account, &old_value))
         {
@@ -387,6 +511,7 @@ monitor(128)
 
     on SawWithdraw(account, amount) where $$ true $$
     $$
+        printf("SawWithdraw(%d, %d)\n", account, amount);
         int old_value=0;
         if(intmap_get(&balances, account, &old_value))
         {
@@ -435,6 +560,7 @@ monitor(128)
 
     on SawWithdrawFail(account, amount) where $$ true $$
     $$
+        printf("SawWithdrawFail(%d, %d)\n", account, amount);
         int old_value=0;
         if(intmap_get(&balances, account, &old_value))
         {
@@ -475,6 +601,7 @@ monitor(128)
 
     on SawTransfer(from_, to_, amount) where $$ true $$
     $$
+        printf("SawTransfer(%d, %d, %d)\n", from_, to_, amount);
         int old_value=0;
         if(intmap_get(&balances, to_, &old_value))
         {
@@ -542,7 +669,7 @@ monitor(128)
     $$
     on SawTransferFail(from_, to_, amount) where $$ true $$
     $$
-        //printf("SawTransferFail(%d, %d, %d)\n", from_, to_, amount);
+        printf("SawTransferFail(%d, %d, %d)\n", from_, to_, amount);
         int old_value=0;
         if(intmap_get(&balances, from_, &old_value))
         {
