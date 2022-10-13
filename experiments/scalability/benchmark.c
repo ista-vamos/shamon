@@ -2,7 +2,7 @@
 #include <time.h>
 
 
-#define REP 100000
+#define REP 1000000
 
 int main (int argc, char *argv[]) {
     volatile size_t cycles;
