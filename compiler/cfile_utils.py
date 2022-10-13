@@ -298,7 +298,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv);\n"
                 answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
                 if min_size_uninterrupt is not None:
-                    answer += f"\tshm_arbiter_buffer_set_drop_space_threshold({min_size_uninterrupt})\n;"
+                    answer += f"\tshm_arbiter_buffer_set_drop_space_threshold(BUFFER_{stream_name}{i},{min_size_uninterrupt})\n;"
                 answer += f"\t// register events in {name}\n"
                 for ev_name, attrs in streams_to_events_map[stream_type].items():
                     if ev_name == 'hole': continue
