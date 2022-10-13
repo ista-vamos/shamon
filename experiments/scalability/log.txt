@@ -1,0 +1,44 @@
+-- Working directory is /tmp/vamos.8a2ooyuz --
+Sending numbers up to 100000th...
+Generating monitor with arbiter bufsize 4 ...
+------- [SHM 32 pgs] source waits 40 cyc., arbiter buffer has size 4 ------
+Command: /opt/vamos/shamon/experiments/scalability/source /vamos.ev-hqbukm3n 40 100000 [stdin: None, stdout: -3, stderr: -1
+Command: /opt/vamos/shamon/experiments/scalability/monitor Src:generic:/vamos.ev-hqbukm3n [stdin: None, stdout: -1, stderr: -1
+------- [SHM 32 pgs] source waits 90 cyc., arbiter buffer has size 4 ------
+Command: /opt/vamos/shamon/experiments/scalability/source /vamos.ev-aqsr3hia 90 100000 [stdin: None, stdout: -3, stderr: -1
+Command: /opt/vamos/shamon/experiments/scalability/monitor Src:generic:/vamos.ev-aqsr3hia [stdin: None, stdout: -1, stderr: -1
+Generating monitor with arbiter bufsize 8 ...
+------- [SHM 32 pgs] source waits 40 cyc., arbiter buffer has size 8 ------
+Command: /opt/vamos/shamon/experiments/scalability/source /vamos.ev-v82qyzdh 40 100000 [stdin: None, stdout: -3, stderr: -1
+Command: /opt/vamos/shamon/experiments/scalability/monitor Src:generic:/vamos.ev-v82qyzdh [stdin: None, stdout: -1, stderr: -1
+------- [SHM 32 pgs] source waits 90 cyc., arbiter buffer has size 8 ------
+Command: /opt/vamos/shamon/experiments/scalability/source /vamos.ev-f7mcredu 90 100000 [stdin: None, stdout: -3, stderr: -1
+Command: /opt/vamos/shamon/experiments/scalability/monitor Src:generic:/vamos.ev-f7mcredu [stdin: None, stdout: -1, stderr: -1
+Generating monitor with arbiter bufsize 16 ...
+------- [SHM 32 pgs] source waits 40 cyc., arbiter buffer has size 16 ------
+Command: /opt/vamos/shamon/experiments/scalability/source /vamos.ev-p_ygonjo 40 100000 [stdin: None, stdout: -3, stderr: -1
+Command: /opt/vamos/shamon/experiments/scalability/monitor Src:generic:/vamos.ev-p_ygonjo [stdin: None, stdout: -1, stderr: -1
+------- [SHM 32 pgs] source waits 90 cyc., arbiter buffer has size 16 ------
+Command: /opt/vamos/shamon/experiments/scalability/source /vamos.ev-snr9z5zx 90 100000 [stdin: None, stdout: -3, stderr: -1
+Command: /opt/vamos/shamon/experiments/scalability/monitor Src:generic:/vamos.ev-snr9z5zx [stdin: None, stdout: -1, stderr: -1
+Generating monitor with arbiter bufsize 128 ...
+------- [SHM 32 pgs] source waits 40 cyc., arbiter buffer has size 128 ------
+Command: /opt/vamos/shamon/experiments/scalability/source /vamos.ev-uhixf5zl 40 100000 [stdin: None, stdout: -3, stderr: -1
+Command: /opt/vamos/shamon/experiments/scalability/monitor Src:generic:/vamos.ev-uhixf5zl [stdin: None, stdout: -1, stderr: -1
+------- [SHM 32 pgs] source waits 90 cyc., arbiter buffer has size 128 ------
+Command: /opt/vamos/shamon/experiments/scalability/source /vamos.ev-aszce080 90 100000 [stdin: None, stdout: -3, stderr: -1
+Command: /opt/vamos/shamon/experiments/scalability/monitor Src:generic:/vamos.ev-aszce080 [stdin: None, stdout: -1, stderr: -1
+Generating monitor with arbiter bufsize 1024 ...
+------- [SHM 32 pgs] source waits 40 cyc., arbiter buffer has size 1024 ------
+Command: /opt/vamos/shamon/experiments/scalability/source /vamos.ev-dss4cdg0 40 100000 [stdin: None, stdout: -3, stderr: -1
+Command: /opt/vamos/shamon/experiments/scalability/monitor Src:generic:/vamos.ev-dss4cdg0 [stdin: None, stdout: -1, stderr: -1
+------- [SHM 32 pgs] source waits 90 cyc., arbiter buffer has size 1024 ------
+Command: /opt/vamos/shamon/experiments/scalability/source /vamos.ev-ndqdaod7 90 100000 [stdin: None, stdout: -3, stderr: -1
+Command: /opt/vamos/shamon/experiments/scalability/monitor Src:generic:/vamos.ev-ndqdaod7 [stdin: None, stdout: -1, stderr: -1
+Generating monitor with arbiter bufsize 2048 ...
+------- [SHM 32 pgs] source waits 40 cyc., arbiter buffer has size 2048 ------
+Command: /opt/vamos/shamon/experiments/scalability/source /vamos.ev-rmfkplg1 40 100000 [stdin: None, stdout: -3, stderr: -1
+Command: /opt/vamos/shamon/experiments/scalability/monitor Src:generic:/vamos.ev-rmfkplg1 [stdin: None, stdout: -1, stderr: -1
+------- [SHM 32 pgs] source waits 90 cyc., arbiter buffer has size 2048 ------
+Command: /opt/vamos/shamon/experiments/scalability/source /vamos.ev-har2gijz 90 100000 [stdin: None, stdout: -3, stderr: -1
+Command: /opt/vamos/shamon/experiments/scalability/monitor Src:generic:/vamos.ev-har2gijz [stdin: None, stdout: -1, stderr: -1

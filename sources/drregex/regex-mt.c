@@ -503,6 +503,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         if (err < 0) {
             if (err != EINTR) {
                 warn("failed waiting: %s\n", strerror(-err));
+		abort();
             }
             return;
         }

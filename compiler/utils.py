@@ -230,18 +230,6 @@ def get_event_sources_copies(event_sources: Tuple) -> List[Tuple[str, int]]:
         result.append((name, copies))
     return result
 
-def get_buffer_sizes(tree: Tuple, buff_sizes: List[str]) -> None:
-    if tree[0] == 'event_sources':
-        get_buffer_sizes(tree[PLIST_BASE_CASE], buff_sizes)
-        get_buffer_sizes(tree[PLIST_TAIL], buff_sizes)
-    else:
-        assert(tree[0] == 'event_source')
-        connection_kind = tree[PPEVENT_CONN_KIND]
-        assert(connection_kind[0] == 'conn_kind')
-        if connection_kind[PPCONN_KIND_NAME] == 'infinite' or connection_kind[PPCONN_KIND_NAME] == 'blocking':
-            raise Exception("Connection kind infinite and blocking not implemented!")
-        buff_sizes.append(connection_kind[PPCONN_KIND_INT])
-
 def get_out_names(tree: Tuple, out_names: List[str]) -> None:
     if tree[0] == 'event_sources':
         get_out_names(tree[PLIST_BASE_CASE], out_names)

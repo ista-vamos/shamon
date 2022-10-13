@@ -1,0 +1,1998 @@
+-- Starting the monitor --
+(standard input)
+All ready!
+-- Starting interact --
+Getting shared buffer '/bank.stdin'
+Getting control buffer '/bank.stdin.ctrl'
+   ... its size is 232
+Getting shared buffer '/bank.stdout'
+Getting control buffer '/bank.stdout.ctrl'
+   ... its size is 1352
+Mismatched balance on account #100002: Expected 119, but got 122
+Transfer of 40 from account #100001 should have succeeded based on lower balance bound 89
+Mismatched balance on account #100001: Expected at most 40, but got 49
+Transfer of 61 from account #100001 should have succeeded based on balance 123
+Transfer of 30 from account #100002 should have succeeded based on balance 33
+Transfer of 27 from account #100001 should have succeeded based on lower balance bound 73
+Withdrawal of 16 from account #100003 should have succeeded based on balance 164
+Mismatched balance on account #100004: Expected 57, but got 54
+Transfer of 69 from account #100004 should have failed based on balance 54
+Transfer of 21 from account #100004 should have succeeded based on balance 54
+Transfer of 76 from account #100003 should have failed based on balance 65
+Withdrawal of 59 from account #100003 should have failed based on balance 1
+Mismatched balance on account #100001: Expected 212, but got 215
+Mismatched balance on account #100001: Expected 215, but got 212
+Withdrawal of 46 from account #100003 should have failed based on balance 14
+Mismatched balance on account #100003: Expected 45, but got 48
+Transfer of 15 from account #100003 should have succeeded based on lower balance bound 58
+Transfer of 78 from account #100001 should have failed based on upper balance bound 4
+Withdrawal of 27 from account #100001 should have succeeded based on lower balance bound 125
+Transfer of 84 from account #100002 should have failed based on balance 18
+Withdrawal of 85 from account #100001 should have succeeded based on balance 493
+Withdrawal of 28 from account #100003 should have succeeded based on balance 122
+Mismatched balance on account #100002: Expected 4, but got 7
+Transfer of 11 from account #100002 should have succeeded based on balance 20
+Transfer of 66 from account #100003 should have succeeded based on balance 117
+Mismatched balance on account #100002: Expected 59, but got 56
+Mismatched balance on account #100002: Expected 6, but got 9
+Mismatched balance on account #100004: Expected at most 57, but got 226
+Mismatched balance on account #100004: Expected 265, but got 262
+Transfer of 18 from account #100001 should have succeeded based on balance 406
+Transfer of 52 from account #100003 should have succeeded based on lower balance bound 80
+Withdrawal of 82 from account #100003 should have failed based on upper balance bound 52
+Withdrawal of 60 from account #100001 should have succeeded based on balance 397
+Mismatched balance on account #100004: Expected 357, but got 360
+Transfer of 37 from account #100004 should have succeeded based on balance 360
+Mismatched balance on account #100002: Expected 115, but got 118
+Mismatched balance on account #100002: Expected 118, but got 115
+Mismatched balance on account #100003: Expected 293, but got 296
+Transfer of 42 from account #100001 should have succeeded based on balance 235
+Mismatched balance on account #100003: Expected 228, but got 267
+Transfer of 85 from account #100003 should have succeeded based on balance 283
+Transfer of 58 from account #100003 should have succeeded based on balance 399
+Transfer of 39 from account #100001 should have succeeded based on balance 223
+Transfer of 51 from account #100002 should have succeeded based on balance 332
+Withdrawal of 69 from account #100004 should have succeeded based on balance 337
+Transfer of 94 from account #100004 should have succeeded based on balance 232
+Mismatched balance on account #100004: Expected at most 27, but got 55
+Mismatched balance on account #100004: Expected 55, but got 52
+Mismatched balance on account #100004: Expected 156, but got 159
+Transfer of 8 from account #100004 should have succeeded based on balance 159
+Transfer of 91 from account #100003 should have succeeded based on balance 803
+Mismatched balance on account #100003: Expected at most 86, but got 626
+Mismatched balance on account #100003: Expected 531, but got 528
+Mismatched balance on account #100003: Expected 560, but got 563
+Mismatched balance on account #100003: Expected 563, but got 560
+Mismatched balance on account #100001: Expected 267, but got 264
+Transfer of 12 from account #100001 should have succeeded based on balance 183
+Transfer of 56 from account #100001 should have failed based on upper balance bound 51
+Withdrawal of 7 from account #100001 should have succeeded based on lower balance bound 18
+Mismatched balance on account #100001: Expected 36, but got 33
+Withdrawal of 45 from account #100004 should have failed based on upper balance bound 28
+Transfer of 72 from account #100001 should have succeeded based on balance 178
+Mismatched balance on account #100001: Expected 284, but got 281
+Withdrawal of 40 from account #100001 should have succeeded based on balance 325
+Transfer of 28 from account #100002 should have succeeded based on lower balance bound 42
+Mismatched balance on account #100002: Expected at most 28, but got 985
+Mismatched balance on account #100001: Expected 436, but got 439
+Mismatched balance on account #100001: Expected 434, but got 431
+Mismatched balance on account #100003: Expected 877, but got 880
+Withdrawal of 58 from account #100003 should have failed based on upper balance bound 14
+Mismatched balance on account #100001: Expected at most 55, but got 376
+Mismatched balance on account #100002: Expected at most 76, but got 944
+Transfer of 41 from account #100002 should have succeeded based on balance 944
+Withdrawal of 50 from account #100003 should have succeeded based on lower balance bound 88
+Withdrawal of 92 from account #100003 should have failed based on upper balance bound 50
+Transfer of 74 from account #100002 should have succeeded based on balance 1045
+Mismatched balance on account #100002: Expected 997, but got 994
+Mismatched balance on account #100002: Expected 1137, but got 1140
+Mismatched balance on account #100002: Expected 1140, but got 1137
+Mismatched balance on account #100002: Expected 1137, but got 1140
+Mismatched balance on account #100003: Expected 835, but got 909
+Transfer of 63 from account #100003 should have succeeded based on balance 909
+Withdrawal of 90 from account #100001 should have succeeded based on lower balance bound 112
+Mismatched balance on account #100003: Expected 791, but got 788
+Mismatched balance on account #100003: Expected at most 50, but got 841
+Transfer of 17 from account #100003 should have succeeded based on balance 841
+Transfer of 17 from account #100004 should have succeeded based on lower balance bound 41
+Mismatched balance on account #100004: Expected at most 17, but got 102
+Mismatched balance on account #100001: Expected 398, but got 395
+Withdrawal of 41 from account #100001 should have succeeded based on balance 398
+Transfer of 45 from account #100004 should have failed based on balance 34
+Mismatched balance on account #100003: Expected 1106, but got 974
+Transfer of 44 from account #100003 should have succeeded based on balance 906
+Transfer of 95 from account #100003 should have succeeded based on balance 541
+Transfer of 28 from account #100002 should have failed based on upper balance bound 19
+Transfer of 53 from account #100002 should have succeeded based on lower balance bound 192
+Mismatched balance on account #100003: Expected 339, but got 389
+Mismatched balance on account #100003: Expected 342, but got 345
+Mismatched balance on account #100003: Expected 345, but got 342
+Mismatched balance on account #100002: Expected 865, but got 868
+Transfer of 15 from account #100003 should have succeeded based on lower balance bound 124
+Mismatched balance on account #100003: Expected at most 52, but got 516
+Transfer of 44 from account #100002 should have succeeded based on balance 898
+Withdrawal of 46 from account #100003 should have succeeded based on balance 308
+Mismatched balance on account #100003: Expected 386, but got 389
+Withdrawal of 67 from account #100004 should have failed based on balance 25
+Mismatched balance on account #100003: Expected 607, but got 505
+Mismatched balance on account #100003: Expected 473, but got 476
+Mismatched balance on account #100002: Expected at most 27, but got 834
+Mismatched balance on account #100003: Expected 541, but got 538
+Transfer of 31 from account #100002 should have succeeded based on balance 957
+Mismatched balance on account #100002: Expected 908, but got 905
+Transfer of 58 from account #100003 should have failed based on upper balance bound 51
+Withdrawal of 34 from account #100001 should have succeeded based on lower balance bound 58
+Mismatched balance on account #100001: Expected at most 34, but got 796
+Transfer of 90 from account #100002 should have failed based on upper balance bound 36
+Withdrawal of 92 from account #100002 should have succeeded based on balance 686
+Mismatched balance on account #100002: Expected at most 78, but got 426
+Withdrawal of 33 from account #100002 should have succeeded based on balance 347
+Transfer of 14 from account #100004 should have failed based on balance 7
+Mismatched balance on account #100003: Expected 680, but got 666
+Withdrawal of 41 from account #100002 should have succeeded based on balance 270
+Withdrawal of 91 from account #100003 should have succeeded based on balance 614
+Mismatched balance on account #100003: Expected 526, but got 523
+Withdrawal of 30 from account #100003 should have succeeded based on balance 532
+Transfer of 64 from account #100002 should have succeeded based on balance 99
+Transfer of 71 from account #100001 should have succeeded based on lower balance bound 109
+Mismatched balance on account #100003: Expected 546, but got 543
+Mismatched balance on account #100003: Expected 665, but got 668
+Withdrawal of 8 from account #100003 should have succeeded based on balance 668
+Withdrawal of 27 from account #100002 should have failed based on upper balance bound 16
+Mismatched balance on account #100003: Expected 1217, but got 1220
+Mismatched balance on account #100003: Expected at most 9, but got 1242
+Mismatched balance on account #100004: Expected 295, but got 298
+Mismatched balance on account #100004: Expected 298, but got 295
+Mismatched balance on account #100004: Expected 273, but got 276
+Withdrawal of 79 from account #100004 should have succeeded based on balance 245
+Mismatched balance on account #100004: Expected 253, but got 256
+Withdrawal of 56 from account #100003 should have succeeded based on balance 1120
+Mismatched balance on account #100004: Expected 271, but got 268
+Transfer of 74 from account #100004 should have succeeded based on balance 337
+Mismatched balance on account #100002: Expected 140, but got 137
+Withdrawal of 26 from account #100002 should have succeeded based on balance 149
+Transfer of 84 from account #100002 should have failed based on balance 68
+Withdrawal of 19 from account #100004 should have failed based on upper balance bound 15
+Transfer of 80 from account #100004 should have failed based on upper balance bound 44
+Mismatched balance on account #100004: Expected 32, but got 35
+Mismatched balance on account #100004: Expected 35, but got 32
+Mismatched balance on account #100003: Expected 1460, but got 1463
+Withdrawal of 85 from account #100003 should have failed based on upper balance bound 82
+Withdrawal of 22 from account #100001 should have succeeded based on balance 1089
+Transfer of 22 from account #100003 should have succeeded based on balance 1069
+Transfer of 77 from account #100001 should have succeeded based on balance 1092
+Mismatched balance on account #100004: Expected 7, but got 4
+Transfer of 89 from account #100003 should have failed based on upper balance bound 29
+Withdrawal of 91 from account #100001 should have succeeded based on balance 1235
+Withdrawal of 22 from account #100003 should have succeeded based on balance 599
+Withdrawal of 56 from account #100003 should have succeeded based on lower balance bound 151
+Mismatched balance on account #100003: Expected at most 118, but got 734
+Withdrawal of 83 from account #100004 should have succeeded based on balance 363
+Withdrawal of 31 from account #100003 should have succeeded based on balance 713
+Mismatched balance on account #100003: Expected at most 20, but got 665
+Withdrawal of 59 from account #100002 should have failed based on upper balance bound 32
+Mismatched balance on account #100004: Expected 387, but got 390
+Mismatched balance on account #100004: Expected 325, but got 322
+Withdrawal of 87 from account #100003 should have succeeded based on lower balance bound 128
+Mismatched balance on account #100004: Expected at most 210, but got 449
+Mismatched balance on account #100002: Expected 166, but got 163
+Mismatched balance on account #100003: Expected at most 26, but got 589
+Transfer of 80 from account #100003 should have failed based on upper balance bound 20
+Transfer of 78 from account #100003 should have succeeded based on balance 379
+Withdrawal of 65 from account #100003 should have failed based on upper balance bound 18
+Withdrawal of 28 from account #100003 should have succeeded based on balance 218
+Withdrawal of 40 from account #100004 should have succeeded based on balance 621
+Transfer of 42 from account #100003 should have succeeded based on balance 109
+Withdrawal of 30 from account #100003 should have succeeded based on balance 67
+Withdrawal of 45 from account #100002 should have succeeded based on balance 453
+Transfer of 19 from account #100004 should have failed based on upper balance bound 1
+Mismatched balance on account #100003: Expected 11, but got 14
+Mismatched balance on account #100003: Expected 14, but got 11
+Mismatched balance on account #100003: Expected 112, but got 115
+Withdrawal of 67 from account #100003 should have succeeded based on balance 135
+Mismatched balance on account #100001: Expected 1606, but got 1603
+Transfer of 1 from account #100003 should have succeeded based on balance 66
+Mismatched balance on account #100004: Expected 623, but got 626
+Mismatched balance on account #100004: Expected 636, but got 633
+Transfer of 90 from account #100004 should have succeeded based on balance 730
+Transfer of 3 from account #100004 should have succeeded based on balance 760
+Mismatched balance on account #100003: Expected 258, but got 255
+Mismatched balance on account #100003: Expected 244, but got 247
+Mismatched balance on account #100002: Expected 52, but got 55
+Withdrawal of 84 from account #100002 should have failed based on balance 31
+Transfer of 46 from account #100001 should have succeeded based on balance 1697
+Transfer of 99 from account #100004 should have failed based on upper balance bound 48
+Transfer of 25 from account #100003 should have succeeded based on lower balance bound 71
+Mismatched balance on account #100003: Expected at most 65, but got 486
+Withdrawal of 49 from account #100002 should have succeeded based on balance 52
+Transfer of 9 from account #100002 should have succeeded based on lower balance bound 83
+Mismatched balance on account #100002: Expected at most 9, but got 192
+Transfer of 1 from account #100002 should have succeeded based on balance 93
+Mismatched balance on account #100003: Expected at most 307, but got 536
+Mismatched balance on account #100003: Expected 424, but got 427
+Transfer of 51 from account #100003 should have succeeded based on balance 589
+Withdrawal of 68 from account #100004 should have succeeded based on balance 595
+Transfer of 54 from account #100003 should have succeeded based on lower balance bound 94
+Mismatched balance on account #100001: Expected at most 87, but got 1813
+Withdrawal of 4 from account #100002 should have succeeded based on balance 233
+Transfer of 94 from account #100002 should have succeeded based on balance 285
+Mismatched balance on account #100001: Expected 1862, but got 1959
+Mismatched balance on account #100001: Expected 1851, but got 1848
+Transfer of 29 from account #100001 should have succeeded based on balance 1837
+Mismatched balance on account #100002: Expected at most 37, but got 51
+Mismatched balance on account #100001: Expected at most 99, but got 1758
+Withdrawal of 69 from account #100001 should have succeeded based on balance 1758
+Withdrawal of 98 from account #100003 should have failed based on upper balance bound 44
+Withdrawal of 32 from account #100004 should have succeeded based on balance 818
+Mismatched balance on account #100003: Expected 437, but got 440
+Mismatched balance on account #100003: Expected 405, but got 402
+Mismatched balance on account #100004: Expected 697, but got 700
+Transfer of 36 from account #100004 should have succeeded based on balance 708
+Transfer of 21 from account #100004 should have succeeded based on lower balance bound 78
+Withdrawal of 37 from account #100003 should have succeeded based on balance 435
+Mismatched balance on account #100004: Expected at most 203, but got 692
+Mismatched balance on account #100004: Expected 867, but got 870
+Transfer of 45 from account #100001 should have succeeded based on balance 1601
+Withdrawal of 13 from account #100002 should have succeeded based on balance 378
+Transfer of 15 from account #100002 should have succeeded based on balance 365
+Mismatched balance on account #100002: Expected 350, but got 353
+Mismatched balance on account #100003: Expected 329, but got 374
+Mismatched balance on account #100002: Expected 408, but got 405
+Mismatched balance on account #100004: Expected at most 124, but got 1043
+Withdrawal of 22 from account #100003 should have succeeded based on balance 625
+Transfer of 96 from account #100003 should have succeeded based on balance 606
+Mismatched balance on account #100003: Expected at most 146, but got 442
+Withdrawal of 47 from account #100003 should have succeeded based on balance 442
+Mismatched balance on account #100003: Expected 576, but got 579
+Transfer of 52 from account #100003 should have succeeded based on balance 588
+Transfer of 65 from account #100003 should have failed based on upper balance bound 26
+Transfer of 82 from account #100003 should have failed based on upper balance bound 39
+Withdrawal of 91 from account #100001 should have succeeded based on balance 1830
+Withdrawal of 75 from account #100003 should have succeeded based on lower balance bound 139
+Mismatched balance on account #100004: Expected 1336, but got 1333
+Transfer of 14 from account #100002 should have succeeded based on lower balance bound 152
+Mismatched balance on account #100002: Expected at most 14, but got 1104
+Mismatched balance on account #100002: Expected 1192, but got 1189
+Transfer of 79 from account #100003 should have succeeded based on balance 233
+Mismatched balance on account #100002: Expected 1064, but got 1143
+Mismatched balance on account #100002: Expected 1143, but got 1146
+Mismatched balance on account #100001: Expected 1708, but got 1711
+Withdrawal of 40 from account #100003 should have succeeded based on lower balance bound 66
+Withdrawal of 87 from account #100003 should have failed based on upper balance bound 40
+Mismatched balance on account #100004: Expected 1610, but got 1607
+Transfer of 30 from account #100003 should have succeeded based on lower balance bound 36
+Mismatched balance on account #100003: Expected at most 98, but got 120
+Transfer of 87 from account #100002 should have succeeded based on balance 1163
+Mismatched balance on account #100001: Expected 1630, but got 1627
+Withdrawal of 79 from account #100003 should have succeeded based on balance 170
+Withdrawal of 10 from account #100003 should have succeeded based on balance 26
+Withdrawal of 2 from account #100004 should have succeeded based on lower balance bound 41
+Transfer of 11 from account #100003 should have succeeded based on balance 154
+Withdrawal of 38 from account #100003 should have succeeded based on balance 165
+Transfer of 92 from account #100003 should have failed based on balance 28
+Mismatched balance on account #100004: Expected 1697, but got 1694
+Transfer of 42 from account #100003 should have failed based on balance 36
+Transfer of 73 from account #100003 should have succeeded based on balance 106
+Withdrawal of 62 from account #100002 should have succeeded based on balance 1391
+Mismatched balance on account #100002: Expected at most 100, but got 1304
+Mismatched balance on account #100004: Expected at most 48, but got 1629
+Mismatched balance on account #100004: Expected 1629, but got 1632
+Mismatched balance on account #100004: Expected at most 34, but got 1702
+Withdrawal of 43 from account #100004 should have succeeded based on balance 1702
+Withdrawal of 47 from account #100003 should have succeeded based on lower balance bound 126
+Withdrawal of 29 from account #100003 should have failed based on upper balance bound 12
+Transfer of 65 from account #100002 should have failed based on upper balance bound 44
+Mismatched balance on account #100003: Expected 197, but got 194
+Mismatched balance on account #100003: Expected 194, but got 197
+Withdrawal of 67 from account #100004 should have succeeded based on balance 1790
+Mismatched balance on account #100004: Expected 1818, but got 1815
+Withdrawal of 44 from account #100004 should have succeeded based on balance 1817
+Withdrawal of 73 from account #100003 should have succeeded based on lower balance bound 84
+Mismatched balance on account #100003: Expected at most 73, but got 264
+Transfer of 13 from account #100003 should have succeeded based on balance 264
+Transfer of 8 from account #100001 should have succeeded based on balance 1576
+Mismatched balance on account #100004: Expected 1673, but got 1686
+Withdrawal of 32 from account #100004 should have succeeded based on balance 1704
+Withdrawal of 63 from account #100003 should have succeeded based on balance 353
+Transfer of 8 from account #100004 should have succeeded based on balance 1356
+Mismatched balance on account #100004: Expected 1379, but got 1382
+Mismatched balance on account #100001: Expected at most 22, but got 1048
+Mismatched balance on account #100001: Expected 1048, but got 1051
+Withdrawal of 21 from account #100003 should have succeeded based on balance 601
+Withdrawal of 58 from account #100003 should have succeeded based on lower balance bound 82
+Mismatched balance on account #100003: Expected at most 139, but got 685
+Mismatched balance on account #100001: Expected at most 49, but got 1050
+Mismatched balance on account #100004: Expected 1487, but got 1490
+Transfer of 7 from account #100004 should have succeeded based on balance 1340
+Mismatched balance on account #100001: Expected 1159, but got 1156
+Transfer of 75 from account #100001 should have succeeded based on balance 1070
+Withdrawal of 85 from account #100003 should have failed based on upper balance bound 76
+Transfer of 34 from account #100004 should have succeeded based on balance 1532
+Mismatched balance on account #100003: Expected 69, but got 103
+Withdrawal of 11 from account #100004 should have succeeded based on lower balance bound 89
+Mismatched balance on account #100004: Expected at most 100, but got 1665
+Mismatched balance on account #100004: Expected 1518, but got 1521
+Mismatched balance on account #100001: Expected 657, but got 654
+Transfer of 97 from account #100004 should have succeeded based on balance 1543
+Mismatched balance on account #100003: Expected 748, but got 745
+Transfer of 22 from account #100004 should have succeeded based on balance 1259
+Withdrawal of 30 from account #100003 should have succeeded based on balance 792
+Mismatched balance on account #100003: Expected 765, but got 762
+Mismatched balance on account #100003: Expected 763, but got 766
+Mismatched balance on account #100004: Expected 1346, but got 1349
+Mismatched balance on account #100001: Expected at most 75, but got 396
+Mismatched balance on account #100001: Expected at most 42, but got 480
+Transfer of 1 from account #100002 should have succeeded based on lower balance bound 100
+Withdrawal of 18 from account #100002 should have failed based on upper balance bound 5
+Withdrawal of 71 from account #100004 should have succeeded based on balance 1541
+Transfer of 10 from account #100003 should have succeeded based on balance 903
+Mismatched balance on account #100002: Expected at most 44, but got 1913
+Mismatched balance on account #100002: Expected 1868, but got 1871
+Mismatched balance on account #100002: Expected 1858, but got 1855
+Mismatched balance on account #100002: Expected 1855, but got 1858
+Mismatched balance on account #100002: Expected 1789, but got 1786
+Withdrawal of 3 from account #100004 should have succeeded based on balance 1527
+Withdrawal of 88 from account #100003 should have succeeded based on balance 744
+Withdrawal of 28 from account #100003 should have failed based on upper balance bound 9
+Mismatched balance on account #100004: Expected 1609, but got 1606
+Withdrawal of 74 from account #100003 should have succeeded based on balance 142
+Mismatched balance on account #100003: Expected 158, but got 161
+Withdrawal of 28 from account #100003 should have succeeded based on balance 161
+Mismatched balance on account #100003: Expected 88, but got 91
+Mismatched balance on account #100003: Expected 34, but got 31
+Mismatched balance on account #100003: Expected 37, but got 40
+Mismatched balance on account #100002: Expected 1720, but got 1723
+Withdrawal of 40 from account #100003 should have succeeded based on balance 195
+Mismatched balance on account #100003: Expected 61, but got 64
+Mismatched balance on account #100003: Expected 64, but got 61
+Mismatched balance on account #100004: Expected 2384, but got 2387
+Transfer of 3 from account #100003 should have succeeded based on balance 89
+Mismatched balance on account #100003: Expected 89, but got 86
+Transfer of 44 from account #100003 should have succeeded based on balance 86
+Mismatched balance on account #100003: Expected 31, but got 34
+Mismatched balance on account #100003: Expected 90, but got 87
+Withdrawal of 4 from account #100004 should have succeeded based on balance 2455
+Withdrawal of 73 from account #100003 should have succeeded based on balance 143
+Transfer of 28 from account #100004 should have failed based on upper balance bound 2
+Mismatched balance on account #100004: Expected at most 25, but got 2275
+Withdrawal of 7 from account #100004 should have succeeded based on balance 2321
+Withdrawal of 96 from account #100001 should have succeeded based on lower balance bound 129
+Mismatched balance on account #100001: Expected at most 96, but got 502
+Mismatched balance on account #100003: Expected 364, but got 416
+Transfer of 98 from account #100003 should have failed based on upper balance bound 97
+Withdrawal of 34 from account #100004 should have succeeded based on lower balance bound 124
+Mismatched balance on account #100004: Expected at most 34, but got 2499
+Transfer of 9 from account #100004 should have succeeded based on balance 2499
+Mismatched balance on account #100004: Expected 2640, but got 2643
+Mismatched balance on account #100004: Expected 2643, but got 2640
+Mismatched balance on account #100004: Expected 2640, but got 2643
+Mismatched balance on account #100003: Expected 185, but got 182
+Mismatched balance on account #100002: Expected 1597, but got 1594
+Mismatched balance on account #100003: Expected 382, but got 379
+Transfer of 89 from account #100003 should have succeeded based on balance 431
+Mismatched balance on account #100003: Expected 342, but got 345
+Transfer of 96 from account #100004 should have succeeded based on balance 2494
+Mismatched balance on account #100001: Expected 405, but got 408
+Mismatched balance on account #100001: Expected 497, but got 494
+Withdrawal of 45 from account #100001 should have succeeded based on balance 557
+Mismatched balance on account #100003: Expected 295, but got 298
+Transfer of 42 from account #100003 should have succeeded based on balance 298
+Mismatched balance on account #100001: Expected 513, but got 510
+Mismatched balance on account #100002: Expected 1808, but got 1811
+Withdrawal of 49 from account #100002 should have succeeded based on balance 1582
+Transfer of 49 from account #100002 should have succeeded based on balance 1406
+Mismatched balance on account #100002: Expected at most 155, but got 1249
+Mismatched balance on account #100003: Expected 639, but got 642
+Mismatched balance on account #100003: Expected 642, but got 639
+Mismatched balance on account #100004: Expected 2402, but got 2405
+Mismatched balance on account #100004: Expected 2307, but got 2304
+Mismatched balance on account #100004: Expected 2072, but got 2075
+Transfer of 31 from account #100002 should have succeeded based on balance 1260
+Mismatched balance on account #100003: Expected 736, but got 767
+Mismatched balance on account #100003: Expected 857, but got 860
+Mismatched balance on account #100003: Expected 860, but got 857
+Mismatched balance on account #100004: Expected 2075, but got 2072
+Mismatched balance on account #100003: Expected 857, but got 860
+Mismatched balance on account #100003: Expected 834, but got 831
+Mismatched balance on account #100003: Expected 688, but got 691
+Mismatched balance on account #100004: Expected at most 24, but got 2048
+Mismatched balance on account #100003: Expected 438, but got 459
+Withdrawal of 42 from account #100004 should have succeeded based on balance 2184
+Withdrawal of 46 from account #100003 should have failed based on upper balance bound 43
+Withdrawal of 73 from account #100001 should have succeeded based on balance 1086
+Transfer of 72 from account #100001 should have succeeded based on balance 1007
+Mismatched balance on account #100004: Expected 2121, but got 2124
+Withdrawal of 85 from account #100003 should have succeeded based on balance 339
+Mismatched balance on account #100003: Expected 263, but got 260
+Mismatched balance on account #100001: Expected 822, but got 819
+Transfer of 77 from account #100004 should have failed based on upper balance bound 58
+Transfer of 1 from account #100004 should have succeeded based on lower balance bound 19
+Transfer of 30 from account #100004 should have failed based on upper balance bound 26
+Withdrawal of 13 from account #100003 should have succeeded based on balance 657
+Withdrawal of 88 from account #100003 should have succeeded based on balance 591
+Withdrawal of 36 from account #100001 should have failed based on upper balance bound 35
+Mismatched balance on account #100002: Expected at most 4, but got 1485
+Withdrawal of 76 from account #100003 should have succeeded based on lower balance bound 77
+Mismatched balance on account #100003: Expected at most 84, but got 672
+Transfer of 79 from account #100002 should have succeeded based on balance 1343
+Mismatched balance on account #100001: Expected 826, but got 823
+Mismatched balance on account #100004: Expected at most 4, but got 1628
+Transfer of 85 from account #100004 should have succeeded based on balance 1628
+Mismatched balance on account #100004: Expected at most 2, but got 1420
+Mismatched balance on account #100004: Expected 1387, but got 1384
+Withdrawal of 72 from account #100004 should have succeeded based on balance 1384
+Withdrawal of 59 from account #100003 should have succeeded based on balance 1185
+Withdrawal of 49 from account #100004 should have succeeded based on lower balance bound 74
+Transfer of 92 from account #100004 should have failed based on upper balance bound 49
+Mismatched balance on account #100004: Expected 1354, but got 1351
+Withdrawal of 44 from account #100003 should have succeeded based on balance 1446
+Withdrawal of 10 from account #100004 should have succeeded based on balance 1215
+Mismatched balance on account #100004: Expected 1254, but got 1251
+Transfer of 79 from account #100004 should have succeeded based on balance 1304
+Transfer of 7 from account #100002 should have succeeded based on lower balance bound 13
+Withdrawal of 19 from account #100002 should have failed based on upper balance bound 7
+Mismatched balance on account #100004: Expected 1391, but got 1388
+Withdrawal of 83 from account #100002 should have failed based on upper balance bound 29
+Withdrawal of 82 from account #100004 should have failed based on upper balance bound 14
+Mismatched balance on account #100003: Expected 1946, but got 1949
+Transfer of 7 from account #100003 should have succeeded based on balance 1699
+Transfer of 58 from account #100003 should have succeeded based on balance 1612
+Transfer of 21 from account #100004 should have succeeded based on lower balance bound 78
+Mismatched balance on account #100001: Expected 843, but got 840
+Withdrawal of 59 from account #100001 should have succeeded based on balance 779
+Mismatched balance on account #100003: Expected 1826, but got 1829
+Mismatched balance on account #100003: Expected 1809, but got 1806
+Mismatched balance on account #100004: Expected 821, but got 818
+Mismatched balance on account #100002: Expected 1620, but got 1623
+Mismatched balance on account #100004: Expected 978, but got 981
+Transfer of 9 from account #100003 should have succeeded based on balance 1848
+Withdrawal of 35 from account #100003 should have succeeded based on lower balance bound 55
+Withdrawal of 84 from account #100002 should have failed based on upper balance bound 69
+Withdrawal of 95 from account #100003 should have succeeded based on balance 1888
+Withdrawal of 43 from account #100003 should have failed based on upper balance bound 13
+Mismatched balance on account #100003: Expected at most 127, but got 1612
+Mismatched balance on account #100001: Expected at most 51, but got 643
+Transfer of 77 from account #100004 should have succeeded based on balance 1425
+Withdrawal of 96 from account #100004 should have succeeded based on balance 1288
+Mismatched balance on account #100003: Expected 1599, but got 1676
+Transfer of 45 from account #100002 should have succeeded based on balance 1506
+Transfer of 27 from account #100004 should have succeeded based on balance 1322
+Mismatched balance on account #100003: Expected 1670, but got 1694
+Withdrawal of 48 from account #100004 should have failed based on upper balance bound 20
+Transfer of 76 from account #100003 should have succeeded based on lower balance bound 107
+Withdrawal of 86 from account #100003 should have failed based on upper balance bound 2
+Withdrawal of 82 from account #100001 should have succeeded based on balance 564
+Mismatched balance on account #100003: Expected 1416, but got 1419
+Transfer of 87 from account #100002 should have failed based on upper balance bound 56
+Mismatched balance on account #100004: Expected 1311, but got 1308
+Mismatched balance on account #100004: Expected 1315, but got 1318
+Transfer of 69 from account #100004 should have succeeded based on balance 1309
+Mismatched balance on account #100004: Expected at most 30, but got 1207
+Mismatched balance on account #100003: Expected 1626, but got 1629
+Mismatched balance on account #100004: Expected 1227, but got 1224
+Mismatched balance on account #100004: Expected 1398, but got 1395
+Withdrawal of 28 from account #100001 should have succeeded based on balance 527
+Transfer of 88 from account #100001 should have succeeded based on balance 462
+Withdrawal of 16 from account #100004 should have succeeded based on lower balance bound 275
+Mismatched balance on account #100004: Expected at most 16, but got 1654
+Mismatched balance on account #100003: Expected at most 70, but got 1360
+Withdrawal of 77 from account #100002 should have succeeded based on balance 1450
+Mismatched balance on account #100002: Expected at most 1, but got 1362
+Transfer of 8 from account #100004 should have succeeded based on balance 1740
+Mismatched balance on account #100004: Expected at most 24, but got 1770
+Transfer of 15 from account #100003 should have succeeded based on lower balance bound 57
+Transfer of 63 from account #100003 should have failed based on upper balance bound 46
+Mismatched balance on account #100002: Expected at most 61, but got 1301
+Mismatched balance on account #100003: Expected 1055, but got 1058
+Mismatched balance on account #100004: Expected 1901, but got 1898
+Mismatched balance on account #100002: Expected 1254, but got 1257
+Withdrawal of 61 from account #100002 should have succeeded based on balance 1274
+Withdrawal of 26 from account #100003 should have succeeded based on lower balance bound 45
+Transfer of 75 from account #100003 should have failed based on upper balance bound 26
+Transfer of 38 from account #100003 should have succeeded based on balance 1068
+Mismatched balance on account #100003: Expected at most 62, but got 959
+Withdrawal of 29 from account #100003 should have succeeded based on balance 1003
+Mismatched balance on account #100003: Expected 947, but got 944
+Withdrawal of 45 from account #100004 should have succeeded based on lower balance bound 59
+Mismatched balance on account #100004: Expected 2178, but got 2181
+Mismatched balance on account #100004: Expected 2066, but got 2063
+Transfer of 90 from account #100003 should have failed based on upper balance bound 17
+Transfer of 12 from account #100003 should have failed based on upper balance bound 3
+Transfer of 4 from account #100004 should have succeeded based on lower balance bound 102
+Mismatched balance on account #100004: Expected at most 4, but got 2058
+Withdrawal of 41 from account #100004 should have succeeded based on balance 2058
+Withdrawal of 28 from account #100004 should have succeeded based on lower balance bound 72
+Mismatched balance on account #100003: Expected 679, but got 682
+Mismatched balance on account #100004: Expected 2111, but got 2114
+Mismatched balance on account #100002: Expected 1305, but got 1308
+Mismatched balance on account #100002: Expected 1313, but got 1310
+Withdrawal of 42 from account #100002 should have succeeded based on balance 1367
+Mismatched balance on account #100001: Expected 1127, but got 1124
+Transfer of 60 from account #100001 should have succeeded based on balance 1080
+Withdrawal of 21 from account #100003 should have succeeded based on lower balance bound 134
+Mismatched balance on account #100003: Expected at most 21, but got 587
+Transfer of 87 from account #100001 should have failed based on upper balance bound 77
+Mismatched balance on account #100003: Expected at most 122, but got 588
+Withdrawal of 77 from account #100003 should have succeeded based on balance 665
+Mismatched balance on account #100001: Expected 716, but got 719
+Mismatched balance on account #100003: Expected 618, but got 621
+Transfer of 40 from account #100003 should have succeeded based on balance 580
+Transfer of 37 from account #100002 should have succeeded based on lower balance bound 72
+Transfer of 96 from account #100002 should have failed based on upper balance bound 16
+Withdrawal of 32 from account #100002 should have succeeded based on balance 1359
+Mismatched balance on account #100003: Expected at most 56, but got 376
+Withdrawal of 72 from account #100003 should have succeeded based on balance 372
+Withdrawal of 81 from account #100004 should have failed based on upper balance bound 39
+Mismatched balance on account #100004: Expected at most 84, but got 2456
+Withdrawal of 47 from account #100004 should have succeeded based on balance 2352
+Withdrawal of 62 from account #100003 should have succeeded based on balance 878
+Mismatched balance on account #100003: Expected 777, but got 774
+Mismatched balance on account #100004: Expected 2426, but got 2429
+Transfer of 1 from account #100004 should have succeeded based on balance 2429
+Transfer of 28 from account #100002 should have succeeded based on lower balance bound 197
+Transfer of 30 from account #100003 should have succeeded based on balance 813
+Mismatched balance on account #100002: Expected at most 23, but got 978
+Withdrawal of 97 from account #100002 should have succeeded based on balance 838
+Mismatched balance on account #100003: Expected 959, but got 962
+Mismatched balance on account #100003: Expected 962, but got 959
+Withdrawal of 95 from account #100003 should have succeeded based on balance 1046
+Mismatched balance on account #100001: Expected 903, but got 900
+Transfer of 16 from account #100002 should have succeeded based on balance 903
+Transfer of 76 from account #100001 should have succeeded based on balance 760
+Mismatched balance on account #100001: Expected 660, but got 663
+Transfer of 15 from account #100002 should have succeeded based on balance 972
+Withdrawal of 25 from account #100003 should have succeeded based on balance 1093
+Withdrawal of 28 from account #100003 should have succeeded based on balance 1051
+Withdrawal of 87 from account #100003 should have succeeded based on balance 959
+Mismatched balance on account #100003: Expected 1032, but got 1035
+Mismatched balance on account #100003: Expected 1224, but got 1221
+Transfer of 29 from account #100003 should have succeeded based on balance 1230
+Mismatched balance on account #100003: Expected 1213, but got 1210
+Withdrawal of 70 from account #100003 should have succeeded based on balance 1265
+Transfer of 79 from account #100004 should have succeeded based on balance 1975
+Mismatched balance on account #100004: Expected at most 69, but got 1895
+Transfer of 62 from account #100004 should have succeeded based on balance 2032
+Mismatched balance on account #100004: Expected 1973, but got 1970
+Transfer of 18 from account #100003 should have succeeded based on balance 1392
+Mismatched balance on account #100001: Expected at most 35, but got 299
+Withdrawal of 86 from account #100001 should have succeeded based on balance 299
+Transfer of 62 from account #100001 should have failed based on upper balance bound 47
+Withdrawal of 74 from account #100003 should have succeeded based on balance 1411
+Mismatched balance on account #100003: Expected 1272, but got 1275
+Mismatched balance on account #100003: Expected 1275, but got 1272
+Withdrawal of 63 from account #100002 should have failed based on upper balance bound 46
+Withdrawal of 25 from account #100003 should have failed based on upper balance bound 16
+Withdrawal of 98 from account #100002 should have succeeded based on balance 1086
+Transfer of 74 from account #100002 should have succeeded based on balance 988
+Mismatched balance on account #100003: Expected at most 18, but got 1224
+Mismatched balance on account #100003: Expected 1224, but got 1227
+Mismatched balance on account #100003: Expected 1165, but got 1162
+Mismatched balance on account #100003: Expected 1044, but got 1041
+Transfer of 52 from account #100004 should have succeeded based on balance 2148
+Withdrawal of 33 from account #100003 should have failed based on upper balance bound 11
+Mismatched balance on account #100004: Expected 2090, but got 2101
+Mismatched balance on account #100003: Expected at most 72, but got 1295
+Mismatched balance on account #100003: Expected 1364, but got 1361
+Transfer of 19 from account #100002 should have succeeded based on balance 967
+Withdrawal of 62 from account #100001 should have failed based on upper balance bound 1
+Transfer of 11 from account #100001 should have succeeded based on balance 41
+Mismatched balance on account #100001: Expected 177, but got 174
+Mismatched balance on account #100002: Expected at most 97, but got 869
+Mismatched balance on account #100003: Expected at most 110, but got 1766
+Mismatched balance on account #100003: Expected 1601, but got 1604
+Transfer of 88 from account #100003 should have succeeded based on balance 1604
+Mismatched balance on account #100004: Expected 3082, but got 3085
+Mismatched balance on account #100003: Expected 1299, but got 1302
+Mismatched balance on account #100003: Expected 1255, but got 1252
+Mismatched balance on account #100003: Expected 1275, but got 1272
+Transfer of 94 from account #100001 should have failed based on balance 55
+Mismatched balance on account #100003: Expected 1450, but got 1453
+Transfer of 59 from account #100001 should have succeeded based on lower balance bound 233
+Transfer of 49 from account #100003 should have succeeded based on balance 1603
+Mismatched balance on account #100004: Expected 2968, but got 2971
+Withdrawal of 15 from account #100003 should have succeeded based on lower balance bound 63
+Mismatched balance on account #100003: Expected at most 69, but got 1656
+Mismatched balance on account #100003: Expected 1656, but got 1659
+Mismatched balance on account #100003: Expected 1659, but got 1656
+Transfer of 63 from account #100003 should have succeeded based on balance 1656
+Mismatched balance on account #100004: Expected 2955, but got 2952
+Withdrawal of 83 from account #100004 should have succeeded based on balance 2880
+Mismatched balance on account #100001: Expected 382, but got 445
+Transfer of 55 from account #100003 should have succeeded based on lower balance bound 81
+Transfer of 94 from account #100003 should have failed based on upper balance bound 55
+Mismatched balance on account #100004: Expected 3057, but got 3054
+Mismatched balance on account #100002: Expected 504, but got 507
+Withdrawal of 35 from account #100003 should have succeeded based on balance 1607
+Withdrawal of 67 from account #100004 should have failed based on upper balance bound 12
+Transfer of 39 from account #100003 should have succeeded based on balance 1592
+Transfer of 48 from account #100002 should have failed based on upper balance bound 0
+Withdrawal of 14 from account #100002 should have succeeded based on balance 449
+Transfer of 92 from account #100002 should have failed based on upper balance bound 75
+Transfer of 91 from account #100003 should have succeeded based on balance 1634
+Mismatched balance on account #100003: Expected 1541, but got 1538
+Transfer of 54 from account #100004 should have succeeded based on balance 3035
+Withdrawal of 42 from account #100004 should have succeeded based on balance 3033
+Transfer of 65 from account #100003 should have succeeded based on balance 1546
+Transfer of 75 from account #100003 should have failed based on upper balance bound 2
+Mismatched balance on account #100003: Expected 1348, but got 1345
+Transfer of 41 from account #100001 should have succeeded based on lower balance bound 97
+Mismatched balance on account #100003: Expected at most 139, but got 1273
+Transfer of 2 from account #100003 should have succeeded based on balance 994
+Withdrawal of 45 from account #100003 should have succeeded based on lower balance bound 65
+Transfer of 29 from account #100003 should have succeeded based on balance 1255
+Mismatched balance on account #100001: Expected 690, but got 687
+Withdrawal of 83 from account #100001 should have succeeded based on balance 746
+Mismatched balance on account #100003: Expected at most 75, but got 766
+Mismatched balance on account #100003: Expected 482, but got 479
+Withdrawal of 63 from account #100003 should have succeeded based on balance 479
+Withdrawal of 48 from account #100001 should have succeeded based on balance 314
+Withdrawal of 46 from account #100001 should have succeeded based on lower balance bound 77
+Withdrawal of 57 from account #100004 should have succeeded based on balance 3799
+Withdrawal of 98 from account #100003 should have succeeded based on lower balance bound 184
+Transfer of 83 from account #100003 should have succeeded based on lower balance bound 175
+Mismatched balance on account #100003: Expected 199, but got 196
+Mismatched balance on account #100003: Expected 171, but got 174
+Mismatched balance on account #100003: Expected 174, but got 171
+Withdrawal of 47 from account #100001 should have succeeded based on balance 610
+Mismatched balance on account #100001: Expected at most 53, but got 411
+Mismatched balance on account #100001: Expected 427, but got 430
+Transfer of 19 from account #100003 should have succeeded based on balance 37
+Mismatched balance on account #100004: Expected 3921, but got 3924
+Transfer of 43 from account #100003 should have succeeded based on balance 243
+Withdrawal of 55 from account #100003 should have succeeded based on balance 72
+Mismatched balance on account #100003: Expected 33, but got 30
+Mismatched balance on account #100003: Expected 149, but got 152
+Transfer of 13 from account #100003 should have succeeded based on balance 162
+Transfer of 35 from account #100003 should have succeeded based on lower balance bound 47
+Mismatched balance on account #100003: Expected at most 112, but got 241
+Mismatched balance on account #100001: Expected 114, but got 117
+Mismatched balance on account #100001: Expected 117, but got 114
+Mismatched balance on account #100002: Expected 372, but got 369
+Mismatched balance on account #100002: Expected 357, but got 360
+Mismatched balance on account #100002: Expected 343, but got 340
+Mismatched balance on account #100002: Expected 340, but got 343
+Withdrawal of 80 from account #100001 should have failed based on upper balance bound 59
+Transfer of 13 from account #100001 should have succeeded based on balance 253
+Transfer of 24 from account #100003 should have succeeded based on balance 53
+Transfer of 54 from account #100003 should have succeeded based on balance 136
+Withdrawal of 99 from account #100001 should have failed based on balance 24
+Withdrawal of 6 from account #100003 should have succeeded based on balance 169
+Transfer of 74 from account #100004 should have failed based on upper balance bound 15
+Withdrawal of 67 from account #100001 should have failed based on balance 53
+Mismatched balance on account #100002: Expected at most 12, but got 599
+Withdrawal of 31 from account #100003 should have failed based on balance 11
+Transfer of 8 from account #100004 should have succeeded based on lower balance bound 32
+Mismatched balance on account #100004: Expected at most 8, but got 3759
+Mismatched balance on account #100004: Expected 3559, but got 3562
+Mismatched balance on account #100004: Expected 3562, but got 3559
+Mismatched balance on account #100004: Expected 3559, but got 3562
+Transfer of 91 from account #100004 should have succeeded based on balance 3488
+Withdrawal of 60 from account #100003 should have failed based on upper balance bound 1
+Mismatched balance on account #100004: Expected at most 2, but got 3410
+Withdrawal of 32 from account #100003 should have succeeded based on lower balance bound 36
+Transfer of 90 from account #100003 should have failed based on upper balance bound 32
+Mismatched balance on account #100003: Expected 75, but got 78
+Withdrawal of 40 from account #100003 should have failed based on balance 37
+Withdrawal of 36 from account #100003 should have failed based on balance 4
+Transfer of 1 from account #100001 should have succeeded based on lower balance bound 52
+Mismatched balance on account #100004: Expected at most 45, but got 3491
+Withdrawal of 76 from account #100004 should have succeeded based on balance 3491
+Withdrawal of 10 from account #100003 should have succeeded based on lower balance bound 14
+Mismatched balance on account #100003: Expected at most 101, but got 145
+Transfer of 73 from account #100004 should have succeeded based on lower balance bound 74
+Mismatched balance on account #100004: Expected at most 73, but got 3525
+Mismatched balance on account #100003: Expected 173, but got 243
+Transfer of 86 from account #100003 should have succeeded based on balance 243
+Transfer of 90 from account #100004 should have succeeded based on lower balance bound 141
+Mismatched balance on account #100002: Expected at most 19, but got 1105
+Transfer of 17 from account #100003 should have succeeded based on balance 335
+Mismatched balance on account #100002: Expected 1105, but got 1102
+Mismatched balance on account #100004: Expected 3452, but got 3466
+Mismatched balance on account #100004: Expected 3413, but got 3416
+Transfer of 1 from account #100004 should have succeeded based on balance 3456
+Transfer of 53 from account #100004 should have succeeded based on lower balance bound 82
+Mismatched balance on account #100004: Expected at most 4, but got 3368
+Withdrawal of 22 from account #100001 should have succeeded based on lower balance bound 59
+Withdrawal of 94 from account #100001 should have failed based on upper balance bound 73
+Withdrawal of 52 from account #100003 should have succeeded based on balance 144
+Mismatched balance on account #100003: Expected 26, but got 23
+Mismatched balance on account #100003: Expected 23, but got 26
+Mismatched balance on account #100003: Expected 199, but got 196
+Transfer of 94 from account #100001 should have succeeded based on balance 98
+Transfer of 26 from account #100001 should have failed based on balance 4
+Mismatched balance on account #100003: Expected 276, but got 370
+Mismatched balance on account #100003: Expected 292, but got 289
+Withdrawal of 88 from account #100003 should have succeeded based on balance 241
+Withdrawal of 79 from account #100003 should have succeeded based on balance 147
+Mismatched balance on account #100002: Expected 1596, but got 1599
+Transfer of 33 from account #100002 should have succeeded based on balance 1532
+Mismatched balance on account #100001: Expected at most 51, but got 130
+Withdrawal of 56 from account #100001 should have succeeded based on balance 130
+Withdrawal of 67 from account #100004 should have failed based on upper balance bound 44
+Withdrawal of 26 from account #100002 should have succeeded based on balance 1323
+Transfer of 94 from account #100001 should have failed based on upper balance bound 65
+Transfer of 65 from account #100002 should have succeeded based on balance 1182
+Transfer of 5 from account #100003 should have succeeded based on balance 276
+Withdrawal of 30 from account #100003 should have succeeded based on balance 213
+Withdrawal of 62 from account #100003 should have succeeded based on balance 138
+Mismatched balance on account #100003: Expected 269, but got 266
+Mismatched balance on account #100003: Expected 266, but got 269
+Transfer of 45 from account #100003 should have succeeded based on balance 269
+Mismatched balance on account #100003: Expected 189, but got 192
+Withdrawal of 76 from account #100002 should have failed based on upper balance bound 63
+Transfer of 19 from account #100003 should have succeeded based on balance 235
+Mismatched balance on account #100001: Expected 125, but got 122
+Mismatched balance on account #100004: Expected 3585, but got 3678
+Mismatched balance on account #100004: Expected 3611, but got 3614
+Mismatched balance on account #100004: Expected 3614, but got 3611
+Mismatched balance on account #100003: Expected 425, but got 428
+Mismatched balance on account #100003: Expected 402, but got 399
+Mismatched balance on account #100003: Expected 498, but got 501
+Mismatched balance on account #100003: Expected 591, but got 588
+Mismatched balance on account #100003: Expected 491, but got 494
+Mismatched balance on account #100003: Expected 494, but got 491
+Withdrawal of 69 from account #100003 should have succeeded based on balance 491
+Mismatched balance on account #100004: Expected at most 24, but got 3587
+Transfer of 32 from account #100004 should have succeeded based on balance 3587
+Mismatched balance on account #100004: Expected at most 109, but got 3362
+Mismatched balance on account #100001: Expected at most 61, but got 534
+Mismatched balance on account #100001: Expected 513, but got 516
+Transfer of 38 from account #100003 should have succeeded based on balance 621
+Withdrawal of 11 from account #100002 should have succeeded based on balance 911
+Transfer of 38 from account #100002 should have succeeded based on lower balance bound 114
+Mismatched balance on account #100003: Expected at most 13, but got 282
+Withdrawal of 14 from account #100003 should have succeeded based on balance 282
+Mismatched balance on account #100002: Expected at most 105, but got 771
+Transfer of 61 from account #100004 should have succeeded based on balance 3542
+Transfer of 81 from account #100004 should have succeeded based on balance 3479
+Transfer of 6 from account #100004 should have succeeded based on balance 3401
+Withdrawal of 77 from account #100004 should have succeeded based on balance 3388
+Transfer of 27 from account #100003 should have succeeded based on balance 368
+Mismatched balance on account #100003: Expected at most 39, but got 273
+Transfer of 69 from account #100003 should have succeeded based on balance 225
+Withdrawal of 65 from account #100003 should have succeeded based on balance 89
+Mismatched balance on account #100003: Expected 98, but got 95
+Transfer of 83 from account #100003 should have succeeded based on balance 169
+Withdrawal of 58 from account #100004 should have succeeded based on balance 3140
+Mismatched balance on account #100004: Expected 3080, but got 3077
+Mismatched balance on account #100003: Expected 331, but got 328
+Transfer of 35 from account #100003 should have succeeded based on balance 319
+Mismatched balance on account #100003: Expected at most 22, but got 264
+Mismatched balance on account #100003: Expected 264, but got 267
+Mismatched balance on account #100003: Expected 267, but got 264
+Mismatched balance on account #100003: Expected 215, but got 218
+Transfer of 19 from account #100003 should have succeeded based on balance 142
+Withdrawal of 35 from account #100002 should have succeeded based on lower balance bound 233
+Mismatched balance on account #100002: Expected at most 35, but got 1402
+Transfer of 75 from account #100003 should have succeeded based on lower balance bound 99
+Mismatched balance on account #100003: Expected at most 28, but got 147
+Mismatched balance on account #100003: Expected 21, but got 24
+Transfer of 34 from account #100003 should have succeeded based on balance 65
+Withdrawal of 21 from account #100003 should have succeeded based on lower balance bound 34
+Mismatched balance on account #100003: Expected at most 0, but got 41
+Transfer of 27 from account #100001 should have succeeded based on lower balance bound 175
+Mismatched balance on account #100003: Expected 10, but got 37
+Transfer of 57 from account #100003 should have failed based on balance 37
+Transfer of 67 from account #100003 should have succeeded based on balance 114
+Mismatched balance on account #100001: Expected at most 30, but got 963
+Mismatched balance on account #100003: Expected 9, but got 12
+Mismatched balance on account #100003: Expected 12, but got 9
+Mismatched balance on account #100003: Expected 9, but got 12
+Withdrawal of 61 from account #100003 should have succeeded based on balance 73
+Transfer of 9 from account #100003 should have succeeded based on balance 85
+Mismatched balance on account #100003: Expected 1, but got 4
+Mismatched balance on account #100002: Expected 1578, but got 1610
+Withdrawal of 95 from account #100002 should have succeeded based on balance 1518
+Mismatched balance on account #100004: Expected at most 65, but got 3177
+Transfer of 48 from account #100004 should have failed based on upper balance bound 25
+Withdrawal of 44 from account #100001 should have succeeded based on lower balance bound 50
+Transfer of 17 from account #100004 should have succeeded based on lower balance bound 19
+Mismatched balance on account #100004: Expected at most 54, but got 2852
+Mismatched balance on account #100001: Expected 996, but got 999
+Withdrawal of 62 from account #100001 should have succeeded based on balance 965
+Mismatched balance on account #100004: Expected 2980, but got 2977
+Withdrawal of 86 from account #100004 should have succeeded based on lower balance bound 87
+Transfer of 31 from account #100001 should have succeeded based on lower balance bound 122
+Transfer of 69 from account #100003 should have succeeded based on balance 80
+Withdrawal of 56 from account #100003 should have failed based on balance 11
+Withdrawal of 70 from account #100004 should have failed based on upper balance bound 59
+Transfer of 9 from account #100003 should have succeeded based on balance 17
+Transfer of 65 from account #100002 should have succeeded based on balance 1658
+Mismatched balance on account #100003: Expected 8, but got 11
+Withdrawal of 43 from account #100003 should have failed based on balance 11
+Transfer of 37 from account #100003 should have succeeded based on lower balance bound 150
+Transfer of 25 from account #100003 should have failed based on upper balance bound 9
+Mismatched balance on account #100004: Expected 3151, but got 3154
+Mismatched balance on account #100004: Expected 3154, but got 3151
+Withdrawal of 47 from account #100003 should have succeeded based on balance 168
+Withdrawal of 40 from account #100002 should have succeeded based on balance 1735
+Mismatched balance on account #100004: Expected 2985, but got 2982
+Transfer of 64 from account #100004 should have succeeded based on balance 3077
+Transfer of 16 from account #100003 should have succeeded based on lower balance bound 165
+Withdrawal of 87 from account #100003 should have failed based on upper balance bound 16
+Transfer of 60 from account #100003 should have succeeded based on balance 304
+Withdrawal of 61 from account #100003 should have failed based on upper balance bound 33
+Mismatched balance on account #100001: Expected at most 63, but got 1254
+Transfer of 9 from account #100001 should have succeeded based on balance 1209
+Mismatched balance on account #100003: Expected 69, but got 81
+Withdrawal of 46 from account #100004 should have succeeded based on balance 2975
+Withdrawal of 90 from account #100004 should have succeeded based on balance 2907
+Withdrawal of 13 from account #100002 should have succeeded based on balance 1694
+Mismatched balance on account #100001: Expected at most 68, but got 1131
+Mismatched balance on account #100001: Expected 1074, but got 1071
+Transfer of 20 from account #100002 should have succeeded based on balance 1925
+Mismatched balance on account #100002: Expected 1772, but got 1775
+Withdrawal of 68 from account #100002 should have succeeded based on balance 1903
+Transfer of 62 from account #100004 should have failed based on upper balance bound 25
+Transfer of 71 from account #100003 should have succeeded based on lower balance bound 144
+Mismatched balance on account #100003: Expected at most 71, but got 1048
+Mismatched balance on account #100001: Expected 772, but got 806
+Withdrawal of 10 from account #100001 should have succeeded based on balance 806
+Mismatched balance on account #100003: Expected at most 34, but got 612
+Mismatched balance on account #100003: Expected 612, but got 615
+Transfer of 3 from account #100003 should have succeeded based on balance 629
+Mismatched balance on account #100003: Expected at most 92, but got 556
+Mismatched balance on account #100003: Expected 551, but got 554
+Mismatched balance on account #100001: Expected 981, but got 978
+Mismatched balance on account #100002: Expected 2004, but got 2007
+Transfer of 12 from account #100002 should have succeeded based on balance 2061
+Mismatched balance on account #100002: Expected at most 220, but got 2054
+Transfer of 21 from account #100003 should have succeeded based on lower balance bound 98
+Withdrawal of 95 from account #100003 should have failed based on upper balance bound 21
+Mismatched balance on account #100003: Expected at most 3, but got 589
+Mismatched balance on account #100003: Expected 361, but got 364
+Mismatched balance on account #100004: Expected 2703, but got 2706
+Mismatched balance on account #100003: Expected 277, but got 274
+Transfer of 36 from account #100003 should have succeeded based on balance 274
+Mismatched balance on account #100003: Expected 241, but got 238
+Withdrawal of 50 from account #100003 should have succeeded based on balance 240
+Transfer of 2 from account #100004 should have succeeded based on balance 2768
+Withdrawal of 73 from account #100004 should have failed based on upper balance bound 60
+Withdrawal of 86 from account #100003 should have succeeded based on balance 86
+Transfer of 46 from account #100003 should have succeeded based on lower balance bound 78
+Mismatched balance on account #100003: Expected 9, but got 12
+Mismatched balance on account #100003: Expected 39, but got 36
+Mismatched balance on account #100003: Expected 36, but got 39
+Mismatched balance on account #100003: Expected 151, but got 148
+Mismatched balance on account #100001: Expected 1028, but got 1001
+Mismatched balance on account #100001: Expected 994, but got 991
+Mismatched balance on account #100003: Expected 67, but got 70
+Mismatched balance on account #100004: Expected 3094, but got 3091
+Mismatched balance on account #100004: Expected 3096, but got 3099
+Withdrawal of 79 from account #100001 should have succeeded based on balance 1145
+Withdrawal of 87 from account #100002 should have succeeded based on balance 2358
+Withdrawal of 12 from account #100004 should have succeeded based on balance 3006
+Mismatched balance on account #100003: Expected at most 83, but got 230
+Mismatched balance on account #100002: Expected 2161, but got 2164
+Mismatched balance on account #100002: Expected 2183, but got 2180
+Mismatched balance on account #100002: Expected 2097, but got 2100
+Withdrawal of 59 from account #100002 should have succeeded based on balance 2100
+Mismatched balance on account #100004: Expected 2896, but got 2979
+Transfer of 35 from account #100003 should have succeeded based on balance 244
+Withdrawal of 87 from account #100003 should have failed based on upper balance bound 84
+Mismatched balance on account #100004: Expected 2824, but got 2858
+Withdrawal of 36 from account #100003 should have failed based on balance 14
+Mismatched balance on account #100003: Expected 17, but got 14
+Withdrawal of 61 from account #100003 should have failed based on balance 14
+Transfer of 75 from account #100003 should have succeeded based on lower balance bound 119
+Withdrawal of 39 from account #100004 should have succeeded based on balance 2822
+Withdrawal of 66 from account #100003 should have succeeded based on balance 187
+Mismatched balance on account #100004: Expected 2798, but got 2801
+Transfer of 77 from account #100002 should have succeeded based on lower balance bound 185
+Withdrawal of 48 from account #100001 should have failed based on upper balance bound 10
+Mismatched balance on account #100003: Expected 168, but got 245
+Transfer of 63 from account #100001 should have succeeded based on balance 462
+Transfer of 6 from account #100002 should have succeeded based on lower balance bound 96
+Transfer of 26 from account #100002 should have succeeded based on lower balance bound 54
+Withdrawal of 6 from account #100003 should have succeeded based on lower balance bound 128
+Mismatched balance on account #100002: Expected 1933, but got 1936
+Mismatched balance on account #100002: Expected 1936, but got 1933
+Mismatched balance on account #100003: Expected at most 20, but got 576
+Mismatched balance on account #100003: Expected 412, but got 415
+Mismatched balance on account #100003: Expected 416, but got 413
+Withdrawal of 47 from account #100003 should have succeeded based on balance 460
+Transfer of 55 from account #100003 should have failed based on upper balance bound 12
+Mismatched balance on account #100002: Expected at most 114, but got 1735
+Withdrawal of 89 from account #100002 should have succeeded based on balance 1733
+Withdrawal of 37 from account #100004 should have failed based on upper balance bound 19
+Withdrawal of 35 from account #100002 should have succeeded based on balance 1799
+Mismatched balance on account #100003: Expected at most 2, but got 377
+Transfer of 91 from account #100004 should have failed based on upper balance bound 8
+Transfer of 53 from account #100003 should have succeeded based on lower balance bound 178
+Mismatched balance on account #100003: Expected at most 126, but got 731
+Withdrawal of 61 from account #100003 should have succeeded based on balance 688
+Transfer of 76 from account #100003 should have failed based on upper balance bound 6
+Transfer of 34 from account #100003 should have succeeded based on balance 542
+Transfer of 22 from account #100003 should have succeeded based on balance 417
+Transfer of 77 from account #100003 should have failed based on upper balance bound 1
+Transfer of 13 from account #100003 should have succeeded based on balance 136
+Withdrawal of 55 from account #100001 should have succeeded based on balance 976
+Transfer of 51 from account #100001 should have failed based on upper balance bound 12
+Withdrawal of 90 from account #100003 should have failed based on balance 45
+Withdrawal of 93 from account #100001 should have succeeded based on balance 973
+Transfer of 42 from account #100003 should have succeeded based on lower balance bound 292
+Withdrawal of 71 from account #100003 should have succeeded based on balance 277
+Transfer of 69 from account #100004 should have succeeded based on balance 3495
+Mismatched balance on account #100002: Expected at most 157, but got 1741
+Mismatched balance on account #100002: Expected 1808, but got 1811
+Mismatched balance on account #100001: Expected 997, but got 1000
+Transfer of 40 from account #100001 should have succeeded based on balance 1000
+Mismatched balance on account #100002: Expected at most 1, but got 1763
+Transfer of 63 from account #100003 should have succeeded based on balance 726
+Mismatched balance on account #100003: Expected 674, but got 671
+Withdrawal of 25 from account #100003 should have succeeded based on balance 679
+Mismatched balance on account #100003: Expected 741, but got 738
+Transfer of 55 from account #100003 should have succeeded based on balance 674
+Mismatched balance on account #100004: Expected 3578, but got 3581
+Mismatched balance on account #100004: Expected 3585, but got 3582
+Mismatched balance on account #100002: Expected 1859, but got 1862
+Transfer of 74 from account #100002 should have failed based on upper balance bound 40
+Mismatched balance on account #100001: Expected 1003, but got 1006
+Mismatched balance on account #100001: Expected 962, but got 959
+Withdrawal of 54 from account #100003 should have succeeded based on balance 758
+Withdrawal of 5 from account #100004 should have succeeded based on balance 3649
+Withdrawal of 2 from account #100001 should have succeeded based on balance 1036
+Transfer of 89 from account #100001 should have failed based on upper balance bound 37
+Withdrawal of 2 from account #100001 should have succeeded based on balance 809
+Transfer of 84 from account #100003 should have failed based on upper balance bound 56
+Transfer of 79 from account #100004 should have succeeded based on balance 3626
+Transfer of 60 from account #100004 should have succeeded based on lower balance bound 141
+Withdrawal of 73 from account #100004 should have failed based on upper balance bound 60
+Mismatched balance on account #100001: Expected 876, but got 879
+Withdrawal of 58 from account #100001 should have succeeded based on balance 865
+Mismatched balance on account #100003: Expected 558, but got 561
+Mismatched balance on account #100003: Expected 604, but got 601
+Transfer of 26 from account #100003 should have succeeded based on balance 601
+Transfer of 16 from account #100003 should have succeeded based on balance 589
+Mismatched balance on account #100003: Expected at most 1, but got 491
+Mismatched balance on account #100003: Expected 491, but got 494
+Mismatched balance on account #100003: Expected 451, but got 448
+Transfer of 7 from account #100003 should have succeeded based on balance 368
+Transfer of 31 from account #100003 should have succeeded based on balance 453
+Transfer of 50 from account #100003 should have succeeded based on balance 514
+Withdrawal of 70 from account #100003 should have failed based on upper balance bound 37
+Mismatched balance on account #100001: Expected 801, but got 804
+Mismatched balance on account #100003: Expected 386, but got 389
+Mismatched balance on account #100003: Expected 389, but got 386
+Withdrawal of 17 from account #100003 should have succeeded based on balance 386
+Transfer of 46 from account #100002 should have succeeded based on balance 2042
+Mismatched balance on account #100001: Expected 865, but got 868
+Mismatched balance on account #100001: Expected 868, but got 865
+Mismatched balance on account #100001: Expected 954, but got 957
+Withdrawal of 6 from account #100002 should have succeeded based on balance 2098
+Withdrawal of 59 from account #100002 should have succeeded based on balance 2037
+Mismatched balance on account #100003: Expected 366, but got 369
+Withdrawal of 16 from account #100001 should have succeeded based on balance 1119
+Withdrawal of 27 from account #100004 should have succeeded based on balance 3648
+Withdrawal of 64 from account #100001 should have succeeded based on balance 1195
+Withdrawal of 64 from account #100003 should have succeeded based on lower balance bound 112
+Mismatched balance on account #100003: Expected at most 64, but got 539
+Transfer of 59 from account #100003 should have succeeded based on balance 539
+Mismatched balance on account #100001: Expected 973, but got 970
+Transfer of 93 from account #100001 should have succeeded based on balance 963
+Withdrawal of 39 from account #100003 should have succeeded based on lower balance bound 90
+Transfer of 56 from account #100003 should have failed based on upper balance bound 39
+Transfer of 56 from account #100001 should have succeeded based on lower balance bound 56
+Mismatched balance on account #100001: Expected at most 38, but got 710
+Transfer of 10 from account #100003 should have succeeded based on balance 623
+Mismatched balance on account #100002: Expected 2250, but got 2253
+Withdrawal of 49 from account #100003 should have failed based on upper balance bound 2
+Transfer of 63 from account #100003 should have succeeded based on balance 559
+Mismatched balance on account #100004: Expected 3839, but got 3836
+Transfer of 97 from account #100004 should have succeeded based on balance 3737
+Transfer of 46 from account #100003 should have succeeded based on balance 742
+Transfer of 47 from account #100003 should have succeeded based on lower balance bound 63
+Transfer of 60 from account #100003 should have failed based on upper balance bound 42
+Mismatched balance on account #100004: Expected 3960, but got 3963
+Withdrawal of 63 from account #100003 should have succeeded based on balance 701
+Transfer of 6 from account #100003 should have succeeded based on balance 577
+Mismatched balance on account #100003: Expected 492, but got 495
+Mismatched balance on account #100003: Expected 407, but got 404
+Mismatched balance on account #100003: Expected 285, but got 282
+Transfer of 55 from account #100002 should have succeeded based on balance 2204
+Mismatched balance on account #100002: Expected 1988, but got 1991
+Withdrawal of 22 from account #100002 should have succeeded based on balance 1986
+Mismatched balance on account #100004: Expected 3952, but got 3949
+Mismatched balance on account #100001: Expected 912, but got 909
+Withdrawal of 82 from account #100004 should have succeeded based on balance 3899
+Withdrawal of 2 from account #100001 should have succeeded based on lower balance bound 52
+Transfer of 49 from account #100003 should have failed based on upper balance bound 5
+Mismatched balance on account #100001: Expected at most 168, but got 795
+Withdrawal of 57 from account #100001 should have succeeded based on balance 795
+Mismatched balance on account #100003: Expected 1477, but got 1480
+Mismatched balance on account #100003: Expected 1569, but got 1566
+Transfer of 37 from account #100001 should have failed based on upper balance bound 16
+Mismatched balance on account #100002: Expected 1696, but got 1699
+Mismatched balance on account #100002: Expected 1757, but got 1754
+Transfer of 41 from account #100003 should have succeeded based on balance 1575
+Mismatched balance on account #100003: Expected at most 91, but got 1410
+Mismatched balance on account #100004: Expected 3796, but got 3799
+Mismatched balance on account #100004: Expected 3799, but got 3796
+Withdrawal of 42 from account #100003 should have succeeded based on balance 1463
+Withdrawal of 12 from account #100003 should have succeeded based on lower balance bound 60
+Mismatched balance on account #100001: Expected 428, but got 431
+Transfer of 86 from account #100003 should have succeeded based on balance 1357
+Withdrawal of 21 from account #100002 should have succeeded based on lower balance bound 82
+Mismatched balance on account #100002: Expected at most 21, but got 1921
+Mismatched balance on account #100004: Expected at most 38, but got 4008
+Withdrawal of 36 from account #100004 should have succeeded based on balance 4047
+Mismatched balance on account #100004: Expected at most 41, but got 3970
+Transfer of 32 from account #100002 should have succeeded based on lower balance bound 42
+Transfer of 64 from account #100002 should have failed based on upper balance bound 32
+Mismatched balance on account #100002: Expected at most 91, but got 1601
+Transfer of 86 from account #100004 should have succeeded based on balance 3556
+Mismatched balance on account #100003: Expected 2266, but got 2263
+Transfer of 11 from account #100003 should have succeeded based on balance 2263
+Mismatched balance on account #100001: Expected at most 93, but got 675
+Mismatched balance on account #100002: Expected 1557, but got 1554
+Mismatched balance on account #100001: Expected 734, but got 731
+Mismatched balance on account #100003: Expected 2155, but got 2158
+Mismatched balance on account #100003: Expected 2037, but got 2034
+Mismatched balance on account #100002: Expected 1560, but got 1557
+Withdrawal of 77 from account #100002 should have succeeded based on balance 1546
+Withdrawal of 29 from account #100001 should have succeeded based on lower balance bound 88
+Withdrawal of 43 from account #100004 should have succeeded based on lower balance bound 100
+Transfer of 99 from account #100004 should have failed based on upper balance bound 85
+Transfer of 62 from account #100004 should have succeeded based on balance 3478
+Transfer of 10 from account #100004 should have succeeded based on balance 3405
+Mismatched balance on account #100004: Expected 3491, but got 3488
+Transfer of 3 from account #100003 should have succeeded based on balance 2210
+Withdrawal of 95 from account #100003 should have succeeded based on balance 2210
+Mismatched balance on account #100003: Expected 2081, but got 2084
+Mismatched balance on account #100003: Expected 2045, but got 2042
+Transfer of 64 from account #100004 should have succeeded based on balance 3715
+Withdrawal of 66 from account #100004 should have succeeded based on lower balance bound 71
+Transfer of 70 from account #100003 should have succeeded based on balance 2068
+Transfer of 76 from account #100002 should have succeeded based on balance 1255
+Transfer of 3 from account #100003 should have succeeded based on balance 2137
+Mismatched balance on account #100003: Expected 2196, but got 2193
+Mismatched balance on account #100002: Expected 1170, but got 1173
+Transfer of 93 from account #100003 should have succeeded based on balance 2449
+Mismatched balance on account #100003: Expected 2483, but got 2480
+Transfer of 37 from account #100002 should have succeeded based on balance 1072
+Mismatched balance on account #100004: Expected 3650, but got 3743
+Mismatched balance on account #100004: Expected at most 43, but got 4331
+Transfer of 74 from account #100003 should have succeeded based on balance 2384
+Withdrawal of 23 from account #100003 should have succeeded based on balance 2162
+Mismatched balance on account #100004: Expected 4777, but got 4780
+Withdrawal of 14 from account #100004 should have succeeded based on balance 4780
+Mismatched balance on account #100001: Expected 1573, but got 1576
+Transfer of 74 from account #100003 should have succeeded based on balance 1947
+Mismatched balance on account #100002: Expected at most 8, but got 1032
+Withdrawal of 81 from account #100004 should have succeeded based on balance 5133
+Mismatched balance on account #100004: Expected 5088, but got 5091
+Mismatched balance on account #100004: Expected 5091, but got 5088
+Mismatched balance on account #100004: Expected 5021, but got 5024
+Withdrawal of 86 from account #100004 should have succeeded based on balance 5024
+Mismatched balance on account #100003: Expected at most 99, but got 1811
+Mismatched balance on account #100002: Expected 916, but got 913
+Transfer of 96 from account #100004 should have failed based on upper balance bound 81
+Mismatched balance on account #100004: Expected 4683, but got 4686
+Mismatched balance on account #100004: Expected 4669, but got 4666
+Withdrawal of 75 from account #100004 should have succeeded based on balance 4666
+Mismatched balance on account #100002: Expected at most 50, but got 803
+Mismatched balance on account #100004: Expected at most 15, but got 4389
+Mismatched balance on account #100004: Expected 4317, but got 4314
+Transfer of 17 from account #100003 should have succeeded based on lower balance bound 145
+Mismatched balance on account #100003: Expected at most 17, but got 2539
+Transfer of 62 from account #100003 should have succeeded based on balance 2448
+Mismatched balance on account #100003: Expected at most 8, but got 2054
+Mismatched balance on account #100001: Expected 1918, but got 1921
+Withdrawal of 50 from account #100002 should have succeeded based on balance 1058
+Transfer of 12 from account #100003 should have succeeded based on balance 2023
+Withdrawal of 66 from account #100003 should have failed based on upper balance bound 56
+Mismatched balance on account #100003: Expected at most 75, but got 1765
+Mismatched balance on account #100004: Expected at most 62, but got 4605
+Transfer of 29 from account #100003 should have succeeded based on balance 1954
+Mismatched balance on account #100002: Expected 1206, but got 1209
+Mismatched balance on account #100002: Expected 1179, but got 1176
+Transfer of 32 from account #100002 should have succeeded based on balance 1102
+Withdrawal of 64 from account #100002 should have succeeded based on balance 973
+Mismatched balance on account #100004: Expected at most 65, but got 4787
+Mismatched balance on account #100002: Expected 909, but got 912
+Mismatched balance on account #100002: Expected 912, but got 909
+Transfer of 97 from account #100002 should have succeeded based on balance 1022
+Mismatched balance on account #100003: Expected 2427, but got 2562
+Mismatched balance on account #100003: Expected 2656, but got 2659
+Mismatched balance on account #100003: Expected 2444, but got 2441
+Transfer of 1 from account #100003 should have succeeded based on balance 2430
+Transfer of 15 from account #100003 should have failed based on upper balance bound 3
+Mismatched balance on account #100003: Expected at most 70, but got 1916
+Mismatched balance on account #100004: Expected 5103, but got 5268
+Withdrawal of 13 from account #100003 should have succeeded based on balance 1951
+Transfer of 55 from account #100001 should have failed based on upper balance bound 18
+Transfer of 1 from account #100001 should have succeeded based on balance 1509
+Mismatched balance on account #100001: Expected 1586, but got 1589
+Transfer of 54 from account #100003 should have succeeded based on balance 2289
+Withdrawal of 33 from account #100004 should have succeeded based on balance 5168
+Withdrawal of 92 from account #100003 should have failed based on upper balance bound 67
+Mismatched balance on account #100003: Expected at most 103, but got 2082
+Mismatched balance on account #100002: Expected at most 80, but got 1125
+Mismatched balance on account #100003: Expected 1961, but got 1958
+Withdrawal of 41 from account #100004 should have succeeded based on balance 5350
+Transfer of 1 from account #100004 should have succeeded based on balance 5248
+Withdrawal of 69 from account #100004 should have succeeded based on balance 5247
+Withdrawal of 4 from account #100004 should have succeeded based on lower balance bound 98
+Mismatched balance on account #100002: Expected 1237, but got 1240
+Transfer of 96 from account #100002 should have succeeded based on balance 1159
+Transfer of 65 from account #100002 should have failed based on upper balance bound 53
+Withdrawal of 13 from account #100003 should have succeeded based on lower balance bound 156
+Mismatched balance on account #100002: Expected at most 83, but got 913
+Transfer of 36 from account #100002 should have succeeded based on balance 913
+Mismatched balance on account #100003: Expected at most 13, but got 2043
+Withdrawal of 9 from account #100001 should have succeeded based on lower balance bound 37
+Mismatched balance on account #100001: Expected at most 48, but got 1948
+Transfer of 8 from account #100002 should have succeeded based on balance 762
+Mismatched balance on account #100001: Expected 2028, but got 2025
+Mismatched balance on account #100003: Expected 2102, but got 2105
+Mismatched balance on account #100001: Expected 2169, but got 2172
+Mismatched balance on account #100001: Expected 2183, but got 2180
+Mismatched balance on account #100001: Expected 2157, but got 2160
+Mismatched balance on account #100001: Expected at most 11, but got 2139
+Withdrawal of 69 from account #100002 should have succeeded based on balance 909
+Transfer of 13 from account #100004 should have succeeded based on balance 5015
+Withdrawal of 90 from account #100003 should have succeeded based on lower balance bound 157
+Mismatched balance on account #100003: Expected at most 229, but got 2009
+Transfer of 53 from account #100002 should have succeeded based on balance 877
+Withdrawal of 52 from account #100002 should have succeeded based on balance 710
+Mismatched balance on account #100001: Expected 2256, but got 2306
+Withdrawal of 16 from account #100003 should have succeeded based on balance 2168
+Transfer of 59 from account #100003 should have succeeded based on balance 1963
+Mismatched balance on account #100003: Expected 1811, but got 1814
+Mismatched balance on account #100003: Expected 1814, but got 1811
+Withdrawal of 76 from account #100003 should have succeeded based on balance 1664
+Transfer of 58 from account #100002 should have succeeded based on balance 258
+Withdrawal of 16 from account #100001 should have succeeded based on lower balance bound 103
+Mismatched balance on account #100003: Expected 1869, but got 1866
+Transfer of 14 from account #100003 should have succeeded based on balance 1804
+Transfer of 59 from account #100003 should have succeeded based on balance 1656
+Withdrawal of 48 from account #100003 should have succeeded based on balance 1168
+Transfer of 93 from account #100002 should have succeeded based on balance 235
+Mismatched balance on account #100004: Expected 4842, but got 4845
+Transfer of 37 from account #100001 should have succeeded based on lower balance bound 61
+Withdrawal of 87 from account #100001 should have failed based on upper balance bound 36
+Withdrawal of 65 from account #100003 should have succeeded based on balance 1335
+Mismatched balance on account #100003: Expected at most 71, but got 1235
+Withdrawal of 82 from account #100003 should have succeeded based on balance 925
+Withdrawal of 16 from account #100001 should have succeeded based on balance 2417
+Mismatched balance on account #100002: Expected at most 136, but got 250
+Withdrawal of 25 from account #100001 should have succeeded based on balance 2292
+Mismatched balance on account #100003: Expected 934, but got 931
+Mismatched balance on account #100004: Expected 5138, but got 5135
+Transfer of 65 from account #100001 should have succeeded based on balance 2247
+Withdrawal of 94 from account #100003 should have succeeded based on balance 979
+Transfer of 50 from account #100004 should have succeeded based on balance 5135
+Mismatched balance on account #100004: Expected 5085, but got 5088
+Mismatched balance on account #100003: Expected 648, but got 698
+Mismatched balance on account #100003: Expected at most 53, but got 742
+Transfer of 66 from account #100004 should have succeeded based on balance 5406
+Mismatched balance on account #100004: Expected 5031, but got 5028
+Transfer of 14 from account #100004 should have succeeded based on balance 5086
+Transfer of 76 from account #100003 should have succeeded based on balance 1026
+Withdrawal of 48 from account #100002 should have succeeded based on balance 225
+Withdrawal of 95 from account #100003 should have succeeded based on balance 953
+Withdrawal of 92 from account #100002 should have succeeded based on balance 230
+Mismatched balance on account #100002: Expected at most 25, but got 113
+Transfer of 14 from account #100003 should have succeeded based on lower balance bound 76
+Mismatched balance on account #100003: Expected at most 89, but got 714
+Withdrawal of 61 from account #100001 should have succeeded based on balance 2085
+Withdrawal of 15 from account #100003 should have succeeded based on lower balance bound 351
+Transfer of 31 from account #100003 should have failed based on upper balance bound 15
+Mismatched balance on account #100003: Expected 1117, but got 1120
+Transfer of 38 from account #100003 should have succeeded based on balance 1120
+Withdrawal of 90 from account #100002 should have succeeded based on balance 877
+Withdrawal of 68 from account #100002 should have succeeded based on lower balance bound 69
+Transfer of 89 from account #100001 should have succeeded based on balance 1969
+Mismatched balance on account #100003: Expected at most 67, but got 854
+Mismatched balance on account #100002: Expected 1064, but got 1067
+Withdrawal of 15 from account #100003 should have succeeded based on balance 915
+Withdrawal of 67 from account #100003 should have succeeded based on balance 1046
+Transfer of 99 from account #100004 should have failed based on upper balance bound 50
+Mismatched balance on account #100004: Expected 4658, but got 4661
+Mismatched balance on account #100003: Expected 1160, but got 1163
+Mismatched balance on account #100004: Expected 4661, but got 4658
+Transfer of 62 from account #100004 should have succeeded based on balance 4658
+Mismatched balance on account #100004: Expected at most 27, but got 4562
+Mismatched balance on account #100001: Expected 1763, but got 1766
+Withdrawal of 37 from account #100001 should have succeeded based on balance 1766
+Mismatched balance on account #100002: Expected at most 64, but got 720
+Mismatched balance on account #100002: Expected 741, but got 744
+Mismatched balance on account #100002: Expected 870, but got 867
+Transfer of 4 from account #100002 should have succeeded based on balance 891
+Transfer of 75 from account #100002 should have succeeded based on balance 887
+Withdrawal of 93 from account #100001 should have failed based on upper balance bound 3
+Withdrawal of 64 from account #100003 should have failed based on upper balance bound 36
+Mismatched balance on account #100003: Expected at most 31, but got 970
+Mismatched balance on account #100004: Expected 4636, but got 4633
+Transfer of 18 from account #100004 should have succeeded based on balance 4633
+Mismatched balance on account #100004: Expected 4654, but got 4651
+Withdrawal of 18 from account #100003 should have succeeded based on balance 536
+Mismatched balance on account #100003: Expected 726, but got 729
+Mismatched balance on account #100002: Expected at most 76, but got 882
+Transfer of 16 from account #100003 should have succeeded based on balance 785
+Withdrawal of 40 from account #100003 should have succeeded based on balance 755
+Mismatched balance on account #100003: Expected 852, but got 849
+Withdrawal of 17 from account #100004 should have succeeded based on balance 4655
+Mismatched balance on account #100004: Expected 4641, but got 4638
+Withdrawal of 86 from account #100003 should have succeeded based on balance 767
+Withdrawal of 77 from account #100004 should have failed based on upper balance bound 55
+Mismatched balance on account #100003: Expected 781, but got 784
+Transfer of 11 from account #100004 should have succeeded based on balance 4579
+Transfer of 46 from account #100004 should have succeeded based on balance 4544
+Transfer of 68 from account #100003 should have succeeded based on lower balance bound 127
+Mismatched balance on account #100003: Expected at most 39, but got 364
+Transfer of 50 from account #100003 should have succeeded based on balance 474
+Withdrawal of 92 from account #100001 should have succeeded based on balance 1786
+Withdrawal of 22 from account #100002 should have succeeded based on balance 903
+Transfer of 70 from account #100003 should have succeeded based on balance 747
+Mismatched balance on account #100003: Expected at most 42, but got 495
+Mismatched balance on account #100004: Expected 4577, but got 4574
+Transfer of 93 from account #100002 should have succeeded based on balance 842
+Withdrawal of 44 from account #100002 should have succeeded based on lower balance bound 122
+Transfer of 70 from account #100002 should have failed based on upper balance bound 44
+Mismatched balance on account #100001: Expected at most 22, but got 1703
+Mismatched balance on account #100003: Expected 971, but got 968
+Transfer of 96 from account #100001 should have succeeded based on balance 1659
+Transfer of 44 from account #100001 should have succeeded based on lower balance bound 55
+Mismatched balance on account #100003: Expected at most 98, but got 883
+Withdrawal of 61 from account #100002 should have failed based on upper balance bound 5
+Mismatched balance on account #100002: Expected 602, but got 599
+Transfer of 82 from account #100002 should have succeeded based on balance 568
+Mismatched balance on account #100003: Expected at most 124, but got 999
+Withdrawal of 84 from account #100003 should have succeeded based on balance 999
+Mismatched balance on account #100003: Expected 868, but got 871
+Mismatched balance on account #100003: Expected 822, but got 819
+Mismatched balance on account #100003: Expected 819, but got 822
+Transfer of 23 from account #100004 should have succeeded based on lower balance bound 99
+Mismatched balance on account #100004: Expected at most 122, but got 4458
+Withdrawal of 34 from account #100001 should have succeeded based on lower balance bound 76
+Withdrawal of 5 from account #100003 should have succeeded based on balance 728
+Transfer of 4 from account #100003 should have succeeded based on lower balance bound 117
+Mismatched balance on account #100003: Expected at most 200, but got 1029
+Withdrawal of 12 from account #100003 should have succeeded based on balance 935
+Mismatched balance on account #100003: Expected at most 131, but got 978
+Transfer of 72 from account #100003 should have succeeded based on balance 986
+Mismatched balance on account #100004: Expected 4873, but got 4870
+Withdrawal of 16 from account #100004 should have succeeded based on balance 4870
+Withdrawal of 48 from account #100001 should have succeeded based on balance 1622
+Transfer of 95 from account #100003 should have failed based on upper balance bound 65
+Transfer of 70 from account #100002 should have succeeded based on balance 510
+Mismatched balance on account #100002: Expected 356, but got 353
+Withdrawal of 53 from account #100002 should have succeeded based on balance 350
+Withdrawal of 77 from account #100001 should have failed based on upper balance bound 48
+Withdrawal of 55 from account #100002 should have succeeded based on lower balance bound 57
+Mismatched balance on account #100002: Expected at most 51, but got 332
+Transfer of 50 from account #100002 should have succeeded based on balance 462
+Transfer of 25 from account #100002 should have succeeded based on balance 412
+Mismatched balance on account #100003: Expected 1140, but got 1215
+Withdrawal of 62 from account #100003 should have succeeded based on balance 1208
+Withdrawal of 61 from account #100003 should have failed based on upper balance bound 34
+Mismatched balance on account #100001: Expected 1598, but got 1601
+Mismatched balance on account #100001: Expected 1601, but got 1598
+Withdrawal of 57 from account #100001 should have succeeded based on balance 1601
+Mismatched balance on account #100004: Expected at most 34, but got 5030
+Transfer of 56 from account #100003 should have succeeded based on lower balance bound 73
+Mismatched balance on account #100003: Expected at most 56, but got 1344
+Mismatched balance on account #100004: Expected at most 19, but got 5135
+Transfer of 33 from account #100003 should have succeeded based on lower balance bound 62
+Transfer of 61 from account #100003 should have failed based on upper balance bound 33
+Mismatched balance on account #100003: Expected at most 20, but got 665
+Mismatched balance on account #100003: Expected 565, but got 568
+Mismatched balance on account #100002: Expected at most 117, but got 670
+Mismatched balance on account #100003: Expected at most 137, but got 613
+Withdrawal of 54 from account #100002 should have succeeded based on lower balance bound 80
+Transfer of 75 from account #100002 should have failed based on upper balance bound 47
+Mismatched balance on account #100003: Expected at most 87, but got 629
+Transfer of 85 from account #100001 should have failed based on upper balance bound 53
+Transfer of 95 from account #100001 should have failed based on upper balance bound 52
+Withdrawal of 74 from account #100001 should have succeeded based on lower balance bound 172
+Mismatched balance on account #100003: Expected 690, but got 687
+Mismatched balance on account #100003: Expected 801, but got 798
+Mismatched balance on account #100003: Expected 798, but got 801
+Mismatched balance on account #100003: Expected 906, but got 903
+Transfer of 77 from account #100003 should have succeeded based on balance 822
+Mismatched balance on account #100001: Expected 898, but got 901
+Mismatched balance on account #100001: Expected 812, but got 809
+Mismatched balance on account #100003: Expected 883, but got 880
+Withdrawal of 98 from account #100003 should have succeeded based on balance 851
+Mismatched balance on account #100003: Expected 831, but got 888
+Mismatched balance on account #100003: Expected 888, but got 885
+Withdrawal of 14 from account #100003 should have succeeded based on balance 812
+Transfer of 12 from account #100001 should have succeeded based on lower balance bound 44
+Withdrawal of 41 from account #100001 should have succeeded based on lower balance bound 73
+Transfer of 66 from account #100001 should have failed based on upper balance bound 18
+Transfer of 79 from account #100002 should have succeeded based on balance 630
+Mismatched balance on account #100003: Expected 960, but got 963
+Mismatched balance on account #100003: Expected 1130, but got 1127
+Withdrawal of 22 from account #100004 should have succeeded based on balance 5666
+Withdrawal of 35 from account #100001 should have succeeded based on balance 781
+Mismatched balance on account #100003: Expected 1205, but got 1208
+Mismatched balance on account #100003: Expected 1208, but got 1205
+Withdrawal of 11 from account #100003 should have succeeded based on balance 1247
+Mismatched balance on account #100001: Expected 647, but got 650
+Mismatched balance on account #100004: Expected at most 13, but got 5613
+Withdrawal of 59 from account #100001 should have succeeded based on lower balance bound 94
+Mismatched balance on account #100001: Expected at most 59, but got 717
+Withdrawal of 26 from account #100003 should have succeeded based on lower balance bound 140
+Withdrawal of 97 from account #100003 should have failed based on upper balance bound 26
+Mismatched balance on account #100002: Expected 755, but got 752
+Mismatched balance on account #100001: Expected at most 38, but got 505
+Transfer of 55 from account #100002 should have failed based on upper balance bound 50
+Mismatched balance on account #100001: Expected at most 18, but got 319
+Withdrawal of 95 from account #100004 should have succeeded based on balance 5907
+Mismatched balance on account #100003: Expected 1688, but got 1685
+Transfer of 63 from account #100003 should have failed based on upper balance bound 19
+Withdrawal of 15 from account #100003 should have succeeded based on balance 1441
+Withdrawal of 36 from account #100003 should have succeeded based on balance 1550
+Withdrawal of 77 from account #100003 should have succeeded based on balance 1514
+Mismatched balance on account #100004: Expected 5915, but got 5918
+Mismatched balance on account #100004: Expected 5961, but got 5958
+Mismatched balance on account #100004: Expected 5958, but got 5961
+Withdrawal of 83 from account #100004 should have succeeded based on balance 6004
+Mismatched balance on account #100003: Expected at most 20, but got 1503
+Mismatched balance on account #100003: Expected 1508, but got 1505
+Mismatched balance on account #100001: Expected at most 40, but got 320
+Mismatched balance on account #100003: Expected 1563, but got 1566
+Mismatched balance on account #100003: Expected 1581, but got 1578
+Mismatched balance on account #100002: Expected at most 17, but got 837
+Mismatched balance on account #100002: Expected 822, but got 819
+Mismatched balance on account #100003: Expected 1743, but got 1740
+Mismatched balance on account #100003: Expected 1740, but got 1743
+Mismatched balance on account #100002: Expected at most 79, but got 602
+Withdrawal of 69 from account #100004 should have succeeded based on balance 6321
+Mismatched balance on account #100003: Expected at most 94, but got 1708
+Mismatched balance on account #100003: Expected 1675, but got 1672
+Mismatched balance on account #100004: Expected 6228, but got 6225
+Withdrawal of 98 from account #100004 should have succeeded based on balance 5932
+Mismatched balance on account #100003: Expected 1757, but got 1760
+Mismatched balance on account #100003: Expected 1760, but got 1757
+Transfer of 4 from account #100002 should have succeeded based on lower balance bound 24
+Transfer of 54 from account #100002 should have failed based on upper balance bound 4
+Transfer of 58 from account #100003 should have succeeded based on lower balance bound 64
+Withdrawal of 59 from account #100004 should have succeeded based on lower balance bound 160
+Transfer of 65 from account #100004 should have succeeded based on lower balance bound 81
+Mismatched balance on account #100004: Expected at most 140, but got 6091
+Transfer of 15 from account #100003 should have succeeded based on balance 2033
+Mismatched balance on account #100004: Expected at most 46, but got 6093
+Mismatched balance on account #100004: Expected 6084, but got 6087
+Transfer of 42 from account #100004 should have succeeded based on balance 5941
+Transfer of 74 from account #100002 should have succeeded based on balance 719
+Transfer of 63 from account #100004 should have succeeded based on balance 5785
+Transfer of 26 from account #100002 should have failed based on upper balance bound 2
+Transfer of 8 from account #100002 should have succeeded based on balance 432
+Transfer of 14 from account #100002 should have succeeded based on lower balance bound 22
+Transfer of 54 from account #100004 should have succeeded based on lower balance bound 218
+Mismatched balance on account #100004: Expected at most 54, but got 6209
+Mismatched balance on account #100004: Expected 6209, but got 6212
+Transfer of 11 from account #100004 should have succeeded based on balance 6169
+Transfer of 22 from account #100002 should have succeeded based on balance 179
+Mismatched balance on account #100003: Expected at most 58, but got 2114
+Withdrawal of 66 from account #100003 should have succeeded based on balance 2156
+Withdrawal of 40 from account #100004 should have succeeded based on balance 5757
+Mismatched balance on account #100004: Expected 5711, but got 5714
+Mismatched balance on account #100004: Expected 5802, but got 5799
+Mismatched balance on account #100001: Expected 745, but got 742
+Transfer of 16 from account #100003 should have succeeded based on balance 2320
+Transfer of 61 from account #100003 should have succeeded based on balance 2265
+Mismatched balance on account #100004: Expected at most 51, but got 5681
+Mismatched balance on account #100004: Expected at most 63, but got 5692
+Transfer of 82 from account #100003 should have succeeded based on balance 2484
+Mismatched balance on account #100004: Expected 5768, but got 5771
+Mismatched balance on account #100004: Expected 5771, but got 5768
+Transfer of 38 from account #100004 should have succeeded based on balance 5515
+Withdrawal of 3 from account #100001 should have succeeded based on balance 535
+Transfer of 66 from account #100003 should have succeeded based on lower balance bound 132
+Mismatched balance on account #100002: Expected at most 96, but got 383
+Mismatched balance on account #100003: Expected 2560, but got 2563
+Withdrawal of 21 from account #100004 should have succeeded based on balance 5804
+Mismatched balance on account #100004: Expected 5788, but got 5791
+Withdrawal of 15 from account #100002 should have succeeded based on balance 460
+Mismatched balance on account #100002: Expected at most 133, but got 501
+Mismatched balance on account #100002: Expected 501, but got 498
+Transfer of 41 from account #100002 should have succeeded based on balance 434
+Transfer of 79 from account #100002 should have succeeded based on balance 364
+Mismatched balance on account #100004: Expected at most 46, but got 5870
+Mismatched balance on account #100004: Expected 5870, but got 5873
+Mismatched balance on account #100004: Expected 5870, but got 5867
+Transfer of 23 from account #100004 should have succeeded based on balance 5814
+Mismatched balance on account #100004: Expected 5791, but got 5794
+Withdrawal of 54 from account #100003 should have succeeded based on balance 2181
+Mismatched balance on account #100003: Expected at most 151, but got 2213
+Mismatched balance on account #100003: Expected 2213, but got 2210
+Mismatched balance on account #100001: Expected at most 23, but got 733
+Transfer of 2 from account #100003 should have succeeded based on lower balance bound 98
+Withdrawal of 68 from account #100003 should have failed based on upper balance bound 2
+Withdrawal of 96 from account #100003 should have failed based on upper balance bound 68
+Transfer of 94 from account #100003 should have succeeded based on balance 2066
+Mismatched balance on account #100001: Expected 651, but got 648
+Withdrawal of 77 from account #100001 should have failed based on upper balance bound 53
+Mismatched balance on account #100003: Expected 1795, but got 1798
+Withdrawal of 35 from account #100003 should have succeeded based on balance 1835
+Mismatched balance on account #100001: Expected at most 77, but got 428
+Withdrawal of 48 from account #100004 should have succeeded based on lower balance bound 190
+Mismatched balance on account #100004: Expected at most 107, but got 6220
+Transfer of 52 from account #100004 should have succeeded based on balance 6233
+Transfer of 25 from account #100003 should have succeeded based on lower balance bound 49
+Mismatched balance on account #100003: Expected at most 43, but got 1723
+Mismatched balance on account #100003: Expected 1723, but got 1726
+Transfer of 71 from account #100001 should have failed based on upper balance bound 28
+Transfer of 13 from account #100001 should have succeeded based on balance 266
+Transfer of 58 from account #100003 should have succeeded based on balance 1915
+Withdrawal of 36 from account #100003 should have succeeded based on balance 1814
+Mismatched balance on account #100001: Expected 692, but got 695
+Mismatched balance on account #100001: Expected 719, but got 716
+Transfer of 22 from account #100003 should have succeeded based on balance 1956
+Mismatched balance on account #100003: Expected 1934, but got 1937
+Mismatched balance on account #100003: Expected at most 81, but got 1905
+Transfer of 29 from account #100002 should have succeeded based on balance 851
+Mismatched balance on account #100003: Expected at most 140, but got 1728
+Mismatched balance on account #100001: Expected 1188, but got 1185
+Mismatched balance on account #100003: Expected 2007, but got 2010
+Transfer of 96 from account #100001 should have succeeded based on balance 858
+Transfer of 37 from account #100003 should have succeeded based on balance 2010
+Mismatched balance on account #100004: Expected 6382, but got 6379
+Mismatched balance on account #100004: Expected 6339, but got 6342
+Withdrawal of 21 from account #100004 should have failed based on upper balance bound 7
+Mismatched balance on account #100003: Expected 2332, but got 2329
+Mismatched balance on account #100001: Expected 1022, but got 1025
+Transfer of 52 from account #100002 should have succeeded based on balance 1175
+Mismatched balance on account #100004: Expected 6381, but got 6384
+Transfer of 92 from account #100004 should have succeeded based on balance 6492
+Transfer of 61 from account #100004 should have succeeded based on balance 6397
+Mismatched balance on account #100003: Expected 2438, but got 2591
+Mismatched balance on account #100003: Expected 2708, but got 2711
+Transfer of 42 from account #100003 should have succeeded based on balance 2638
+Transfer of 10 from account #100003 should have succeeded based on lower balance bound 131
+Transfer of 77 from account #100003 should have failed based on upper balance bound 10
+Transfer of 54 from account #100003 should have failed based on upper balance bound 29
+Mismatched balance on account #100002: Expected 694, but got 697
+Mismatched balance on account #100002: Expected 599, but got 596
+Mismatched balance on account #100003: Expected 2988, but got 2991
+Mismatched balance on account #100003: Expected 2991, but got 2988
+Mismatched balance on account #100004: Expected 7001, but got 7004
+Mismatched balance on account #100003: Expected 2791, but got 2794
+Withdrawal of 36 from account #100002 should have succeeded based on balance 711
+Mismatched balance on account #100003: Expected 2584, but got 2581
+Mismatched balance on account #100004: Expected 6976, but got 6979
+Transfer of 92 from account #100004 should have succeeded based on balance 7096
+Transfer of 38 from account #100004 should have succeeded based on balance 6766
+Mismatched balance on account #100003: Expected at most 92, but got 2821
+Transfer of 82 from account #100001 should have failed based on upper balance bound 30
+Withdrawal of 52 from account #100003 should have failed based on upper balance bound 38
+Mismatched balance on account #100002: Expected 632, but got 635
+Transfer of 51 from account #100001 should have succeeded based on balance 857
+Withdrawal of 89 from account #100002 should have succeeded based on balance 673
+Mismatched balance on account #100002: Expected 589, but got 586
+Mismatched balance on account #100001: Expected at most 69, but got 792
+Mismatched balance on account #100002: Expected 525, but got 528
+Transfer of 96 from account #100003 should have succeeded based on balance 3236
+Transfer of 70 from account #100001 should have succeeded based on balance 910
+Mismatched balance on account #100003: Expected at most 33, but got 2990
+Transfer of 31 from account #100003 should have succeeded based on balance 2877
+Mismatched balance on account #100003: Expected at most 91, but got 2867
+Mismatched balance on account #100003: Expected 2785, but got 2788
+Mismatched balance on account #100003: Expected 2788, but got 2785
+Mismatched balance on account #100001: Expected 1156, but got 1159
+Mismatched balance on account #100001: Expected 1159, but got 1156
+Withdrawal of 47 from account #100002 should have succeeded based on balance 535
+Mismatched balance on account #100002: Expected at most 43, but got 363
+Withdrawal of 25 from account #100002 should have succeeded based on lower balance bound 56
+Transfer of 31 from account #100003 should have failed based on upper balance bound 10
+Mismatched balance on account #100001: Expected 1387, but got 1390
+Withdrawal of 41 from account #100001 should have succeeded based on balance 1284
+Withdrawal of 42 from account #100004 should have succeeded based on lower balance bound 91
+Withdrawal of 53 from account #100004 should have failed based on upper balance bound 42
+Withdrawal of 90 from account #100003 should have succeeded based on balance 2603
+Mismatched balance on account #100003: Expected at most 93, but got 2420
+Transfer of 3 from account #100003 should have succeeded based on balance 2420
+Withdrawal of 33 from account #100003 should have failed based on upper balance bound 10
+Mismatched balance on account #100004: Expected 7102, but got 7105
+Mismatched balance on account #100004: Expected 7154, but got 7151
+Mismatched balance on account #100004: Expected at most 4, but got 7090
+Transfer of 71 from account #100001 should have failed based on upper balance bound 59
+Mismatched balance on account #100001: Expected 897, but got 900
+Mismatched balance on account #100001: Expected 980, but got 977
+Mismatched balance on account #100004: Expected 7085, but got 7088
+Transfer of 81 from account #100001 should have failed based on upper balance bound 50
+Mismatched balance on account #100001: Expected 749, but got 746
+Transfer of 4 from account #100001 should have succeeded based on balance 746
+Mismatched balance on account #100004: Expected 7088, but got 7085
+Mismatched balance on account #100004: Expected 7085, but got 7088
+Transfer of 55 from account #100002 should have succeeded based on balance 272
+Transfer of 73 from account #100003 should have failed based on upper balance bound 58
+Mismatched balance on account #100002: Expected 413, but got 416
+Withdrawal of 30 from account #100004 should have succeeded based on balance 7114
+Transfer of 50 from account #100004 should have failed based on upper balance bound 49
+Transfer of 63 from account #100004 should have succeeded based on balance 6701
+Mismatched balance on account #100003: Expected at most 81, but got 2681
+Withdrawal of 79 from account #100003 should have succeeded based on balance 2653
+Mismatched balance on account #100003: Expected at most 93, but got 2481
+Transfer of 25 from account #100001 should have succeeded based on balance 941
+Transfer of 38 from account #100003 should have succeeded based on balance 2458
+Mismatched balance on account #100003: Expected at most 76, but got 2347
+Mismatched balance on account #100003: Expected 2465, but got 2462
+Transfer of 29 from account #100004 should have succeeded based on balance 7289
+Mismatched balance on account #100003: Expected at most 79, but got 2397
+Mismatched balance on account #100003: Expected 2454, but got 2457
+Mismatched balance on account #100004: Expected 7595, but got 7592
+Mismatched balance on account #100004: Expected 7592, but got 7595
+Mismatched balance on account #100004: Expected 7624, but got 7621
+Transfer of 13 from account #100003 should have succeeded based on balance 2351
+Withdrawal of 9 from account #100003 should have succeeded based on lower balance bound 45
+Transfer of 86 from account #100001 should have succeeded based on balance 1068
+Mismatched balance on account #100001: Expected 1071, but got 1068
+Mismatched balance on account #100001: Expected 1068, but got 1071
+Mismatched balance on account #100001: Expected 1042, but got 1039
+Transfer of 73 from account #100003 should have succeeded based on lower balance bound 241
+Mismatched balance on account #100003: Expected at most 202, but got 2410
+Mismatched balance on account #100003: Expected 2507, but got 2510
+Mismatched balance on account #100003: Expected 2510, but got 2507
+Withdrawal of 52 from account #100003 should have succeeded based on balance 2433
+Transfer of 33 from account #100003 should have failed based on upper balance bound 25
+Withdrawal of 95 from account #100004 should have failed based on upper balance bound 64
+Withdrawal of 59 from account #100003 should have succeeded based on balance 2519
+Mismatched balance on account #100003: Expected 2515, but got 2518
+Mismatched balance on account #100003: Expected 2408, but got 2405
+Transfer of 66 from account #100003 should have succeeded based on balance 2405
+Transfer of 57 from account #100003 should have failed based on upper balance bound 44
+Transfer of 98 from account #100004 should have succeeded based on balance 7486
+Withdrawal of 94 from account #100003 should have succeeded based on balance 2235
+Transfer of 56 from account #100001 should have succeeded based on balance 1398
+Mismatched balance on account #100002: Expected 1015, but got 1018
+Mismatched balance on account #100002: Expected 1018, but got 1015
+Withdrawal of 98 from account #100002 should have succeeded based on balance 903
+Withdrawal of 52 from account #100002 should have failed based on upper balance bound 49
+Withdrawal of 30 from account #100002 should have succeeded based on balance 707
+Withdrawal of 68 from account #100002 should have succeeded based on balance 682
+Transfer of 16 from account #100001 should have succeeded based on balance 1349
+Mismatched balance on account #100001: Expected 1348, but got 1345
+Mismatched balance on account #100004: Expected at most 94, but got 7421
+Transfer of 67 from account #100004 should have succeeded based on balance 7421
+Withdrawal of 21 from account #100003 should have succeeded based on lower balance bound 131
+Transfer of 40 from account #100003 should have failed based on upper balance bound 21
+Withdrawal of 13 from account #100004 should have failed based on upper balance bound 6
+Transfer of 29 from account #100004 should have failed based on upper balance bound 25
+Transfer of 98 from account #100004 should have failed based on upper balance bound 9
+Mismatched balance on account #100004: Expected at most 40, but got 7185
+Transfer of 16 from account #100004 should have succeeded based on balance 7059
+Transfer of 13 from account #100001 should have succeeded based on balance 1103
+Transfer of 2 from account #100001 should have succeeded based on balance 995
+Withdrawal of 4 from account #100001 should have succeeded based on balance 993
+Mismatched balance on account #100003: Expected 2618, but got 2634
+Withdrawal of 21 from account #100003 should have failed based on upper balance bound 3
+Withdrawal of 38 from account #100003 should have succeeded based on lower balance bound 86
+Mismatched balance on account #100003: Expected at most 38, but got 2661
+Mismatched balance on account #100003: Expected 2462, but got 2459
+Mismatched balance on account #100002: Expected 775, but got 772
+Withdrawal of 9 from account #100001 should have succeeded based on balance 1055
+Transfer of 67 from account #100003 should have succeeded based on balance 2917
+Mismatched balance on account #100001: Expected at most 12, but got 983
+Withdrawal of 17 from account #100003 should have succeeded based on lower balance bound 91
+Mismatched balance on account #100003: Expected at most 17, but got 2910
+Mismatched balance on account #100004: Expected at most 9, but got 7173
+Mismatched balance on account #100002: Expected at most 70, but got 461
+Transfer of 7 from account #100003 should have succeeded based on lower balance bound 28
+Mismatched balance on account #100003: Expected at most 7, but got 2629
+Mismatched balance on account #100003: Expected at most 21, but got 2359
+Withdrawal of 38 from account #100003 should have succeeded based on balance 2142
+Mismatched balance on account #100003: Expected 1943, but got 1946
+Transfer of 69 from account #100003 should have succeeded based on balance 1878
+Transfer of 44 from account #100003 should have succeeded based on lower balance bound 101
+Transfer of 59 from account #100003 should have succeeded based on balance 1972
+Withdrawal of 86 from account #100002 should have succeeded based on balance 535
+Transfer of 56 from account #100003 should have succeeded based on lower balance bound 90
+Transfer of 63 from account #100003 should have failed based on upper balance bound 56
+Withdrawal of 95 from account #100003 should have succeeded based on balance 1899
+Transfer of 80 from account #100003 should have succeeded based on lower balance bound 112
+Withdrawal of 75 from account #100003 should have failed based on upper balance bound 58
+Mismatched balance on account #100004: Expected 7915, but got 7995
+Transfer of 40 from account #100003 should have succeeded based on balance 1661
+Mismatched balance on account #100003: Expected 1621, but got 1624
+Mismatched balance on account #100002: Expected 177, but got 174
+Transfer of 32 from account #100001 should have succeeded based on balance 1593
+Mismatched balance on account #100003: Expected 1661, but got 1664
+Withdrawal of 83 from account #100003 should have succeeded based on balance 1664
+Withdrawal of 75 from account #100004 should have failed based on upper balance bound 39
+Withdrawal of 85 from account #100001 should have succeeded based on balance 1431
+Mismatched balance on account #100003: Expected 1561, but got 1558
+Mismatched balance on account #100004: Expected 7734, but got 7737
+Mismatched balance on account #100004: Expected 7656, but got 7653
+Withdrawal of 28 from account #100004 should have succeeded based on balance 7657
+Mismatched balance on account #100001: Expected 1164, but got 1167
+Mismatched balance on account #100003: Expected 1819, but got 1822
+Mismatched balance on account #100003: Expected 1907, but got 1904
+Transfer of 75 from account #100003 should have succeeded based on balance 1863
+Transfer of 51 from account #100003 should have succeeded based on lower balance bound 136
+Mismatched balance on account #100003: Expected at most 56, but got 1927
+Transfer of 17 from account #100003 should have succeeded based on balance 1927
+Mismatched balance on account #100003: Expected 1815, but got 1812
+Transfer of 36 from account #100001 should have succeeded based on lower balance bound 89
+Withdrawal of 37 from account #100001 should have failed based on upper balance bound 23
+Withdrawal of 70 from account #100001 should have succeeded based on balance 1071
+Withdrawal of 2 from account #100003 should have succeeded based on balance 2192
+Transfer of 79 from account #100003 should have succeeded based on balance 2011
+Mismatched balance on account #100003: Expected at most 12, but got 1840
+Transfer of 99 from account #100001 should have failed based on upper balance bound 81
+Withdrawal of 54 from account #100001 should have succeeded based on balance 521
+Transfer of 63 from account #100001 should have failed based on upper balance bound 42
+Mismatched balance on account #100001: Expected at most 45, but got 281
+Transfer of 58 from account #100003 should have succeeded based on balance 1912
+Mismatched balance on account #100003: Expected at most 74, but got 1780
+Withdrawal of 99 from account #100002 should have succeeded based on balance 1114
+Transfer of 65 from account #100004 should have succeeded based on balance 7772
+Mismatched balance on account #100004: Expected at most 52, but got 7655
+Mismatched balance on account #100004: Expected 7655, but got 7658
+Mismatched balance on account #100001: Expected 377, but got 374
+Mismatched balance on account #100003: Expected 1830, but got 1833
+Mismatched balance on account #100004: Expected at most 96, but got 7726
+Mismatched balance on account #100004: Expected 7726, but got 7729
+Transfer of 31 from account #100001 should have succeeded based on lower balance bound 51
+Mismatched balance on account #100001: Expected at most 13, but got 225
+Mismatched balance on account #100003: Expected 1699, but got 1702
+Transfer of 21 from account #100004 should have succeeded based on balance 7797
+Mismatched balance on account #100004: Expected 8013, but got 8016
+Mismatched balance on account #100001: Expected 228, but got 231
+Transfer of 62 from account #100001 should have succeeded based on balance 231
+Transfer of 42 from account #100002 should have succeeded based on lower balance bound 50
+Mismatched balance on account #100002: Expected at most 49, but got 1008
+Withdrawal of 91 from account #100004 should have succeeded based on balance 7941
+Mismatched balance on account #100004: Expected at most 8, but got 7801
+Transfer of 30 from account #100004 should have succeeded based on balance 7757
+Mismatched balance on account #100004: Expected 7691, but got 7688
+Transfer of 43 from account #100002 should have succeeded based on lower balance bound 109
+Mismatched balance on account #100002: Expected at most 173, but got 1088
+Withdrawal of 82 from account #100002 should have succeeded based on balance 989
+Mismatched balance on account #100001: Expected 544, but got 608
+Mismatched balance on account #100001: Expected 608, but got 605
+Mismatched balance on account #100001: Expected 605, but got 608
+Transfer of 31 from account #100001 should have succeeded based on balance 513
+Mismatched balance on account #100003: Expected 2179, but got 2210
+Transfer of 43 from account #100003 should have succeeded based on balance 2210
+Transfer of 9 from account #100003 should have succeeded based on balance 2008
+Transfer of 17 from account #100002 should have succeeded based on balance 850
+Withdrawal of 95 from account #100002 should have succeeded based on balance 781
+Withdrawal of 72 from account #100002 should have succeeded based on balance 651
+Withdrawal of 53 from account #100001 should have succeeded based on balance 694
+Transfer of 29 from account #100004 should have succeeded based on lower balance bound 88
+Transfer of 36 from account #100004 should have failed based on upper balance bound 29
+Transfer of 34 from account #100003 should have succeeded based on lower balance bound 74
+Mismatched balance on account #100003: Expected at most 106, but got 2468
+Mismatched balance on account #100002: Expected 270, but got 273
+Mismatched balance on account #100002: Expected 250, but got 247
+Mismatched balance on account #100004: Expected 8237, but got 8240
+Withdrawal of 10 from account #100004 should have succeeded based on balance 8242
+Withdrawal of 74 from account #100003 should have succeeded based on balance 1995
+Withdrawal of 91 from account #100004 should have succeeded based on lower balance bound 98
+Mismatched balance on account #100004: Expected at most 9, but got 7999
+Transfer of 88 from account #100003 should have succeeded based on balance 1882
+Transfer of 1 from account #100003 should have succeeded based on balance 1569
+Transfer of 89 from account #100003 should have succeeded based on balance 1711
+Withdrawal of 19 from account #100003 should have succeeded based on lower balance bound 113
+Mismatched balance on account #100004: Expected at most 149, but got 8120
+Mismatched balance on account #100004: Expected 8120, but got 8123
+Withdrawal of 69 from account #100004 should have succeeded based on balance 8123
+Withdrawal of 76 from account #100003 should have succeeded based on lower balance bound 110
+Mismatched balance on account #100003: Expected at most 89, but got 1894
+Withdrawal of 69 from account #100003 should have succeeded based on balance 1803
+Transfer of 62 from account #100003 should have succeeded based on lower balance bound 84
+Mismatched balance on account #100003: Expected at most 62, but got 1753
+Withdrawal of 61 from account #100001 should have succeeded based on balance 584
+Transfer of 64 from account #100003 should have succeeded based on balance 1268
+Mismatched balance on account #100001: Expected 185, but got 188
+Withdrawal of 88 from account #100001 should have succeeded based on balance 188
+Withdrawal of 24 from account #100003 should have succeeded based on balance 1217
+Mismatched balance on account #100001: Expected 17, but got 20
+Transfer of 12 from account #100001 should have succeeded based on balance 49
+Withdrawal of 52 from account #100004 should have succeeded based on lower balance bound 57
+Mismatched balance on account #100004: Expected at most 52, but got 7909
+Withdrawal of 87 from account #100004 should have succeeded based on balance 7950
+Withdrawal of 77 from account #100004 should have succeeded based on lower balance bound 171
+Mismatched balance on account #100002: Expected at most 83, but got 151
+Mismatched balance on account #100003: Expected 1403, but got 1406
+Withdrawal of 42 from account #100003 should have succeeded based on balance 1324
+Mismatched balance on account #100001: Expected at most 98, but got 220
+Mismatched balance on account #100004: Expected 7926, but got 7929
+Transfer of 29 from account #100002 should have succeeded based on balance 371
+Withdrawal of 6 from account #100001 should have succeeded based on balance 415
+Mismatched balance on account #100003: Expected 1002, but got 1031
+Withdrawal of 98 from account #100004 should have succeeded based on balance 8147
+Mismatched balance on account #100003: Expected 776, but got 773
+Withdrawal of 69 from account #100001 should have succeeded based on balance 576
+Transfer of 30 from account #100001 should have succeeded based on lower balance bound 39
+Mismatched balance on account #100003: Expected 868, but got 901
+Mismatched balance on account #100001: Expected at most 18, but got 420
+Transfer of 70 from account #100003 should have succeeded based on balance 1015
+Mismatched balance on account #100003: Expected at most 75, but got 834
+Transfer of 58 from account #100003 should have succeeded based on balance 834
+Mismatched balance on account #100003: Expected at most 32, but got 744
+Mismatched balance on account #100004: Expected 8096, but got 8099
+Transfer of 55 from account #100002 should have succeeded based on balance 480
+Withdrawal of 55 from account #100003 should have succeeded based on balance 639
+Withdrawal of 36 from account #100001 should have succeeded based on balance 523
+Withdrawal of 55 from account #100004 should have succeeded based on balance 8183
+Mismatched balance on account #100001: Expected at most 70, but got 400
+Transfer of 88 from account #100003 should have succeeded based on balance 794
+Withdrawal of 66 from account #100003 should have succeeded based on balance 706
+Withdrawal of 68 from account #100004 should have failed based on upper balance bound 50
+Transfer of 8 from account #100003 should have succeeded based on lower balance bound 22
+Transfer of 80 from account #100003 should have failed based on upper balance bound 8
+Mismatched balance on account #100003: Expected at most 23, but got 852
+Mismatched balance on account #100003: Expected at most 11, but got 700
+Mismatched balance on account #100003: Expected 273, but got 270
+Withdrawal of 84 from account #100003 should have succeeded based on balance 270
+Mismatched balance on account #100003: Expected at most 10, but got 184
+Mismatched balance on account #100003: Expected 184, but got 187
+Mismatched balance on account #100003: Expected 193, but got 190
+Withdrawal of 38 from account #100004 should have succeeded based on balance 7643
+Transfer of 59 from account #100004 should have succeeded based on balance 7360
+Mismatched balance on account #100002: Expected 874, but got 871
+Withdrawal of 85 from account #100004 should have succeeded based on balance 7097
+Transfer of 1 from account #100004 should have succeeded based on balance 7152
+Withdrawal of 67 from account #100004 should have failed based on upper balance bound 31
+Withdrawal of 16 from account #100001 should have succeeded based on balance 396
+Transfer of 58 from account #100001 should have succeeded based on balance 304
+Transfer of 92 from account #100003 should have succeeded based on balance 1032
+Withdrawal of 40 from account #100001 should have succeeded based on balance 595
+Mismatched balance on account #100001: Expected 558, but got 555
+Transfer of 6 from account #100001 should have succeeded based on balance 555
+Transfer of 42 from account #100002 should have succeeded based on balance 717
+Transfer of 66 from account #100003 should have succeeded based on balance 617
+Mismatched balance on account #100004: Expected at most 95, but got 7459
+Mismatched balance on account #100004: Expected 7379, but got 7382
+Mismatched balance on account #100004: Expected 7327, but got 7324
+Transfer of 84 from account #100002 should have succeeded based on balance 688
+Mismatched balance on account #100001: Expected 667, but got 670
+Mismatched balance on account #100004: Expected at most 62, but got 7230
+Transfer of 17 from account #100004 should have succeeded based on balance 6942
+Mismatched balance on account #100001: Expected 668, but got 665
+Transfer of 66 from account #100002 should have succeeded based on balance 648
+Mismatched balance on account #100001: Expected 481, but got 527
+Transfer of 24 from account #100002 should have succeeded based on lower balance bound 92
+Mismatched balance on account #100001: Expected 642, but got 666
+Mismatched balance on account #100004: Expected 7055, but got 7052
+Mismatched balance on account #100003: Expected 1112, but got 1109
+Mismatched balance on account #100003: Expected 1065, but got 1068
+Mismatched balance on account #100003: Expected 1068, but got 1065
+Mismatched balance on account #100003: Expected at most 41, but got 1043
+Mismatched balance on account #100003: Expected 1229, but got 1232
+Withdrawal of 18 from account #100001 should have succeeded based on lower balance bound 141
+Mismatched balance on account #100001: Expected at most 18, but got 788
+Transfer of 26 from account #100003 should have succeeded based on balance 1180
+Withdrawal of 88 from account #100003 should have failed based on upper balance bound 77
+Withdrawal of 87 from account #100002 should have succeeded based on balance 429
+Mismatched balance on account #100001: Expected at most 80, but got 1400
+Transfer of 18 from account #100003 should have succeeded based on balance 452
+Mismatched balance on account #100004: Expected 7130, but got 7127
+Withdrawal of 52 from account #100004 should have succeeded based on balance 7061
+Mismatched balance on account #100001: Expected 1585, but got 1603
+Mismatched balance on account #100001: Expected 1624, but got 1627
+Transfer of 12 from account #100001 should have succeeded based on balance 1627
+Withdrawal of 17 from account #100003 should have succeeded based on balance 487
+Transfer of 94 from account #100003 should have succeeded based on balance 349
+Transfer of 58 from account #100003 should have succeeded based on balance 417
+Mismatched balance on account #100003: Expected 359, but got 362
+Mismatched balance on account #100003: Expected 413, but got 429
+Transfer of 15 from account #100004 should have succeeded based on lower balance bound 28
+Mismatched balance on account #100004: Expected at most 15, but got 7155
+Withdrawal of 21 from account #100004 should have succeeded based on balance 7155
+Transfer of 34 from account #100003 should have succeeded based on balance 1139
+Mismatched balance on account #100004: Expected 6735, but got 6738
+Mismatched balance on account #100004: Expected 6758, but got 6755
+Withdrawal of 66 from account #100002 should have failed based on balance 28
+Transfer of 74 from account #100001 should have succeeded based on lower balance bound 178
+Mismatched balance on account #100003: Expected 839, but got 842
+Transfer of 48 from account #100003 should have succeeded based on balance 811
+Mismatched balance on account #100003: Expected at most 53, but got 733
+Transfer of 66 from account #100004 should have succeeded based on balance 7000
+Mismatched balance on account #100002: Expected at most 65, but got 194
+Transfer of 67 from account #100002 should have succeeded based on balance 115
+Transfer of 29 from account #100003 should have succeeded based on lower balance bound 81
+Withdrawal of 8 from account #100003 should have succeeded based on balance 874
+Transfer of 86 from account #100002 should have succeeded based on balance 147
+Withdrawal of 44 from account #100001 should have failed based on upper balance bound 4
+Withdrawal of 95 from account #100003 should have succeeded based on balance 779
+Mismatched balance on account #100001: Expected at most 184, but got 1564
+Mismatched balance on account #100003: Expected 650, but got 653
+Mismatched balance on account #100003: Expected 653, but got 650
+Mismatched balance on account #100004: Expected 6951, but got 6948
+Transfer of 14 from account #100004 should have succeeded based on balance 6948
+Mismatched balance on account #100004: Expected at most 99, but got 6813
+Withdrawal of 18 from account #100003 should have succeeded based on lower balance bound 85
+Mismatched balance on account #100003: Expected at most 175, but got 771
+Mismatched balance on account #100003: Expected 771, but got 768
+Transfer of 29 from account #100002 should have succeeded based on lower balance bound 83
+Transfer of 85 from account #100002 should have failed based on upper balance bound 29
+Mismatched balance on account #100002: Expected 168, but got 165
+Withdrawal of 31 from account #100002 should have failed based on balance 22
+Withdrawal of 72 from account #100003 should have succeeded based on lower balance bound 178
+Mismatched balance on account #100003: Expected at most 72, but got 912
+Withdrawal of 20 from account #100002 should have succeeded based on balance 138
+Mismatched balance on account #100001: Expected 1811, but got 1877
+Withdrawal of 52 from account #100001 should have succeeded based on balance 1770
+Mismatched balance on account #100002: Expected 48, but got 51
+Mismatched balance on account #100003: Expected 967, but got 970
+Mismatched balance on account #100003: Expected 951, but got 948
+Transfer of 65 from account #100004 should have succeeded based on balance 6956
+Transfer of 99 from account #100003 should have succeeded based on balance 644
+Withdrawal of 26 from account #100003 should have succeeded based on balance 615
+Mismatched balance on account #100003: Expected at most 36, but got 553
+Withdrawal of 72 from account #100002 should have succeeded based on lower balance bound 75
+Withdrawal of 73 from account #100004 should have failed based on upper balance bound 59
+Mismatched balance on account #100001: Expected 1661, but got 1664
+Mismatched balance on account #100001: Expected 1664, but got 1661
+Withdrawal of 67 from account #100001 should have succeeded based on balance 1799
+Transfer of 78 from account #100001 should have failed based on upper balance bound 14
+Withdrawal of 2 from account #100001 should have succeeded based on balance 1634
+Mismatched balance on account #100003: Expected at most 72, but got 793
+Withdrawal of 20 from account #100003 should have succeeded based on balance 768
+Withdrawal of 83 from account #100003 should have failed based on upper balance bound 60
+Mismatched balance on account #100002: Expected 512, but got 515
+Withdrawal of 97 from account #100003 should have failed based on upper balance bound 32
+Mismatched balance on account #100001: Expected at most 97, but got 1842
+Mismatched balance on account #100002: Expected 624, but got 721
+Mismatched balance on account #100003: Expected 398, but got 401
+Transfer of 72 from account #100003 should have succeeded based on balance 401
+Transfer of 66 from account #100001 should have succeeded based on balance 1775
+Mismatched balance on account #100001: Expected 1712, but got 1709
+Withdrawal of 40 from account #100002 should have succeeded based on balance 892
+Transfer of 16 from account #100001 should have succeeded based on balance 1731
+Mismatched balance on account #100003: Expected at most 18, but got 25
+Mismatched balance on account #100003: Expected 97, but got 94
+Transfer of 56 from account #100001 should have failed based on upper balance bound 54
+Transfer of 14 from account #100002 should have succeeded based on balance 177
+Withdrawal of 65 from account #100002 should have succeeded based on balance 65
+Mismatched balance on account #100002: Expected 3, but got 0
+Transfer of 4 from account #100003 should have succeeded based on balance 251
+Withdrawal of 8 from account #100001 should have succeeded based on balance 1994
+Withdrawal of 14 from account #100002 should have succeeded based on balance 161
+Withdrawal of 32 from account #100003 should have succeeded based on balance 732
+Withdrawal of 14 from account #100003 should have succeeded based on balance 839
+Withdrawal of 78 from account #100003 should have succeeded based on balance 858
+Mismatched balance on account #100003: Expected 662, but got 665
+Mismatched balance on account #100004: Expected at most 45, but got 7366
+Withdrawal of 29 from account #100004 should have succeeded based on balance 7366
+Transfer of 11 from account #100003 should have succeeded based on balance 794
+Mismatched balance on account #100003: Expected 711, but got 714
+Mismatched balance on account #100003: Expected 714, but got 711
+Withdrawal of 48 from account #100004 should have succeeded based on balance 7401
+Mismatched balance on account #100003: Expected at most 96, but got 642
+Transfer of 90 from account #100003 should have succeeded based on balance 642
+Mismatched balance on account #100001: Expected at most 49, but got 1689
+Withdrawal of 75 from account #100003 should have failed based on upper balance bound 50
+Mismatched balance on account #100003: Expected 292, but got 295
+Mismatched balance on account #100003: Expected 295, but got 292
+Mismatched balance on account #100003: Expected 263, but got 266
+Withdrawal of 48 from account #100004 should have succeeded based on balance 7589
+Transfer of 94 from account #100001 should have succeeded based on balance 1826
+Mismatched balance on account #100001: Expected 1386, but got 1389
+Mismatched balance on account #100001: Expected 1368, but got 1365
+Transfer of 70 from account #100003 should have failed based on upper balance bound 49
+Transfer of 5 from account #100003 should have succeeded based on balance 544
+Transfer of 5 from account #100003 should have succeeded based on lower balance bound 47
+Mismatched balance on account #100002: Expected at most 50, but got 653
+Transfer of 31 from account #100003 should have failed based on upper balance bound 25
+Mismatched balance on account #100001: Expected 1365, but got 1368
+Mismatched balance on account #100002: Expected at most 86, but got 539
+Withdrawal of 56 from account #100004 should have succeeded based on balance 7910
+Withdrawal of 16 from account #100003 should have succeeded based on balance 247
+Mismatched balance on account #100002: Expected at most 135, but got 659
+Withdrawal of 13 from account #100003 should have succeeded based on lower balance bound 109
+Withdrawal of 82 from account #100003 should have succeeded based on lower balance bound 99
+Transfer of 31 from account #100003 should have failed based on upper balance bound 27
+Mismatched balance on account #100003: Expected 500, but got 503
+Transfer of 92 from account #100003 should have succeeded based on balance 503
+Withdrawal of 73 from account #100001 should have succeeded based on balance 1604
+Withdrawal of 23 from account #100003 should have succeeded based on balance 459
+Transfer of 68 from account #100001 should have succeeded based on balance 1512
+Transfer of 31 from account #100002 should have succeeded based on lower balance bound 55
+Mismatched balance on account #100002: Expected at most 31, but got 844
+Withdrawal of 9 from account #100002 should have succeeded based on balance 844
+Mismatched balance on account #100003: Expected at most 98, but got 587
+Withdrawal of 95 from account #100003 should have succeeded based on balance 689
+Mismatched balance on account #100003: Expected 916, but got 919
+Withdrawal of 64 from account #100002 should have failed based on upper balance bound 37
+Withdrawal of 42 from account #100003 should have succeeded based on balance 1329
+Mismatched balance on account #100004: Expected 8025, but got 8028
+Mismatched balance on account #100004: Expected 8028, but got 8025
+Transfer of 52 from account #100004 should have succeeded based on balance 7905
+Transfer of 48 from account #100003 should have succeeded based on balance 1312
+Withdrawal of 38 from account #100004 should have succeeded based on balance 8051
+Transfer of 66 from account #100002 should have succeeded based on lower balance bound 134
+Transfer of 31 from account #100002 should have failed based on upper balance bound 20
+Transfer of 45 from account #100004 should have succeeded based on balance 8183
+Mismatched balance on account #100002: Expected 565, but got 562
+Mismatched balance on account #100001: Expected 1678, but got 1681
+Withdrawal of 55 from account #100001 should have succeeded based on balance 1602
+Mismatched balance on account #100004: Expected at most 84, but got 7963
+Transfer of 15 from account #100003 should have succeeded based on balance 1684
+Withdrawal of 62 from account #100002 should have succeeded based on balance 664
+Withdrawal of 82 from account #100003 should have succeeded based on lower balance bound 189
+Mismatched balance on account #100003: Expected at most 82, but got 1750
+Withdrawal of 44 from account #100003 should have succeeded based on balance 1726
+Withdrawal of 93 from account #100002 should have succeeded based on balance 778
+Mismatched balance on account #100003: Expected at most 54, but got 1615
+Transfer of 85 from account #100003 should have succeeded based on balance 1588
+Mismatched balance on account #100001: Expected 2027, but got 2081
+Transfer of 5 from account #100001 should have succeeded based on balance 2081
+Transfer of 94 from account #100001 should have succeeded based on balance 1946
+Mismatched balance on account #100001: Expected 1818, but got 1821
+Withdrawal of 51 from account #100003 should have succeeded based on balance 1442
+Withdrawal of 45 from account #100003 should have succeeded based on balance 1341
+Mismatched balance on account #100003: Expected at most 60, but got 1214
+Transfer of 86 from account #100003 should have succeeded based on balance 1107
+Mismatched balance on account #100003: Expected at most 83, but got 891
+Mismatched balance on account #100004: Expected 8467, but got 8470
+Mismatched balance on account #100003: Expected at most 70, but got 962
+Mismatched balance on account #100003: Expected 913, but got 910
+Mismatched balance on account #100002: Expected at most 278, but got 1197
+Transfer of 2 from account #100003 should have succeeded based on balance 494
+Withdrawal of 75 from account #100002 should have succeeded based on balance 1294
+Mismatched balance on account #100002: Expected 1222, but got 1219
+Transfer of 32 from account #100003 should have succeeded based on balance 285
+Mismatched balance on account #100003: Expected at most 52, but got 204
+Mismatched balance on account #100003: Expected 204, but got 201
+Mismatched balance on account #100001: Expected 2198, but got 2250
+Withdrawal of 7 from account #100001 should have succeeded based on balance 2250
+Mismatched balance on account #100002: Expected 1132, but got 1164
+Mismatched balance on account #100003: Expected 392, but got 395
+Mismatched balance on account #100003: Expected 376, but got 373
+Mismatched balance on account #100004: Expected at most 38, but got 8674
+Mismatched balance on account #100004: Expected 8599, but got 8596
+Transfer of 74 from account #100003 should have succeeded based on lower balance bound 200
+Mismatched balance on account #100003: Expected at most 8, but got 510
+Transfer of 92 from account #100003 should have succeeded based on balance 510
+Mismatched balance on account #100003: Expected 711, but got 714
+Withdrawal of 15 from account #100003 should have succeeded based on balance 856
+Withdrawal of 53 from account #100003 should have succeeded based on balance 806
+Withdrawal of 32 from account #100003 should have succeeded based on lower balance bound 35
+Transfer of 17 from account #100003 should have succeeded based on lower balance bound 56
+Mismatched balance on account #100003: Expected at most 228, but got 785
+Mismatched balance on account #100003: Expected at most 34, but got 770
+Transfer of 89 from account #100003 should have succeeded based on balance 770
+Transfer of 20 from account #100004 should have succeeded based on lower balance bound 76
+Mismatched balance on account #100004: Expected at most 62, but got 9174
+Mismatched balance on account #100004: Expected 9174, but got 9171
+Transfer of 88 from account #100003 should have succeeded based on balance 833
+Mismatched balance on account #100003: Expected at most 91, but got 652
+Mismatched balance on account #100001: Expected 2281, but got 2284
+Withdrawal of 55 from account #100003 should have succeeded based on balance 619
+Mismatched balance on account #100004: Expected at most 200, but got 9371
+Withdrawal of 77 from account #100003 should have succeeded based on balance 603
+Mismatched balance on account #100003: Expected at most 46, but got 589
+Mismatched balance on account #100002: Expected at most 34, but got 543
+Mismatched balance on account #100002: Expected 496, but got 499
+Mismatched balance on account #100002: Expected 686, but got 683
+Mismatched balance on account #100003: Expected 556, but got 553
+Transfer of 32 from account #100001 should have succeeded based on lower balance bound 84
+Withdrawal of 24 from account #100004 should have succeeded based on balance 9156
+Mismatched balance on account #100003: Expected 1042, but got 1045
+Transfer of 89 from account #100003 should have succeeded based on balance 877
+Mismatched balance on account #100004: Expected 9172, but got 9169
+Withdrawal of 93 from account #100004 should have succeeded based on balance 9016
+Withdrawal of 76 from account #100001 should have succeeded based on balance 2548
+Mismatched balance on account #100003: Expected 1117, but got 1120
+Mismatched balance on account #100003: Expected 1158, but got 1155
+Mismatched balance on account #100003: Expected 1155, but got 1158
+Withdrawal of 85 from account #100003 should have succeeded based on balance 1131
+Mismatched balance on account #100003: Expected at most 82, but got 979
+Mismatched balance on account #100003: Expected 1007, but got 1010
+Withdrawal of 87 from account #100003 should have succeeded based on balance 1010
+Transfer of 46 from account #100003 should have failed based on upper balance bound 18
+Mismatched balance on account #100002: Expected 939, but got 942
+Transfer of 81 from account #100003 should have succeeded based on balance 689
+Transfer of 80 from account #100003 should have succeeded based on lower balance bound 141
+Mismatched balance on account #100003: Expected at most 145, but got 731
+Mismatched balance on account #100004: Expected 9116, but got 9113
+Transfer of 91 from account #100004 should have failed based on upper balance bound 77
+Transfer of 7 from account #100003 should have succeeded based on lower balance bound 14
+Transfer of 43 from account #100002 should have succeeded based on lower balance bound 152
+Mismatched balance on account #100001: Expected at most 46, but got 2698
+Mismatched balance on account #100004: Expected 8878, but got 8875
+Withdrawal of 42 from account #100004 should have succeeded based on balance 8875
+Mismatched balance on account #100004: Expected 8832, but got 8835
+Transfer of 61 from account #100003 should have succeeded based on lower balance bound 63
+Withdrawal of 63 from account #100003 should have succeeded based on lower balance bound 76
+Withdrawal of 79 from account #100004 should have failed based on upper balance bound 75
+Mismatched balance on account #100003: Expected 1090, but got 1165
+Transfer of 83 from account #100003 should have succeeded based on balance 1165
+Mismatched 
