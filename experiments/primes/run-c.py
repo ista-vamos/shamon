@@ -14,6 +14,7 @@ if len(argv) > 2:
     ABS = argv[2]
     if len(argv) > 3:
         NUM=argv[3]
+    WAIT_DROP = argv[4]
 else:
     print("args: shm-buffer-size arbiter-buffer-size [number of primes]")
     print("shm-buffer-size is the compiled (!) size, it does not set the size.")
@@ -21,13 +22,13 @@ else:
     exit(1)
 
 open_log()
-open_csvlog(BS, ABS, NUM)
+open_csvlog(BS, ABS, NUM, WAIT_DROP)
 
 lprint(f"Enumerating primes up to {NUM}th prime...")
 lprint(f"Taking average of {repeat_num()} runs...\n")
 
 EMPTY_MONITOR_PATH = f"{PRIMESPATH}/programs/empty_monitor{ABS}"
-MONITOR_PATH = f"{PRIMESPATH}/programs/monitor{ABS}"
+MONITOR_PATH = f"{PRIMESPATH}/programs/monitor{ABS}_{WAIT_DROP}"
 
 ###############################################################################
 
