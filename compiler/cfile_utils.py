@@ -296,11 +296,9 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 name = f"{stream_name}_{i}"
                 answer += f"\t// connect to event source {name}\n"
                 answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv);\n"
-                if min_size_uninterrupt is None:
-                    answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
-                else:
-                    # TODO: Change me! this should be a new feature in autodrop
-                    answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size}, {min_size_uninterrupt});\n\n"
+                answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
+                if min_size_uninterrupt is not None:
+                    answer += f"\tshm_arbiter_buffer_set_drop_space_threshold({min_size_uninterrupt})\n;"
                 answer += f"\t// register events in {name}\n"
                 for ev_name, attrs in streams_to_events_map[stream_type].items():
                     if ev_name == 'hole': continue
