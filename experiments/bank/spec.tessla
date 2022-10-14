@@ -1,16 +1,41 @@
-in ubound: Events[(Int, Int)]
-in lbound: Events[(Int, Int)]
-in change: Events[(Int, Int)]
+in ubound: Events[Int]
+in lbound: Events[Int]
+in change: Events[Int]
 in reset:  Events[Unit]
-in check_atleast: Events[(Int, Int)]
-in check_less: Events[(Int, Int)]
+in balance: Events[Int]
 
-def s3lb = merge(filter(lbound, lbound._1 == 100003)._2, 0) + filter(change, change._1 == 100003)._2
+in check_atleast: Events[Int]
+in check_atmost: Events[Int]
 
-def s3error = s3lb < 0 || s3lb < filter(check_atleast, check_atleast._1 == 100003)._2
+def resetSum(events: Events[Int], resets: Events[Unit]): Events[Int] = cnt where {
+    def curr : Events[Int] = merge3(on(resets, 0), last(cnt, events), 0)
+    def cnt : Events[Int] = lift(curr, events,
+                                 (c: Option[Int], e: Option[Int]) =>
+			 	 if (isSome(e))
+				  then Some(getSome(c) + getSome(e))
+		                  else c)
+}
 
-out s3error
-out check_atleast
-out s3lb
+def curr1 : Events[Int] = merge4(on(reset, 0), on(balance, 0), last(chg, change), 0)
+def chg : Events[Int] = lift(curr1, change,
+                             (c: Option[Int], e: Option[Int]) =>
+			     if (isSome(e))
+			      then Some(getSome(c) + getSome(e))
+		              else c)
+
+# we use -1 as invalid value
+def curr2 : Events[Int] = merge4(on(reset, -1), balance, last(lb, change), -1)
+def lb : Events[Int] = lift(curr2, lbound,
+                             (c: Option[Int], e: Option[Int]) =>
+			     if (isSome(e)) then
+			        (if (isSome(c) && (getSome(c) > getSome(e)))
+				 then c else e)
+		              else c)
+
+
+out lbound
+out ubound
+out change
 out reset
-
+out chg
+out lb

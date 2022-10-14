@@ -5,20 +5,24 @@
 #include <assert.h>
 #include <regex.h>
 #include <errno.h>
+#include <stdatomic.h>
 #include <string.h> /* memset */
+#include <immintrin.h> // For _mm_pause
 
 #include "dr_api.h"
 #include "drmgr.h"
+#include "shm_string-macro.h"
 
 #include "buffer.h"
 #include "client.h"
 #include "event.h"
 #include "signatures.h"
 #include "source.h"
+#include "spsc_ringbuf.h"
 #include "streams/stream-drregex.h" /* event type */
 
-#define warn(...) fprintf(stderr, "warning: " __VA_ARGS__)
-#define info(...) fprintf(stderr, __VA_ARGS__)
+#define warn(...) dr_fprintf(STDERR, "warning: " __VA_ARGS__)
+#define info(...) dr_fprintf(STDERR, __VA_ARGS__)
 
 #ifdef UNIX
 #if defined(MACOS) || defined(ANDROID)
@@ -45,9 +49,15 @@
 static char  *tmpline;
 static size_t tmpline_len;
 
-static char  *current_line[3];
-static size_t current_line_alloc_len[3];
-static size_t current_line_idx[3];
+struct line_header {
+    int len;
+    _Atomic char commited;
+};
+
+#define LINES_DATA_SIZE 4096
+static char *lines_data[3];
+static shm_spsc_ringbuf lines[3];
+static struct line_header *current_line_header[3];
 
 bool first_match_only = true;
 bool timestamps       = false;
@@ -101,14 +111,6 @@ static void usage_and_exit(int ret) {
     exit(ret);
 }
 
-static size_t line_alloc_size(size_t x) {
-    size_t n = 256; /* make it at least 256 bytes */
-    while (n < x) {
-        n <<= 1;
-    }
-    return n;
-}
-
 char **exprs[3];
 char **names[3];
 static size_t        exprs_num[3];
@@ -128,8 +130,13 @@ typedef struct {
     size_t thread;
 } per_thread_t;
 
-static int parse_line(per_thread_t *data, uint64_t ts, char *line) {
-    int fd = data->fd;
+#ifdef SUPPORT_MT
+static _Atomic uint64_t timestamp = 1;
+#else
+static uint64_t timestamp = 1;
+#endif
+
+static int parse_line(int fd, char *line) {
     assert(fd >= 0 && fd < 3);
 
     int               status;
@@ -139,6 +146,8 @@ static int parse_line(per_thread_t *data, uint64_t ts, char *line) {
 
     int            num = (int)exprs_num[fd];
     struct buffer *shm = shmbuf[fd];
+
+    // info("[%d] parsing line (%p): '%s'\n", fd, line, line);
 
     shm_event *ev = &evs[fd];
     for (int i = 0; i < num; ++i) {
@@ -150,6 +159,12 @@ static int parse_line(per_thread_t *data, uint64_t ts, char *line) {
         if (status != 0) {
             continue;
         }
+
+#ifdef SUPPORT_MT
+            uint64_t ts = atomic_fetch_and_add(&timestamp, 1, memory_order_seq_cst);
+#else
+            uint64_t ts = ++timestamp;
+#endif
         int   m = 1;
         void *addr;
 
@@ -255,58 +270,241 @@ static int parse_line(per_thread_t *data, uint64_t ts, char *line) {
     return 0;
 }
 
-#ifdef SUPPORT_MT
-static _Atomic uint64_t timestamp = 1;
-#else
-static uint64_t timestamp = 1;
-#endif
+static bool buffers_are_empty() {
+    for (int i = 0; i < 3; ++i) {
+        if (shm_spsc_ringbuf_size(lines + i) > 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool monitor_disconected() {
+    for (int i = 0; i < 3; ++i) {
+        if (shmbuf[i] == 0)
+            continue;
+        if (buffer_monitor_attached(shmbuf[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static volatile _Atomic int __parser_finished = 0;
+
+static _Atomic bool __done[3];
+
+static inline bool buffers_done() {
+    for (int i = 0; i < 3; ++i) {
+        printf("__done[%d] == %d\n", i, __done[i]);
+        if (atomic_load_explicit(__done+i, memory_order_acquire) == 0)
+            return false;
+    }
+    return true;
+}
+
+static void parser_thread(void *data) {
+    (void)data;
+    struct line_header *header;
+
+    size_t off, off2, len;
+    size_t no_line = 0;
+    STRING(tmp);
+    STRING_INIT(tmp);
+    (void)STRING_SIZE(tmp);
+
+    /* TODO: rather just align the size of the buffer and all lines in the buffer to sizeof(struct line_header) to make sure there is no wrap */
+    struct line_header tmpheader;
+
+    char *line;
+    size_t l1, l2;
+
+
+    while (1) {
+        for (int i = 0; i < 3; ++i) {
+            if (shmbuf[i] == 0)
+                continue;
+            len = shm_spsc_ringbuf_peek(lines + i, sizeof(*header),
+                                        &off, &l1, &l2);
+            if (len < sizeof(*header))
+                continue;
+            /* this is the last header of the line? */
+            if (len == sizeof(*header) && atomic_load_explicit(&__done[i], memory_order_acquire) == 1) {
+                info("Consuming last header of %d\n", i);
+                shm_spsc_ringbuf_consume(lines + i, sizeof(*header));
+                continue;
+            }
+
+            if (l2 == 0) {
+                header = (struct line_header*)(lines_data[i] + off);
+            } else {
+                memcpy(&tmpheader, lines_data[i] + off, l1);
+                memcpy(((unsigned char *)&tmpheader) + l1, lines_data[i], l2);
+                header = &tmpheader;
+            }
+
+            /* now ask for the whole line, solve wrapping */
+            len = shm_spsc_ringbuf_peek(lines + i, header->len + sizeof(*header),
+                                        &off2, &l1, &l2);
+            assert(off == off2 && "Am I not the only reader?");
+            /*
+            if (len > 0) {
+                info("fd %d: len %lu\n", i, len);
+                info("header->len %d: header->commited %d\n", header->len, header->commited);
+            }
+            */
+
+            /* this may fail with tmpheader, but we'll try again... */
+            if (atomic_load_explicit(&header->commited, memory_order_acquire)
+                    && header->len + sizeof(*header) <= len) {
+                if (l2 > 0) {
+                    /* there is a wrap-over, we must reconstruct the string */
+                    assert(l1 + l2 == header->len);
+                    STRING_GROW(tmp, (unsigned)header->len);
+                    memcpy(tmp, lines_data[i] + off, l1);
+                    memcpy(tmp + l1, lines_data[i], l2);
+                    line = tmp;
+                } else {
+                    line = (char*)(header + 1);
+                }
+                assert(line[header->len - 1] == '\0');
+                if (parse_line(i, line) < 0) {
+                    warn("parse line returned error\n");
+                    goto finish;
+                }
+                shm_spsc_ringbuf_consume(lines + i, header->len + sizeof(*header));
+                no_line = 0;
+            }
+        }
+
+        if (++no_line > 10) {
+            _mm_pause();
+            _mm_pause();
+
+            if (no_line > 1000) {
+                if (buffers_done() && buffers_are_empty())
+                    goto finish;
+                if (monitor_disconected()) {
+                    warn("Parser thread: all disconnected, exitting...\n");
+                    goto finish;
+                }
+
+                dr_sleep(5);
+                if (no_line > 1000000) {
+                    dr_sleep(10);
+                }
+            }
+
+        }
+    }
+
+finish:
+    STRING_DESTROY(tmp);
+    __parser_finished = 1;
+}
+
+static inline void line_written_n(int fd, size_t n) {
+    info("written %lu\n", n);
+    assert(current_line_header[fd] != 0);
+    current_line_header[fd]->len += n;
+    shm_spsc_ringbuf_write_finish(lines + fd, n);
+}
+
+static inline void finish_line(int fd) {
+    info("finished\n");
+    assert(current_line_header[fd] != 0);
+    assert(current_line_header[fd]->len >= 1 && "Line has no terminating 0");
+    atomic_store_explicit(&current_line_header[fd]->commited, 1,
+                          memory_order_release);
+}
+
+static void init_new_line(int fd) {
+    size_t off;
+    size_t tmp = sizeof(struct line_header);
+    size_t wrap;
+    off = shm_spsc_ringbuf_acquire(&lines[fd], &tmp, &wrap);
+       info("acq: %lu, free %lu\n", tmp, shm_spsc_ringbuf_free_num(lines + fd));
+    while (tmp + wrap < sizeof(struct line_header)) {
+       /* we need space for the size of the line and at least one character */
+       tmp = sizeof(struct line_header);
+       off = shm_spsc_ringbuf_acquire(&lines[fd], &tmp, &wrap);
+       info("acq: %lu, free %lu\n", tmp, shm_spsc_ringbuf_free_num(lines + fd));
+       _mm_pause();
+    }
+
+    assert(tmp + wrap == sizeof(struct line_header));
+
+    if (wrap > 0) {
+        struct line_header header = {0, 0};
+        memcpy(lines_data[fd] + off, &header, tmp);
+        memcpy(lines_data[fd], &header, wrap);
+    } else {
+        current_line_header[fd] = (struct line_header*)(lines_data[fd] + off);
+        current_line_header[fd]->len = 0;
+        atomic_store_explicit(&current_line_header[fd]->commited, 0, memory_order_release);
+    }
+    shm_spsc_ringbuf_write_finish(lines + fd, sizeof(struct line_header));
+}
+
+static char *get_line_ptr(int fd, size_t *len) {
+    shm_spsc_ringbuf *buff = lines + fd;
+    size_t off = shm_spsc_ringbuf_write_off_nowrap(buff, len);
+    while (*len == 0) {
+        off = shm_spsc_ringbuf_write_off_nowrap(buff, len);
+    }
+    return lines_data[fd] + off;
+}
 
 static void handle_event(per_thread_t *data) {
+    info("Start handling event\n");
     DR_ASSERT(data->len > 0);
-    /*
-    fprintf(stderr, "---- [fd: %d, len: %ld, size: %lu\n]"
-                    "'%*s'\n",
+    info("---- [fd: %d, len: %ld, size: %lu\n]"
+                 "'%*s'\n",
             data->fd, data->len, data->size, (int)data->len, (char*)data->buf);
-            */
 
     const int fd = data->fd;
     assert(fd >= 0 && fd < 3);
+    assert(data->len < LINES_DATA_SIZE && "Couldn't fit into buffer");
 
     /* FIXME: user temporary variables, do not access via 'fd' all the time
      * (although a good compiler could optimize this) */
-    for (ssize_t i = 0; i < data->len; ++i) {
-        if (current_line_idx[fd] >= current_line_alloc_len[fd]) {
-            current_line_alloc_len[fd] += line_alloc_size(data->len);
-            current_line[fd] =
-                realloc(current_line[fd], current_line_alloc_len[fd]);
-            assert(current_line[fd] && "Allocation failed");
-        }
+    size_t n = 0, len;
+    size_t written = 0;
+    const size_t data_len = data->len;
+    char *p;
+    while (n < data_len) {
+        p = get_line_ptr(fd, &len);
+        assert(len > 0);
 
-        char c = ((char*)data->buf)[i];
-        if (c == '\n' || c == '\0') {
-            /* temporary end */
-            assert(current_line_idx[fd] < current_line_alloc_len[fd]);
-            current_line[fd][current_line_idx[fd]] = '\0';
-            /* start new line */
-            current_line_idx[fd] = 0;
+        while (n < data_len && len-- > 0) {
+            ++written;
+            /* We can copy 'len' data. But we still must do it char by char,
+               because we need to detect the end of line/string. */
+            char c = ((char*)data->buf)[n++];
+            if (c == '\n' || c == '\0') {
+                *p = '\0';
+                info("endling line\n");
+                line_written_n(fd, written);
+                finish_line(fd);
+                /* start new line */
+                info("initing\n");
+                init_new_line(fd);
+                written = 0;
+                info("inited line\n");
 
-#ifdef SUPPORT_MT
-            uint64_t ts = atomic_fetch_and_add(&timestamp, 1, memory_order_seq_cst);
-#else
-            uint64_t ts = ++timestamp;
-#endif
-            if (parse_line(data, ts, current_line[fd]) < 0) {
-                warn("parse_line failed");
-                return;
+                p = get_line_ptr(fd, &len);
+                info("got new ptr\n");
+                continue;
             }
-            continue;
-        }
 
-        assert(current_line_idx[fd] < current_line_alloc_len[fd]);
-        current_line[fd][current_line_idx[fd]++] = c;
+            info("Written %c\n", c);
+            *p++ = c;
+        }
     }
 
-    return;
+    line_written_n(fd, written);
+
+    info("End handling event\n");
 }
 
 int parse_args(int argc, const char *argv[], char **exprs[3], char **names[3]) {
@@ -451,6 +649,12 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         DR_ASSERT(signatures[i]);
         re[i] = dr_global_alloc(exprs_num[i] * sizeof(regex_t));
         DR_ASSERT(re[i]);
+
+        if (exprs_num[i] > 0) {
+            lines_data[i] = malloc(LINES_DATA_SIZE);
+            shm_spsc_ringbuf_init(&lines[i], LINES_DATA_SIZE);
+            init_new_line(i);
+        }
     }
 
     int err = parse_args(argc, argv, exprs, names);
@@ -470,6 +674,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         if (exprs_num[i] == 0) {
             /* we DONT want to get data from this fd from eBPF */
             filter_fd_mask |= (1 << i);
+            atomic_store_explicit(&__done[i], 1, memory_order_release);
             continue;
         }
 
@@ -509,10 +714,31 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         }
     }
     info("done\n");
+
+    info("Creating parser thread...");
+    if (!dr_create_client_thread(parser_thread, 0)) {
+        warn("failed creating the parser thread\n");
+        abort();
+    }
+    info("done\n");
+
+
     info("Continue program\n");
 }
 
 static void event_exit(void) {
+    /* notify thread that this is the end */
+    info("EXIT\n");
+    for (int i = 0; i < 3; ++i) {
+        info("SIGNAL %d\n", i);
+        atomic_store_explicit(&__done[i], 1, memory_order_release);
+    }
+    /* wait until the thread finishes */
+    while (!__parser_finished) {
+        dr_sleep(5);
+    }
+    assert(buffers_are_empty());
+
     if (!drmgr_unregister_cls_field(event_thread_context_init,
                                     event_thread_context_exit, tcls_idx) ||
         !drmgr_unregister_pre_syscall_event(event_pre_syscall) ||
@@ -524,6 +750,11 @@ static void event_exit(void) {
         info(
             "[fd %d] info: sent %lu events, busy waited on buffer %lu cycles\n",
             fd, evs[fd].id, waiting_for_buffer[fd]);
+
+        if (shmbuf[fd]) {
+            destroy_shared_buffer(shmbuf[fd]);
+        }
+
         for (int i = 0; i < (int)exprs_num[fd]; ++i) {
             regfree(&re[fd][i]);
         }
@@ -535,11 +766,7 @@ static void event_exit(void) {
         free(signatures[fd]);
         free(re[fd]);
 
-        free(current_line[fd]);
-
-        if (shmbuf[fd]) {
-            destroy_shared_buffer(shmbuf[fd]);
-        }
+        free(lines_data[fd]);
     }
 
     free(tmpline);

@@ -31,8 +31,8 @@ stream type BankEvent
     Clear();
 }
 
-event source In : BankInputEvent to autodrop(1024)
-event source Out : BankOutputEvent to autodrop(1024)
+event source In : BankInputEvent to autodrop(8)
+event source Out : BankOutputEvent to autodrop(8)
 
 globals
 $$
@@ -398,40 +398,41 @@ arbiter : BankEvent
 
 monitor (128) {
 
-    on SawBalance(account, balance) where $$ true $$
+    on SawBalance(account, balance) where $$ account == 100003 $$
     $$
-        fprintf(tessla_in, "%lu: ubound = (%d, %d)\n", ++timestamp, account, balance);
-        fprintf(tessla_in, "%lu: lbound = (%d, %d)\n", timestamp, account, balance);
-    $$
-
-    on SawDeposit(account, amount) where $$ true $$
-    $$
-        fprintf(tessla_in, "%lu: change = (%d, %d)\n", ++timestamp, account, amount);
+        fprintf(tessla_in, "%lu: ubound = %d\n", ++timestamp, balance);
+        fprintf(tessla_in, "%lu: lbound = %d\n", timestamp, balance);
     $$
 
-    on SawWithdraw(account, amount) where $$ true $$
+    on SawDeposit(account, amount) where $$  account == 100003  $$
     $$
-        fprintf(tessla_in, "%lu: check_atleast = (%d, %d)\n", ++timestamp, account, amount);
-        fprintf(tessla_in, "%lu: change = (%d, %d)\n", ++timestamp, account, -amount);
-    $$
-
-    on SawWithdrawFail(account, amount) where $$ true $$
-    $$
-        fprintf(tessla_in, "%lu: check_less = (%d, %d)\n", ++timestamp, account, amount);
+        fprintf(tessla_in, "%lu: change = %d\n", ++timestamp, amount);
     $$
 
-    on SawTransfer(from_, to_, amount) where $$ true $$
+    on SawWithdraw(account, amount) where $$  account == 100003  $$
     $$
-        fprintf(tessla_in, "%lu: check_atleast = (%d, %d)\n", ++timestamp, from_, amount);
-        fprintf(tessla_in, "%lu: change = (%d, %d)\n", ++timestamp, from_, -amount);
-        fprintf(tessla_in, "%lu: change = (%d, %d)\n", ++timestamp, to_, amount);
+        fprintf(tessla_in, "%lu: check_atleast = %d\n", ++timestamp, amount);
+        fprintf(tessla_in, "%lu: change = %d\n", ++timestamp, -amount);
     $$
 
-    on SawTransferFail(from_, to_, amount) where $$ true $$
+    on SawWithdrawFail(account, amount) where $$ account == 100003 $$
+    $$
+       /* todo */
+    $$
+
+    on SawTransfer(from_, to_, amount) where $$  from_ == 100003 || to_ == 100003 $$
+    $$
+	if (from_ == 10003) {
+            fprintf(tessla_in, "%lu: check_atleast = %d\n", ++timestamp, amount);
+	}
+        fprintf(tessla_in, "%lu: change = %d\n", ++timestamp,
+                from_ == 10003 ? -amount : amount);
+    $$
+
+    on SawTransferFail(from_, to_, amount) where $$ from_ == 100003 $$
     $$
 	if (amount > 0) {
-            fprintf(tessla_in, "%lu: check_less = (%d, %d)\n", ++timestamp, from_, amount);
-            fprintf(tessla_in, "%lu: ubound = (%d, %d)\n", ++timestamp, from_, amount - 1);
+            fprintf(tessla_in, "%lu: ubound = %d\n", ++timestamp, amount - 1);
 	}
     $$
 
