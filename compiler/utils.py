@@ -17,6 +17,8 @@ def get_components_dict(tree: Tuple, answer: Dict[str, List[Tuple]]) -> None:
 def get_name_with_args(tree: Tuple) -> (Tuple, List[str]):
     if tree[0] == "name-with-args":
         args = []
+        if tree[2] is None:
+            return tree[1], []
         if tree[2][0] == 'listids':
             get_list_ids(tree[2], args)
         else:
@@ -28,6 +30,8 @@ def get_name_with_args(tree: Tuple) -> (Tuple, List[str]):
 def get_name_args_count(tree: Tuple) -> (Tuple, int):
     if tree[0] == "name-with-args":
         args = []
+        if tree[2] is None:
+            return (tree[1], 0)
         if tree[2][0] == 'listids':
             get_list_ids(tree[2], args)
         else:
@@ -130,7 +134,7 @@ def get_events_data(tree: Tuple, events_data: List[Dict[str, str]]) -> None:
         events_data.append(data)
 
 
-def get_stream_to_events_mapping(stream_types: List[Tuple]) -> Dict[str, Any]:
+def get_stream_to_events_mapping(stream_types: List[Tuple], stream_processors) -> Dict[str, Any]:
     mapping = dict()
     for tree in stream_types:
         assert(tree[0] == "stream_type")
@@ -145,6 +149,9 @@ def get_stream_to_events_mapping(stream_types: List[Tuple]) -> Dict[str, Any]:
             mapping_events[data['name']] = data
         mapping_events['hole'] = {'index': 1, 'args':[('n', 'int')], 'enum': f'{stream_type.upper()}_HOLE'}
         mapping[stream_type] = mapping_events
+
+    for (processor, data) in stream_processors.items():
+        mapping[processor] = mapping[data["input_type"]]
     return mapping
 
 def get_stream_types(event_sources: Tuple) -> Dict[str, Any]:
@@ -240,12 +247,13 @@ def get_out_names(tree: Tuple, out_names: List[str]) -> None:
 
 
 def get_rule_set_names(tree: Tuple, names: List[str]) -> None:
-    if tree[0] == 'arb_rule_set_l':
-        get_rule_set_names(tree[PLIST_BASE_CASE], names)
-        get_rule_set_names(tree[PLIST_TAIL], names)
-    else:
-        assert(tree[0] == 'arbiter_rule_set')
-        names.append(tree[PPARB_RULE_SET_NAME])
+    if tree is not None:
+        if tree[0] == 'arb_rule_set_l':
+            get_rule_set_names(tree[PLIST_BASE_CASE], names)
+            get_rule_set_names(tree[PLIST_TAIL], names)
+        else:
+            assert(tree[0] == 'arbiter_rule_set')
+            names.append(tree[PPARB_RULE_SET_NAME])
 
 def get_count_events_from_list_calls(tree: Tuple) -> int:
     assert(tree[0] != "|")
@@ -488,4 +496,7 @@ def get_first_const_rule_set_name(tree: Tuple) -> str:
 
     rule_set_names = []
     get_rule_set_names(tree[PPARBITER_RULE_SET_LIST], rule_set_names)
-    return f"SWITCH_TO_RULE_SET_{rule_set_names[0]}"
+    if len(rule_set_names):
+        return f"SWITCH_TO_RULE_SET_{rule_set_names[0]}"
+    else:
+        return "-1"

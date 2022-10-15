@@ -277,7 +277,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
         
         processor_name = TypeChecker.event_sources_data[stream_name]["processor_name"]
 
-        if processor_name == "forward":
+        if processor_name.lower() == "forward":
             out_name = TypeChecker.event_sources_data[stream_name]["input_stream_type"]
         else:
             out_name = TypeChecker.stream_processors_data[processor_name]["output_type"]
@@ -408,7 +408,7 @@ def build_drop_funcs_conds(tree, stream_name, mapping) -> str:
         creates_at_most = tree[2]
         if creates_at_most is not None:
             raise Exception("creates at most not implemented in stream processors")
-        return f'''if (e->kind == {mapping[tree[event_name]]["enum"]}) {"{"}
+        return f'''if (e->kind == {mapping[event_name]["enum"]}) {"{"}
         {process_performance_match(tree[-1])}
     {"}"}
         '''
@@ -493,6 +493,7 @@ def build_switch_performance_match(tree, mapping_in, mapping_out, level) -> str:
 
 
 def get_stream_switch_cases(ast, mapping_in, mapping_out, level) -> str:
+
     if ast[0] == 'perf_layer_list':
         return get_stream_switch_cases(ast[PLIST_BASE_CASE], mapping_in, mapping_out, level) \
                + get_stream_switch_cases(ast[PLIST_TAIL], mapping_in, mapping_out, level)
@@ -500,8 +501,9 @@ def get_stream_switch_cases(ast, mapping_in, mapping_out, level) -> str:
         tabs = "\t"*level
         tabs_plus1 = "\t" * (level+1)
         assert(ast[0] == 'perf_layer_rule')
+        event_name, _ = get_name_with_args(ast[PPPERF_LAYER_EVENT])
         return f'''
-{tabs}case {mapping_in[ast[PPPERF_LAYER_EVENT]]["enum"]}:
+{tabs}case {mapping_in[event_name]["enum"]}:
 {build_switch_performance_match(ast[-1], mapping_in, mapping_out, level=level+1)}
 {tabs_plus1}break;'''
 
@@ -598,26 +600,36 @@ def arbiter_code(tree, components):
                                 f"\t\t\trule_sets_match_count += RULE_SET_{name}();\n" \
                                 f"\t\t{'}'}\n"
 
-    return f'''int arbiter() {"{"}
-    
-    while (!are_streams_done()) {"{"}
-        int rule_sets_match_count = 0;
-{rule_set_invocations}
-        if(rule_sets_match_count == 0) {"{"}
-            // increment counter of no consecutive matches
-            no_matches_count++;
-        {"}"} else {"{"}
-            // if there is a match reinit counter
-            no_matches_count = 0;
-        {"}"}
+    if len(rule_set_names) > 0:
+        return f'''int arbiter() {"{"}
         
-        if(no_matches_count == no_consecutive_matches_limit) {"{"}
-            printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\\n", no_consecutive_matches_limit);
-            print_buffers_state();
-            // cleanup code
-            {get_pure_c_code(components, 'cleanup')}
-            abort();
+        while (!are_streams_done()) {"{"}
+            int rule_sets_match_count = 0;
+    {rule_set_invocations}
+            if(rule_sets_match_count == 0) {"{"}
+                // increment counter of no consecutive matches
+                no_matches_count++;
+            {"}"} else {"{"}
+                // if there is a match reinit counter
+                no_matches_count = 0;
+            {"}"}
+            
+            if(no_matches_count == no_consecutive_matches_limit) {"{"}
+                printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\\n", no_consecutive_matches_limit);
+                print_buffers_state();
+                // cleanup code
+                {get_pure_c_code(components, 'cleanup')}
+                abort();
+            {"}"}
         {"}"}
+        shm_monitor_set_finished(monitor_buffer);
+    {"}"}
+        '''
+    else:
+        return f'''int arbiter() {"{"}
+
+    while (!are_streams_done()) {"{"}
+        
     {"}"}
     shm_monitor_set_finished(monitor_buffer);
 {"}"}
@@ -915,20 +927,29 @@ def monitor_events_code(tree, stream_name, possible_events, count_tabs) -> str:
         '''
 
 
-def monitor_code(tree, possible_events, arbiter_event_source) -> str:
+def monitor_code(tree, mapping, arbiter_event_source) -> str:
+    if arbiter_event_source in mapping.keys():
+        possible_events = mapping[arbiter_event_source]
+    else:
+        possible_events = None
     assert(tree[0] == "monitor_def")
-    return f'''
-    // monitor
-    STREAM_{arbiter_event_source}_out * received_event;
-    while(true) {"{"}
-        received_event = fetch_arbiter_stream(monitor_buffer);
-        if (received_event == NULL) {"{"}
-            break;
-        {"}"}
+    if possible_events is not None:
+        return f'''
+        // monitor
+        STREAM_{arbiter_event_source}_out * received_event;
+        while(true) {"{"}
+            received_event = fetch_arbiter_stream(monitor_buffer);
+            if (received_event == NULL) {"{"}
+                break;
+            {"}"}
 {monitor_events_code(tree[PPMONITOR_RULE_LIST], arbiter_event_source, possible_events, 2)}
         shm_monitor_buffer_consume(monitor_buffer, 1);
     {"}"}
     '''
+    else:
+        return f'''
+// Empty Monitor  
+'''
 
 def process_where_condition(tree):
     if tree[0] == "l_where_expr":
@@ -1092,17 +1113,20 @@ def build_rule_set_functions(tree, mapping, stream_types, existing_buffers):
             return arbiter_rule_code(local_tree, mapping, stream_types, TypeChecker.arbiter_output_type)
 
     def local_explore_arb_rule_set_list(local_tree) -> str:
-        if local_tree[0] == "arb_rule_set_l":
-            return local_explore_arb_rule_set_list(local_tree[1]) + local_explore_arb_rule_set_list(local_tree[2])
+        if local_tree is not None:
+            if local_tree[0] == "arb_rule_set_l":
+                return local_explore_arb_rule_set_list(local_tree[1]) + local_explore_arb_rule_set_list(local_tree[2])
+            else:
+                assert (local_tree[0] == "arbiter_rule_set")
+                rule_set_name = local_tree[1]
+                return f"int RULE_SET_{rule_set_name}() {'{'}\n" \
+                       f"{buffer_peeks(local_tree[2], existing_buffers)}" \
+                       f"{local_explore_rule_list(local_tree[2])}" \
+                       f"{check_progress(rule_set_name, local_tree[2], existing_buffers)}" \
+                       f"\treturn 0;\n" \
+                       f"{'}'}"
         else:
-            assert (local_tree[0] == "arbiter_rule_set")
-            rule_set_name = local_tree[1]
-            return f"int RULE_SET_{rule_set_name}() {'{'}\n" \
-                   f"{buffer_peeks(local_tree[2], existing_buffers)}" \
-                   f"{local_explore_rule_list(local_tree[2])}" \
-                   f"{check_progress(rule_set_name, local_tree[2], existing_buffers)}" \
-                   f"\treturn 0;\n" \
-                   f"{'}'}"
+            return ""
 
     assert (tree[0] == 'arbiter_def')
 

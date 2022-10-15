@@ -328,7 +328,7 @@ class TypeChecker:
             'args': args,
             'input_stream_type': stream_type_name,
             'input_stream_args': stream_args,
-            'processor_name' : processor_name.lower(),
+            'processor_name' : processor_name,
             'processor_args' : processor_args,
             'connection_kind': connection_kind
         }

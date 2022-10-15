@@ -178,8 +178,8 @@ def p_stream_processor(p):
     output_stream_name, c_args_output = get_name_args_count(output_type)
 
 
-    TypeChecker.check_args_are_primitive(input_stream_name)
-    TypeChecker.check_args_are_primitive(output_stream_name)
+    # TypeChecker.check_args_are_primitive(input_stream_name)
+    # TypeChecker.check_args_are_primitive(output_stream_name)
 
     TypeChecker.assert_num_args_match(input_stream_name, c_args_input)
     TypeChecker.assert_num_args_match(output_stream_name, c_args_output)
@@ -208,6 +208,7 @@ def p_performance_layer_rule(p):
                     | ON name_with_args CREATES AT MOST INT ID TO connection_kind performance_match
                     | ON name_with_args CREATES ID PROCESS USING name_with_args TO connection_kind performance_match
                     | ON name_with_args CREATES ID TO connection_kind performance_match
+                    | ON name_with_args performance_match
     '''
 
     on_event = p[2]
@@ -215,7 +216,9 @@ def p_performance_layer_rule(p):
     process_using = None
     if len(p) == 4:
         # ON name_with_args performance_match
-        assert False
+        stream_name = None
+        connection_kind = None
+        performance_match = p[3]
     elif p[4] == "at":
         if len(p) == 11:
             # ON name_with_args CREATES AT MOST INT ID TO connection_kind performance_match
@@ -250,7 +253,7 @@ def p_performance_layer_rule(p):
 
     event_name, c_event_args = get_name_args_count(on_event)
     TypeChecker.assert_symbol_type(event_name, EVENT_NAME)
-    TypeChecker.assert_num_args_match(p[PPERF_LAYER_EVENT], c_event_args)
+    TypeChecker.assert_num_args_match(p[PPERF_LAYER_EVENT][1], c_event_args)
 
     # TODO: Missing more type checking for the rest of parameters
 
@@ -344,11 +347,11 @@ def p_event_source_tail(p):
         connection_kind = p[5]
     p[0] = ('ev-source-tail', process_using, connection_kind)
 
-    if process_using is not None:
-        name, c_args = get_name_args_count(process_using)
-        if name.lower() != "forward":
-            TypeChecker.assert_symbol_type(name, STREAM_PROCESSOR_NAME)
-            TypeChecker.assert_num_args_match(name, c_args)
+    # if process_using is not None:
+    #     name, c_args = get_name_args_count(process_using)
+    #     if name.lower() != "forward":
+    #         TypeChecker.assert_symbol_type(name, STREAM_PROCESSOR_NAME)
+    #         TypeChecker.assert_num_args_match(name, c_args)
 
 def p_connection_kind(p):
     '''
@@ -450,10 +453,14 @@ def p_match_fun_def(p):
 def p_arbiter_definition(p):
     '''
     arbiter_definition : ARBITER ':' ID '{' arbiter_rule_set_list '}'
+                       | ARBITER ':' ID '{' '}'
     '''
 
     # TypeChecker.assert_symbol_type(p[ARBITER_OUTPUT_TYPE], STREAM_TYPE_NAME)
-    p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], p[ARBITER_RULE_SET_LIST])
+    if len(p) == 6:
+        p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], None)
+    else:
+        p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], p[ARBITER_RULE_SET_LIST])
 
 
 def p_arbiter_rule_set_list(p):
@@ -749,10 +756,17 @@ def p_arbiter_rule_stmt(p):
 def p_monitor_definition(p):
     '''
     monitor_definition : MONITOR '{' monitor_rule_list '}'
+    monitor_definition : MONITOR '{' '}'
     monitor_definition : MONITOR '(' INT ')' '{' monitor_rule_list '}'
+    monitor_definition : MONITOR '(' INT ')' '{' '}'
+    monitor_definition : MONITOR '(' ')' '{' '}'
     '''
-
-    if len(p) == 8:
+    monitor_rule_list = None
+    if len(p) == 7:
+        TypeChecker.monitor_buffer_size = int(p[3])
+    elif len(p) == 6 or len(p) == 4:
+        pass
+    elif len(p) == 8:
         TypeChecker.monitor_buffer_size = int(p[3])
         monitor_rule_list = p[6]
     else:
@@ -812,11 +826,14 @@ def p_name_with_args(p):
     name_with_args : ID '(' expression_list ')'
                    | ID '(' listids ')'
                    | ID
+                   | ID '(' ')'
                    | FORWARD
     '''
 
     if len(p) == 2:
         p[0] = p[1]
+    elif len(p) == 4:
+        p[0] = ("name-with-args", p[1], None)
     else:
         p[0] = ("name-with-args", p[1], p[3])
 

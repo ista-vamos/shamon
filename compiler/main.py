@@ -20,6 +20,8 @@ components = dict()
 get_components_dict(ast[1], components)
 # # Type checker again
 TypeChecker.get_stream_events(components["stream_type"])
+if "stream_processor" in components.keys():
+	TypeChecker.get_stream_processors_data(components["stream_processor"])
 # TypeChecker.check_event_sources_types(ast[PMAIN_PROGRAM_EVENT_SOURCES])
 # TypeChecker.check_arbiter(ast[PMAIN_PROGRAM_ARBITER])
 # TypeChecker.check_monitor(ast[PMAIN_PROGRAM_MONITOR])
@@ -27,10 +29,10 @@ TypeChecker.get_stream_events(components["stream_type"])
 # Produce C file
 output_file = open(output_path, "w")
 #
-streams_to_events_map = get_stream_to_events_mapping(components["stream_type"])
+streams_to_events_map = get_stream_to_events_mapping(components["stream_type"], TypeChecker.stream_processors_data)
 
 stream_types : Dict[str, Tuple[str, str]] = get_stream_types(components["event_source"])
-
+print(stream_types)
 arbiter_event_source = get_arbiter_event_source(ast[2])
 existing_buffers = get_existing_buffers(TypeChecker)
 
@@ -251,7 +253,7 @@ int main(int argc, char **argv) {"{"}
      // create arbiter thread
      thrd_create(&ARBITER_THREAD, arbiter, 0);
      
- {monitor_code(ast[3], streams_to_events_map[arbiter_event_source], arbiter_event_source)}
+ {monitor_code(ast[3], streams_to_events_map, arbiter_event_source)}
  	
 {destroy_all()}
 	
