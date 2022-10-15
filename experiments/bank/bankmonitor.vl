@@ -1,0 +1,674 @@
+stream type BankOutputEvent
+{
+    balance(timestamp: uint64_t, account : int);
+    depositTo(timestamp: uint64_t, account : int);
+    withdraw(timestamp: uint64_t, account: int);
+    transfer(timestamp: uint64_t, fromAccount: int, toAccount: int);
+    depositSuccess(timestamp: uint64_t);
+    depositFail(timestamp: uint64_t);
+    withdrawSuccess(timestamp: uint64_t);
+    withdrawFail(timestamp: uint64_t);
+    transferSuccess(timestamp: uint64_t);
+    selectedAccount(timestamp: uint64_t, account: int);
+    logout(timestamp: uint64_t);
+    numOut(timestamp: uint64_t, num: int);
+}
+
+stream type BankInputEvent
+{
+    numIn(timestamp: uint64_t, num : int);
+    otherIn(timestamp: uint64_t);
+}
+
+stream type BankEvent
+{
+    SawBalance(account : int, balance : int);
+    SawDeposit(account : int, amount : int);
+    SawWithdraw(account : int, amount : int);
+    SawWithdrawFail(account : int, amount : int);
+    SawTransfer(from_ : int, to_ : int, amount : int);
+    SawTransferFail(from_ : int, to_ : int, amount : int);
+    Clear();
+}
+
+event source In : BankInputEvent to autodrop(16)
+event source Out : BankOutputEvent to autodrop(16)
+
+globals
+$$
+    #include "./compiler/cfiles/intmap.h"
+    intmap balances;
+    intmap upper_bounds;
+    intmap lower_bounds;
+    int in_processed=0;
+    int out_processed=0;
+    int in_holes=0;
+    int out_holes=0;
+    int errors=0;
+$$
+
+startup
+$$
+init_intmap(&balances);
+init_intmap(&upper_bounds);
+init_intmap(&lower_bounds);
+$$
+
+cleanup
+$$
+printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
+printf("in_holes: %i, out_holes: %i\n", in_holes, out_holes);
+printf("Errors found: %d\n", errors);
+fflush(stdout);
+destroy_intmap(&balances);
+destroy_intmap(&upper_bounds);
+destroy_intmap(&lower_bounds);
+$$
+
+arbiter : BankEvent
+{
+    rule set aligning {
+        on Out : hole(n) | where $$ true $$
+        $$
+            $yield Clear();
+            ++out_holes;
+            ++out_processed;
+        $$
+
+        on Out : | balance(t, a)     where $$ true $$  $$ $switch to align_in; $$
+        on Out : | depositTo(t, a)   where $$ true $$  $$ $switch to align_in; $$
+        on Out : | withdraw(t, a)    where $$ true $$  $$ $switch to align_in; $$
+        on Out : | transfer(t, s, r) where $$ true $$  $$ $switch to align_in; $$
+
+        on Out : 1 where $$ true $$
+	$$
+	    ++out_processed;
+	    $drop 1 from Out;
+	$$
+
+        on Out : done where $$ true $$ $$ $switch to align_in; $$
+    }
+
+    rule set align_in {
+        on Out : | balance(tout, account),
+           In  : | numIn(tin, action)
+	   where $$ true $$
+	   $$
+	       if (tout == tin + 1) {
+		   assert(action == 3);
+	           $switch to working;
+	       } else if (tout > tin) {
+                   ++in_processed;
+		   $drop 1 from In;
+	       } else {
+		   /* the event is incomplete, there must have been some hole,
+		      try once more */
+		   assert(in_holes > 0);
+                   ++out_processed;
+		   $drop 1 from Out;
+		   $switch to aligning;
+	       }
+	   $$
+
+        on Out : | depositTo(tout, account),
+           In  : | numIn(tin, action)
+	   where $$ true $$
+	   $$
+	       if (tout == tin + 1) {
+		   assert(action == 1);
+	           $switch to working;
+	       } else if (tout > tin) {
+                   ++in_processed;
+		   $drop 1 from In;
+	       } else {
+		   /* the event is incomplete, there must have been some hole,
+		      try once more */
+		   assert(in_holes > 0);
+                   ++out_processed;
+		   $drop 1 from Out;
+		   $switch to aligning;
+	       }
+	   $$
+
+        on Out : | withdraw(tout, account),
+           In  : | numIn(tin, action)
+	   where $$ true $$
+	   $$
+	       if (tout == tin + 1) {
+		   assert(action == 2);
+	           $switch to working;
+	       } else if (tout > tin) {
+                   ++in_processed;
+		   $drop 1 from In;
+	       } else {
+		   /* the event is incomplete, there must have been some hole,
+		      try once more */
+		   assert(in_holes > 0);
+                   ++out_processed;
+		   $drop 1 from Out;
+		   $switch to aligning;
+	       }
+	   $$
+
+        on Out : | transfer(tout, from_, to_),
+           In  : | numIn(tin, action)
+	   where $$ true $$
+	   $$
+	       if (tout == tin + 4) {
+		   assert(action == 4);
+	           $switch to working;
+	       } else if (tout > tin + 4) {
+                   ++in_processed;
+		   $drop 1 from In;
+	       } else {
+		   /* the event is incomplete, there must have been some hole,
+		      try once more */
+		   assert(in_holes > 0);
+                   ++out_processed;
+		   $drop 1 from Out;
+		   $switch to aligning;
+	       }
+	   $$
+
+        on Out : | logout(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | numOut(t, n) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | selectedAccount(t, a) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | depositSuccess(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | depositFail(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | withdrawSuccess(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | withdrawFail(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | transferSuccess(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+
+	on Out : 1, In: hole(n) | where $$ true $$
+	$$
+            $yield Clear();
+	    ++in_holes;
+	    ++in_processed;
+	$$
+
+        on Out : 1, In  : otherIn(tin) | where $$ true $$
+	$$
+	$$
+
+        on Out : done, In : 1 where $$ true $$
+        $$
+            ++in_processed;
+            $drop 1 from In;
+        $$
+
+        on Out : 1, In : done where $$ true $$
+        $$
+            ++out_processed;
+            $drop 1 from Out;
+	    $switch to aligning;
+        $$
+    }
+
+    rule set working
+    {
+        on Out : transfer(t2, from_, to_) transferSuccess(t4) |,
+           In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) |
+           where $$ true $$
+        $$
+            assert(action == 4);
+            $yield SawTransfer(from_, to_, amnt);
+            out_processed += 2;
+            in_processed += 3;
+            $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) transferSuccess(t4) |,
+           In  : 3 where $$ true $$
+        $$
+	    /* some In event is not matching */
+	    in_processed += 2;
+	    out_processed += 2;
+	    $drop 1 from In; /* drop the number */
+            $switch to aligning;
+        $$
+
+        on Out : transfer(t2, from_, to_) selectedAccount(t4, acc) |,
+           In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) |
+           where $$ true $$
+        $$
+            assert(action == 4);
+            $yield SawTransferFail(from_, to_, amnt);
+            out_processed += 2;
+            in_processed += 3;
+	    $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) selectedAccount(t4, acc) |,
+           In  : 3 where $$ true $$
+        $$
+	    /* some In event is not matching */
+	    in_processed += 2;
+	    out_processed += 2;
+	    $drop 1 from In; /* drop the number */
+            $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) | hole(n) where $$ true $$
+        $$
+	    ++out_processed;
+            $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) |,
+           In  : numIn(t0, action) | hole(n) where $$ true $$
+        $$
+	    /* some In event is not matching */
+            $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) |,
+           In  : numIn(t0, action) otherIn(t1) | where $$ true $$
+        $$
+	    /* some In event is not matching */
+            $switch to aligning;
+        $$
+
+        on Out : balance(t2, acc) numOut(t3, amnt) |,
+           In  : numIn(t1, action) | where $$ true $$
+        $$
+            assert(action == 3);
+            $yield SawBalance(acc, amnt);
+            out_processed += 2;
+            ++in_processed;
+            $switch to aligning;
+        $$
+
+        on Out : balance(t2, acc) | hole(n) where $$ true $$
+        $$
+            ++out_processed;
+            $switch to aligning;
+        $$
+
+        on Out : depositTo(t2, acc) depositSuccess(t4) |,
+           In  : numIn(t1, action) numIn(t3, amnt) |
+           where $$ true $$
+        $$
+            assert(action == 1);
+	    assert(t2 == t1 + 1);
+	    assert(t3 == t2 + 1);
+            $yield SawDeposit(acc, amnt);
+            out_processed += 2;
+            in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : depositTo(t2, acc) depositFail(t4) |,
+           In  : numIn(t1, action) numIn(t3, amnt) |
+           where $$ true $$
+        $$
+            assert(action == 1);
+            out_processed += 2;
+            in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : depositTo(t2, acc) depositFail(t4) |,
+           In  : numIn(t1, action) | hole(n)
+           where $$ true $$
+        $$
+            assert(action == 1);
+            out_processed += 2;
+            in_processed += 1;
+            $switch to aligning;
+        $$
+
+        on Out : depositTo(t2, acc) depositSuccess(t4) |,
+           In  : numIn(t1, action) | hole(n)
+           where $$ true $$
+        $$
+            assert(action == 1);
+            out_processed += 2;
+            in_processed += 1;
+            $switch to aligning;
+        $$
+
+        on Out : depositTo(t2, acc) | hole(n)
+           where $$ true $$
+        $$
+            ++out_processed;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) withdrawSuccess(t4) |,
+           In  : numIn(t1, act) numIn(t3, amnt) |
+           where $$ true $$
+        $$
+            assert(act == 2);
+            $yield SawWithdraw(acc, amnt);
+            out_processed += 2;
+            in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) withdrawFail(t4) |,
+           In  : numIn(t1, act) numIn(t3, amnt) |
+           where $$ true $$
+        $$
+            assert(act == 2);
+            $yield SawWithdrawFail(acc, amnt);
+            out_processed += 2;
+            in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) withdrawSuccess(t4) |,
+           In  : numIn(t1, act) | hole(n)
+           where $$ true $$
+        $$
+            out_processed += 2;
+            in_processed += 1;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) withdrawFail(t4) |,
+           In  : numIn(t1, act) | hole(n)
+           where $$ true $$
+        $$
+            out_processed += 2;
+            in_processed += 1;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) | hole(n)
+           where $$ true $$
+        $$
+            ++out_processed;
+            $switch to aligning;
+        $$
+
+	on In : done where $$ true $$
+	$$
+            $switch to aligning;
+	$$
+
+        on Out : done where $$ true $$
+        $$
+            $switch to aligning;
+        $$
+    }
+
+}
+
+
+monitor(128)
+{
+    on Clear() where $$ true $$
+    $$
+	// printf("Clear()\n");
+        intmap_clear(&balances);
+        intmap_clear(&upper_bounds);
+        intmap_clear(&lower_bounds);
+    $$
+
+    on SawBalance(account, balance) where $$ true $$
+    $$
+        // printf("SawBalance(%d, %d)\n", account, balance);
+        int old_value=0;
+        if(intmap_get(&balances, account, &old_value))
+        {
+            if(old_value != balance)
+            {
+                ++errors;
+                printf("Mismatched balance on account #%i: "
+                       "Expected %i, but got %i\n",
+                       account, old_value, balance);
+                intmap_insert(&balances, account, balance);
+            }
+        }
+        else
+        {
+            if(intmap_get(&upper_bounds, account, &old_value))
+            {
+                if(balance>old_value)
+                {
+                    ++errors;
+                    printf("Mismatched balance on account #%i: "
+                           "Expected at most %i, but got %i\n",
+                           account, old_value, balance);
+                }
+                intmap_remove(&upper_bounds, account);
+            }
+            if(intmap_get(&lower_bounds, account, &old_value))
+            {
+                if(balance<old_value)
+                {
+                    ++errors;
+                    printf("Mismatched balance on account #%i: "
+                           "Expected at least %i, but got %i\n",
+                           account, old_value, balance);
+                }
+                intmap_remove(&lower_bounds, account);
+            }
+            intmap_insert(&balances, account, balance);
+        }
+    $$
+
+    on SawDeposit(account,amount) where $$ true $$
+    $$
+        // printf("SawDeposit(%d, %d)\n", account, amount);
+        int old_value=0;
+        if(intmap_get(&balances, account, &old_value))
+        {
+            intmap_insert(&balances, account, old_value + amount);
+        }
+        else
+        {
+            if(intmap_get(&upper_bounds, account, &old_value))
+            {
+                intmap_insert(&upper_bounds, account, old_value + amount);
+            }
+            if(intmap_get(&lower_bounds, account, &old_value))
+            {
+                intmap_insert(&lower_bounds, account, old_value + amount);
+            }
+            else
+            {
+                intmap_insert(&lower_bounds, account, amount);
+            }
+        }
+    $$
+
+    on SawWithdraw(account, amount) where $$ true $$
+    $$
+        // printf("SawWithdraw(%d, %d)\n", account, amount);
+        int old_value=0;
+        if(intmap_get(&balances, account, &old_value))
+        {
+            if(old_value >= amount)
+            {
+                intmap_insert(&balances, account, old_value - amount);
+            }
+            else
+            {
+                ++errors;
+                printf("Withdrawal of %i from account #%i should have failed "
+                       "based on balance %i\n", amount, account, old_value);
+                intmap_remove(&balances, account);
+            }
+        }
+        else
+        {
+            if(intmap_get(&upper_bounds, account, &old_value))
+            {
+                if(old_value >= amount)
+                {
+                    intmap_insert(&upper_bounds, account, old_value - amount);
+                }
+                else
+                {
+                    ++errors;
+                    printf("Withdrawal of %i from account #%i should have failed "
+                           "based on upper balance bound %i\n",
+                           amount, account, old_value);
+                    intmap_remove(&upper_bounds, account);
+                }
+            }
+            if(intmap_get(&lower_bounds, account, &old_value))
+            {
+                if(old_value >= amount)
+                {
+                    intmap_insert(&lower_bounds, account, old_value - amount);
+                }
+                else
+                {
+                    intmap_insert(&lower_bounds, account, 0);
+                }
+            }
+        }
+    $$
+
+    on SawWithdrawFail(account, amount) where $$ true $$
+    $$
+        // printf("SawWithdrawFail(%d, %d)\n", account, amount);
+        int old_value=0;
+        if(intmap_get(&balances, account, &old_value))
+        {
+            if(old_value >= amount)
+            {
+                ++errors;
+                printf("Withdrawal of %i from account #%i should have succeeded "
+                       "based on balance %i\n", amount, account, old_value);
+                intmap_remove(&balances, account);
+            }
+        }
+        else
+        {
+            if(intmap_get(&upper_bounds, account, &old_value))
+            {
+                if(old_value < amount)
+                {
+                    intmap_insert(&upper_bounds, account, amount);
+                }
+            }
+            else
+            {
+                intmap_insert(&upper_bounds, account, amount);
+            }
+            if(intmap_get(&lower_bounds, account, &old_value))
+            {
+                if(old_value >= amount)
+                {
+                    ++errors;
+                    printf("Withdrawal of %i from account #%i should have succeeded "
+                           "based on lower balance bound %i\n",
+                           amount, account, old_value);
+                    intmap_remove(&lower_bounds, account);
+                }
+            }
+        }
+    $$
+
+    on SawTransfer(from_, to_, amount) where $$ true $$
+    $$
+        // printf("SawTransfer(%d, %d, %d)\n", from_, to_, amount);
+        int old_value=0;
+        if(intmap_get(&balances, to_, &old_value))
+        {
+            intmap_insert(&balances, to_, old_value + amount);
+        }
+        else
+        {
+            if(intmap_get(&upper_bounds, to_, &old_value))
+            {
+                intmap_insert(&upper_bounds, to_, old_value + amount);
+            }
+            if(intmap_get(&lower_bounds, to_, &old_value))
+            {
+                intmap_insert(&lower_bounds, to_, old_value + amount);
+            }
+            else
+            {
+                intmap_insert(&lower_bounds, to_, amount);
+            }
+        }
+
+        if(intmap_get(&balances, from_, &old_value))
+        {
+            if(old_value >= amount)
+            {
+                intmap_insert(&balances, from_, old_value - amount);
+            }
+            else
+            {
+                ++errors;
+                printf("Transfer of %i from account #%i should have failed "
+                       "based on balance %i\n", amount, from_, old_value);
+                intmap_remove(&balances, from_);
+            }
+        }
+        else
+        {
+            if(intmap_get(&upper_bounds, from_, &old_value))
+            {
+                if(old_value >= amount)
+                {
+                    intmap_insert(&upper_bounds, from_, old_value - amount);
+                }
+                else
+                {
+                    ++errors;
+                    printf("Transfer of %i from account #%i should have failed "
+                           "based on upper balance bound %i\n",
+                           amount, from_, old_value);
+                    intmap_remove(&upper_bounds, from_);
+                }
+            }
+            if(intmap_get(&lower_bounds, from_, &old_value))
+            {
+                if(old_value >= amount)
+                {
+                    intmap_insert(&lower_bounds, from_, old_value - amount);
+                }
+                else
+                {
+                    intmap_insert(&lower_bounds, from_, 0);
+                }
+            }
+        }
+    $$
+    on SawTransferFail(from_, to_, amount) where $$ true $$
+    $$
+        // printf("SawTransferFail(%d, %d, %d)\n", from_, to_, amount);
+        int old_value=0;
+        if(intmap_get(&balances, from_, &old_value))
+        {
+            if(old_value >= amount)
+            {
+                ++errors;
+                printf("Transfer of %i from account #%i should have succeeded "
+                       "based on balance %i\n", amount, from_, old_value);
+                intmap_remove(&balances, from_);
+            }
+        }
+        else
+        {
+            if(intmap_get(&upper_bounds, from_, &old_value))
+            {
+                if(old_value < amount)
+                {
+                    intmap_insert(&upper_bounds, from_, amount);
+                }
+            }
+            else
+            {
+                intmap_insert(&upper_bounds, from_, amount);
+            }
+            if(intmap_get(&lower_bounds, from_, &old_value))
+            {
+                if(old_value >= amount)
+                {
+                    ++errors;
+                    printf("Transfer of %i from account #%i should have succeeded "
+                           "based on lower balance bound %i\n",
+                           amount, from_, old_value);
+                    intmap_remove(&lower_bounds, from_);
+                }
+            }
+        }
+    $$
+}

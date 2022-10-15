@@ -1,0 +1,3 @@
+Client Shamon-drrregex is running
+waiting for the monitor to attach... done
+Continue program

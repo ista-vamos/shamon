@@ -2,7 +2,7 @@
 
 set -e  # exit on any error
 
-REP=10
+REP=3
 
 export PYTHON_OPTIMIZE=1
 #export PYTHONDONTWRITEBYTECODE=1
