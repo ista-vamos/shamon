@@ -351,7 +351,6 @@ static void parser_thread(void *data) {
             }
 
             if (header->done) {
-                info("parser thread: %d done\n", i);
                 shm_spsc_ringbuf_consume(lines + i, 1);
                 assert(shm_spsc_ringbuf_size(lines + i) == 0);
                 done[i] = true;
@@ -368,7 +367,7 @@ static void parser_thread(void *data) {
             } else {
                 line = lines_data[i] + (off+1)*BLOCK_SIZE;
             }
-            info("line: '%s'\n", line);
+            /* info("line: '%s'\n", line);*/
             if (parse_line(i, line) < 0) {
                 warn("parse line returned error\n");
                 goto finish;
@@ -405,7 +404,6 @@ finish:
 }
 
 static void init_new_line(int fd) {
-    info("Inited new line on %d\n", fd);
     size_t off, n;
     /* allocate space for the header */
     off = shm_spsc_ringbuf_write_off_nowrap(&lines[fd], &n);
@@ -431,7 +429,6 @@ static void init_new_line(int fd) {
 }
 
 static inline void finish_line(int fd) {
-    info("Finished line on %d\n", fd);
     assert(current_line_header[fd] != 0);
 
     /* finish the write of the last block */
@@ -443,7 +440,6 @@ static inline void finish_line(int fd) {
 }
 
 static inline void line_new_block(int fd) {
-    info("New block on %d\n", fd);
     assert(current_line_header[fd] != 0);
 
     /* finish the write of the last block */
@@ -464,9 +460,11 @@ static inline void line_new_block(int fd) {
 
 static void handle_event(per_thread_t *data) {
     DR_ASSERT(data->len > 0);
+    /*
     info("---- [fd: %d, len: %ld, size: %lu\n]"
                  "'%*s'\n",
             data->fd, data->len, data->size, (int)data->len, (char*)data->buf);
+            */
 
     const int fd = data->fd;
     assert(fd >= 0 && fd < 3);
@@ -496,7 +494,6 @@ static void handle_event(per_thread_t *data) {
                 continue;
             }
 
-            info("Put %c\n", c);
             *cur->buf++ = c;
         }
     }
@@ -636,13 +633,13 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     char **exprs[3];
     char **names[3];
     for (int i = 0; i < 3; ++i) {
-        exprs[i] = dr_global_alloc(exprs_num[i] * sizeof(char *));
+        exprs[i] = malloc(exprs_num[i] * sizeof(char *));
         DR_ASSERT(exprs[i]);
-        names[i] = dr_global_alloc(exprs_num[i] * sizeof(char *));
+        names[i] = malloc(exprs_num[i] * sizeof(char *));
         DR_ASSERT(names[i]);
-        signatures[i] = dr_global_alloc(exprs_num[i] * sizeof(char *));
+        signatures[i] = malloc(exprs_num[i] * sizeof(char *));
         DR_ASSERT(signatures[i]);
-        re[i] = dr_global_alloc(exprs_num[i] * sizeof(regex_t));
+        re[i] = malloc(exprs_num[i] * sizeof(regex_t));
         DR_ASSERT(re[i]);
 
         if (exprs_num[i] > 0) {
@@ -726,17 +723,19 @@ static void event_exit(void) {
     /* notify thread that this is the end */
     info("EXIT\n");
     for (int i = 0; i < 3; ++i) {
+        if (shmbuf[i] == 0)
+            continue;
         info("SIGNAL %d\n", i);
         current_line_header[i]->done = 1;
         atomic_store_explicit(&current_line_header[i]->commited, 1, memory_order_release);
     }
-    info("Signaled!");
+    info("Signaled!\n");
 
     /* wait until the thread finishes */
     while (!__parser_finished) {
         dr_sleep(5);
     }
-    info("Thread finished, all fine!");
+    info("Thread finished, all fine!\n");
     assert(buffers_are_empty());
 
     if (!drmgr_unregister_cls_field(event_thread_context_init,
@@ -747,15 +746,16 @@ static void event_exit(void) {
     drmgr_exit();
 
     for (unsigned fd = 0; fd < 3; ++fd) {
+        if (shmbuf[fd] == NULL)
+            continue;
+
         info(
             "[fd %d] info: sent %lu events, busy waited on buffer %lu cycles\n",
             fd, evs[fd].id, waiting_for_buffer[fd]);
 
-        if (shmbuf[fd]) {
-            info("Destroying buffer for fd %d\n", fd);
-            destroy_shared_buffer(shmbuf[fd]);
-        }
+        destroy_shared_buffer(shmbuf[fd]);
 
+        free(lines_data[fd]);
         for (int i = 0; i < (int)exprs_num[fd]; ++i) {
             regfree(&re[fd][i]);
         }
@@ -766,11 +766,10 @@ static void event_exit(void) {
         }
         free(signatures[fd]);
         free(re[fd]);
-
-        free(lines_data[fd]);
     }
 
     free(tmpline);
+    /*info("Clean up done\n");*/
 }
 
 static void event_thread_context_init(void *drcontext, bool new_depth) {
