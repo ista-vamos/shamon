@@ -334,7 +334,7 @@ static void dump_lines(int fd) {
 */
 
 static inline void put_to_pool(struct line *line) {
-    /* reset the string */
+    /* clear the string */
     STRING_SIZE(line->data) = 0;
 
     pool_lock();
@@ -447,6 +447,7 @@ finish:
 struct line *create_new_line() {
     struct line *line = xmalloc(sizeof *line);
     STRING_INIT(line->data);
+    STRING_GROW(line->data, 128);
     shm_list_embedded_init(&line->list);
 
     return line;
@@ -650,7 +651,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         signatures[i] = xmalloc(num * sizeof(char *));
         re[i] = xmalloc(num * sizeof(regex_t));
 
-        VEC_INIT(lines[i].data);
+        STRING_INIT(lines[i].data);
+        STRING_GROW(lines[i].data, 128);
         shm_list_embedded_init(&lines[i].list);
         init_new_line(i);
     }
