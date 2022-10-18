@@ -374,6 +374,25 @@ arbiter : BankEvent
             $switch to aligning;
         $$
 
+        on Out : withdraw(t2, acc) withdrawFail(t4) |,
+           In  : numIn(t1, act) otherIn(t3) |
+           where $$ true $$
+        $$
+            assert(act == 2);
+            out_processed += 2;
+            in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) withdrawSuccess(t4) |,
+           In  : numIn(t1, act) otherIn(t3) |
+           where $$ true $$
+        $$
+            out_processed += 2;
+            in_processed += 2;
+            $switch to aligning;
+        $$
+
         on Out : withdraw(t2, acc) | hole(n)
            where $$ true $$
         $$
@@ -391,7 +410,6 @@ arbiter : BankEvent
             $switch to aligning;
         $$
     }
-
 }
 
 
