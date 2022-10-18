@@ -45,7 +45,7 @@ arbiter : NumberPairs
             }
             else
             {
-                fprintf(tessla_in, "%lu: primes2 = (%d, %d)\n", ++timestamp, rn, rn);
+                fprintf(tessla_in, "%lu: primes2 = (%d, %d)\n", ++timestamp, rn, rp);
                 $drop 1 from P[1];
             }
         $$
@@ -60,20 +60,15 @@ arbiter : NumberPairs
                 fprintf(tessla_in, "%lu: holes2 = %d\n", ++timestamp, n);
 	$$
 
-        on P[0]: done where $$ true $$ $$ $switch to finish; $$
-        on P[1]: done where $$ true $$ $$ $switch to finish; $$
-    }
-
-    rule set finish {
-        on P[0]: prime(ln, lp) |  where $$ true $$
-        $$
+        on P[0]: prime(ln, lp) | , P[1]: done where $$ true $$
+	$$
              fprintf(tessla_in, "%lu: primes1 = (%d, %d)\n", ++timestamp, ln, lp);
-        $$
+	$$
 
-        on P[1]: prime(rn, rp) |  where $$ true $$
-        $$
+        on P[1]: prime(rn, rp) | , P[0]: done where $$ true $$
+	$$
              fprintf(tessla_in, "%lu: primes2 = (%d, %d)\n", ++timestamp, rn, rp);
-        $$
+	$$
     }
 }
 
