@@ -27,7 +27,7 @@ LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
            $SHAMONDIR/core/libshamon-utils.a\
            $SHAMONDIR/core/libshamon-stream.a\
            $SHAMONDIR/core/libshamon-parallel-queue.a\
-           /home/fabian/tessla/bankmon/target/debug/libmonitor.a\
+           $SHAMONDIR/tessla/bankmon/target/debug/libmonitor.a\
            $SHAMONDIR/core/list.c\
            $SHAMONDIR/core/signatures.c\
            $SHAMONDIR/shmbuf/libshamon-shmbuf.a\
