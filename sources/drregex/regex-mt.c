@@ -15,10 +15,11 @@
 
 #include "buffer.h"
 #include "client.h"
-#include "event.h"
 #include "signatures.h"
 #include "source.h"
 #include "utils.h"
+#include "list-embedded.h"
+#include "vector-macro.h"
 #include "spsc_ringbuf.h"
 #include "streams/stream-drregex.h" /* event type */
 
@@ -50,28 +51,20 @@
 static char  *tmpline;
 static size_t tmpline_len;
 
-struct line_header {
-    size_t blocks_num;
-    /* if set to 1, then the whole line has been written to the buffer
-     * and the parser thread can continue */
-    _Atomic char commited;
-    /* this is the last line */
-    char done;
+struct line {
+    STRING(data);
+
+    shm_list_embedded list;
 };
 
-struct line_data {
-    char *buf;
-    size_t blocks_num;
-    size_t in_block;
-};
+struct line lines[3];
+VEC(line_pool, struct line *);
 
-#define LINES_DATA_SIZE 2*4096
-#define BLOCK_SIZE CACHELINE_SIZE
+static struct line *current_line[3];
 
-static char *lines_data[3];
-static shm_spsc_ringbuf lines[3];
-static struct line_header *current_line_header[3];
-static struct line_data current_line[3];
+#ifndef NDEBUG
+static size_t pool_max_size;
+#endif
 
 bool first_match_only = true;
 bool timestamps       = false;
@@ -83,25 +76,46 @@ static int tcls_idx;
 /* we'll number threads from 0 up */
 static size_t thread_num = 0;
 
-#ifdef SUPPORT_MT
-static _Atomic(bool) _write_lock = false;
+static _Atomic bool  _list_lock = false;
+static _Atomic bool  _pool_lock = false;
 
-static inline void write_lock() {
-    _Atomic bool *l = &_write_lock;
-    bool          unlocked;
+static inline void _lock(_Atomic bool *l) {
+    bool unlocked;
     do {
         unlocked = false;
     } while (atomic_compare_exchange_weak(l, &unlocked, true));
 }
 
-static inline void write_unlock() {
-    /* FIXME: use explicit memory ordering, seq_cnt is not needed here */
-    _write_lock = false;
+static inline void _unlock(_Atomic bool *l) {
+    atomic_store_explicit(l, false, memory_order_release);
 }
-#else
-static inline void write_lock() {}
-static inline void write_unlock() {}
-#endif /* SUPPORT_MT */
+
+static inline void list_lock() {
+    _lock(&_list_lock);
+}
+
+static inline void list_unlock() {
+    _unlock(&_list_lock);
+}
+
+static inline void pool_lock() {
+    _lock(&_pool_lock);
+}
+
+static inline void pool_unlock() {
+    _unlock(&_pool_lock);
+}
+
+//static _Atomic bool  _write_lock = false;
+
+static inline void write_lock() {
+    /* We have just one thread */
+    //_lock(&_write_lock);
+}
+
+static inline void write_unlock() {
+    //_unlock(&_write_lock);
+}
 
 /* The system call number of SYS_write/NtWriteFile */
 static int write_sysnum, read_sysnum;
@@ -284,13 +298,47 @@ static int parse_line(int fd, char *line) {
     return 0;
 }
 
-static bool buffers_are_empty() {
-    for (int i = 0; i < 3; ++i) {
-        if (shm_spsc_ringbuf_size(lines + i) > 0) {
-            return false;
-        }
+/*
+static void dump_line(struct line *line) {
+    printf("[%p, len %lu] ", line, STRING_SIZE(line->data));
+    printf("'%.*s'\n",
+           STRING_SIZE(line->data) > 10 ? 10 : (int)STRING_SIZE(line->data),
+           line->data);
+}
+
+static void dump_lines(int fd) {
+    int n = 0;
+    struct line *line;
+    info("Lines [%d]:\n", fd);
+    shm_list_embedded_foreach(line, &lines[fd].list, list) {
+        printf("  fd %d, line %d: ", fd, ++n);
+        dump_line(line);
     }
-    return true;
+    info("----\n");
+}
+*/
+
+static inline void put_to_pool(struct line *line) {
+    /* reset the string */
+    STRING_SIZE(line->data) = 0;
+
+    pool_lock();
+    VEC_PUSH(line_pool, &line);
+#ifndef NDEBUG
+    if (VEC_SIZE(line_pool) > pool_max_size) {
+        pool_max_size = VEC_SIZE(line_pool);
+    }
+#endif
+    pool_unlock();
+}
+
+
+static inline struct line *get_line(int fd) {
+    struct line *line;
+    shm_list_embedded_foreach(line, &lines[fd].list, list) {
+        return line;
+    }
+    return NULL;
 }
 
 static bool monitor_disconected() {
@@ -306,75 +354,54 @@ static bool monitor_disconected() {
 
 static volatile _Atomic int __parser_finished = 0;
 
+_Atomic bool __done[3];
+
+static inline bool all_done() {
+    for (int i = 0; i < 3; ++i) {
+        if (atomic_load_explicit(&__done[i], memory_order_acquire) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static void parser_thread(void *data) {
     (void)data;
-    struct line_header *header;
-
-    size_t off;
     size_t no_line = 0;
-    STRING(tmp);
-    STRING_INIT(tmp);
-    (void)STRING_SIZE(tmp);
+    struct line *line;
 
-    char *line;
-    size_t n, l1, l2;
-
-    struct line_header *headers[3] = {NULL, NULL, NULL};
-    bool line_commited[3] = {false, false, false};
-    bool done[3];
-    for (int i = 0; i < 0; ++i) {
-        done[i] = (shmbuf[i] == 0);
+    for (int i = 0; i < 3; ++i) {
+        __done[i] = (shmbuf[i] == 0);
     }
 
     while (1) {
         for (int i = 0; i < 3; ++i) {
-            if (done[i] == 1)
+            if (shmbuf[i] == 0) {
                 continue;
-
-            header = headers[i];
-            if (!header) {
-                off = shm_spsc_ringbuf_read_off_nowrap(lines + i, &n);
-                if (n <= 0)
-                    continue;
-
-                headers[i] = header = (struct line_header*)(lines_data[i] + off*BLOCK_SIZE);
-                line_commited[i] = false;
             }
-            assert(header);
 
-            /* this may fail with tmpheader, but we'll try again... */
-            if (!line_commited[i]) {
-                line_commited[i] = (atomic_load_explicit(&header->commited, memory_order_acquire) == 1);
-                if (!line_commited[i]) {
-                    continue;
+            while (1) {
+                list_lock();
+                line = get_line(i);
+                if (!line) {
+                    list_unlock();
+                    break;
                 }
-            }
 
-            if (header->done) {
-                shm_spsc_ringbuf_consume(lines + i, 1);
-                assert(shm_spsc_ringbuf_size(lines + i) == 0);
-                done[i] = true;
-                continue;
-            }
+                assert(!shm_list_embedded_empty(&lines[i].list));
+                shm_list_embedded_remove(&line->list);
+                list_unlock();
 
-            shm_spsc_ringbuf_peek(lines + i, header->blocks_num, &off, &l1, &l2);
-            if (l2 > 0) {
-                /* there is a wrap-over, we must reconstruct the string */
-                STRING_GROW(tmp, (unsigned)header->blocks_num*BLOCK_SIZE);
-                memcpy(tmp, lines_data[i] + off*BLOCK_SIZE, l1*BLOCK_SIZE);
-                memcpy(tmp + l1*BLOCK_SIZE, lines_data[i], l2*BLOCK_SIZE);
-                line = tmp;
-            } else {
-                line = lines_data[i] + (off+1)*BLOCK_SIZE;
+                assert(line);
+                //info("parse line: '%s'\n", line->data);
+                if (parse_line(i, line->data) < 0) {
+                    warn("parse line returned error\n");
+                    goto finish;
+                }
+                /* TODO: insert into pool */
+                put_to_pool(line);
+                no_line = 0;
             }
-            /* info("line: '%s'\n", line);*/
-            if (parse_line(i, line) < 0) {
-                warn("parse line returned error\n");
-                goto finish;
-            }
-            no_line = 0;
-            shm_spsc_ringbuf_consume(lines + i, header->blocks_num);
-            headers[i] = NULL;
         }
 
         if (++no_line > 10) {
@@ -382,7 +409,7 @@ static void parser_thread(void *data) {
             _mm_pause();
 
             if (no_line > 1000) {
-                if (buffers_are_empty())
+                if (all_done())
                     goto finish;
                 if (monitor_disconected()) {
                     warn("Parser thread: all disconnected, exitting...\n");
@@ -399,63 +426,45 @@ static void parser_thread(void *data) {
     }
 
 finish:
-    STRING_DESTROY(tmp);
     __parser_finished = 1;
 }
 
-static void init_new_line(int fd) {
-    size_t off, n;
-    /* allocate space for the header */
-    off = shm_spsc_ringbuf_write_off_nowrap(&lines[fd], &n);
-    while (n == 0) {
-       off = shm_spsc_ringbuf_write_off_nowrap(&lines[fd], &n);
-       _mm_pause();
+
+
+struct line *create_new_line() {
+    struct line *line = malloc(sizeof *line);
+    if (!line) {
+        assert(0 && "Allocation failed");
+        abort();
     }
 
-    current_line_header[fd] = (struct line_header*)(lines_data[fd] + off*BLOCK_SIZE);
-    atomic_store_explicit(&current_line_header[fd]->commited, 0, memory_order_release);
-    shm_spsc_ringbuf_write_finish(lines + fd, 1);
+    STRING_INIT(line->data);
+    shm_list_embedded_init(&line->list);
 
-    /* allocate first block of bytes for line itself */
-    off = shm_spsc_ringbuf_write_off_nowrap(&lines[fd], &n);
-    while (n == 0) {
-       off = shm_spsc_ringbuf_write_off_nowrap(&lines[fd], &n);
-       _mm_pause();
+    return line;
+}
+
+static struct line *init_new_line(int fd) {
+    struct line *line = NULL;
+    pool_lock();
+    if (VEC_SIZE(line_pool) > 0) {
+        line = VEC_POP_TOP(line_pool);
+    }
+    pool_unlock();
+
+    if (line == NULL) {
+        line = create_new_line();
     }
 
-    current_line[fd].buf = lines_data[fd] + off*BLOCK_SIZE;
-    current_line[fd].in_block = 0;
-    current_line[fd].blocks_num = 2; /* header + the first block */
+    current_line[fd] = line;
+    return line;
 }
 
 static inline void finish_line(int fd) {
-    assert(current_line_header[fd] != 0);
-
-    /* finish the write of the last block */
-    shm_spsc_ringbuf_write_finish(lines + fd, 1);
-
-    current_line_header[fd]->blocks_num = current_line[fd].blocks_num;
-    atomic_store_explicit(&current_line_header[fd]->commited, 1,
-                          memory_order_release);
-}
-
-static inline void line_new_block(int fd) {
-    assert(current_line_header[fd] != 0);
-
-    /* finish the write of the last block */
-    shm_spsc_ringbuf_write_finish(lines + fd, 1);
-
-    size_t off, n;
-    off = shm_spsc_ringbuf_write_off_nowrap(&lines[fd], &n);
-    while (n == 0) {
-       off = shm_spsc_ringbuf_write_off_nowrap(&lines[fd], &n);
-       _mm_pause();
-    }
-
-    current_line[fd].buf = lines_data[fd] + off*BLOCK_SIZE;
-    (void)off;
-    ++current_line[fd].blocks_num;
-    current_line[fd].in_block = 0;
+    list_lock();
+    /* insert at the end */
+    shm_list_embedded_insert_after(lines[fd].list.prev, &current_line[fd]->list);
+    list_unlock();
 }
 
 static void handle_event(per_thread_t *data) {
@@ -468,33 +477,24 @@ static void handle_event(per_thread_t *data) {
 
     const int fd = data->fd;
     assert(fd >= 0 && fd < 3);
-    assert(data->len < LINES_DATA_SIZE && "Couldn't fit into buffer");
-
-    assert(current_line_header[fd] != NULL);
 
     size_t n = 0;
     const size_t data_len = data->len;
-    struct line_data *cur = current_line + fd;
+    struct line *line = current_line[fd];
+    /* TODO: in STRING_APPEND we check sizes of the string every iteration.
+     * Don't do that, get the allocation size of the string and fill
+     * as many characters as possible */
     while (n < data_len) {
-        if (cur->in_block == BLOCK_SIZE) {
-            line_new_block(fd);
-        }
+        char c = ((char*)data->buf)[n++];
+        STRING_APPEND(line->data, c);
 
-        /* fill the current block with data */
-        while (n < data_len && cur->in_block < BLOCK_SIZE) {
-            char c = ((char*)data->buf)[n++];
-            ++cur->in_block;
+        if (c == '\n' || c == '\0') {
+            STRING_TOP(line->data) = '\0';
 
-            if (c == '\n' || c == '\0') {
-                *cur->buf = '\0';
-                finish_line(fd);
-
-                /* start new line */
-                init_new_line(fd);
-                continue;
-            }
-
-            *cur->buf++ = c;
+            /* finish this line and start a new one */
+            finish_line(fd);
+            line = init_new_line(fd);
+            continue;
         }
     }
 }
@@ -643,10 +643,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         DR_ASSERT(re[i]);
 
         if (exprs_num[i] > 0) {
-            assert(LINES_DATA_SIZE % CACHELINE_SIZE == 0
-                   && "Data size must be divisible by cache line size");
-            lines_data[i] = malloc(LINES_DATA_SIZE);
-            shm_spsc_ringbuf_init(&lines[i], LINES_DATA_SIZE);
+            VEC_INIT(lines[i].data);
+            shm_list_embedded_init(&lines[i].list);
             init_new_line(i);
         }
     }
@@ -714,29 +712,22 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         abort();
     }
     info("done\n");
-
-
     info("Continue program\n");
 }
 
 static void event_exit(void) {
     /* notify thread that this is the end */
-    info("EXIT\n");
     for (int i = 0; i < 3; ++i) {
         if (shmbuf[i] == 0)
             continue;
-        info("SIGNAL %d\n", i);
-        current_line_header[i]->done = 1;
-        atomic_store_explicit(&current_line_header[i]->commited, 1, memory_order_release);
+        atomic_store_explicit(&__done[i], 1, memory_order_release);
     }
-    info("Signaled!\n");
 
     /* wait until the thread finishes */
     while (!__parser_finished) {
         dr_sleep(5);
     }
     info("Thread finished, all fine!\n");
-    assert(buffers_are_empty());
 
     if (!drmgr_unregister_cls_field(event_thread_context_init,
                                     event_thread_context_exit, tcls_idx) ||
@@ -755,7 +746,6 @@ static void event_exit(void) {
 
         destroy_shared_buffer(shmbuf[fd]);
 
-        free(lines_data[fd]);
         for (int i = 0; i < (int)exprs_num[fd]; ++i) {
             regfree(&re[fd][i]);
         }
@@ -769,6 +759,9 @@ static void event_exit(void) {
     }
 
     free(tmpline);
+#ifndef NDEBUG
+    info("Max pool size: %lu\n", pool_max_size);
+#endif
     /*info("Clean up done\n");*/
 }
 

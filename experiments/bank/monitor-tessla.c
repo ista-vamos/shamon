@@ -85,7 +85,7 @@ typedef struct _EVENT_numOut EVENT_numOut;
 struct _STREAM_BankOutputEvent_in {
     shm_event head;
     union {
-        EVENT_depositTo depositTo;EVENT_logout logout;EVENT_depositFail depositFail;EVENT_selectedAccount selectedAccount;EVENT_withdrawFail withdrawFail;EVENT_transferSuccess transferSuccess;EVENT_withdraw withdraw;EVENT_depositSuccess depositSuccess;EVENT_transfer transfer;EVENT_withdrawSuccess withdrawSuccess;EVENT_numOut numOut;EVENT_balance balance;
+        EVENT_depositTo depositTo;EVENT_depositSuccess depositSuccess;EVENT_logout logout;EVENT_selectedAccount selectedAccount;EVENT_depositFail depositFail;EVENT_numOut numOut;EVENT_transfer transfer;EVENT_withdrawFail withdrawFail;EVENT_withdraw withdraw;EVENT_transferSuccess transferSuccess;EVENT_withdrawSuccess withdrawSuccess;EVENT_balance balance;
     }cases;
 };
 typedef struct _STREAM_BankOutputEvent_in STREAM_BankOutputEvent_in;
@@ -95,7 +95,7 @@ struct _STREAM_BankOutputEvent_out {
     shm_event head;
     union {
         EVENT_hole hole;
-        EVENT_depositTo depositTo;EVENT_logout logout;EVENT_depositFail depositFail;EVENT_selectedAccount selectedAccount;EVENT_withdrawFail withdrawFail;EVENT_transferSuccess transferSuccess;EVENT_withdraw withdraw;EVENT_depositSuccess depositSuccess;EVENT_transfer transfer;EVENT_withdrawSuccess withdrawSuccess;EVENT_numOut numOut;EVENT_balance balance;
+        EVENT_depositTo depositTo;EVENT_depositSuccess depositSuccess;EVENT_logout logout;EVENT_selectedAccount selectedAccount;EVENT_depositFail depositFail;EVENT_numOut numOut;EVENT_transfer transfer;EVENT_withdrawFail withdrawFail;EVENT_withdraw withdraw;EVENT_transferSuccess transferSuccess;EVENT_withdrawSuccess withdrawSuccess;EVENT_balance balance;
     }cases;
 };
 typedef struct _STREAM_BankOutputEvent_out STREAM_BankOutputEvent_out;
@@ -116,7 +116,7 @@ typedef struct _EVENT_otherIn EVENT_otherIn;
 struct _STREAM_BankInputEvent_in {
     shm_event head;
     union {
-        EVENT_numIn numIn;EVENT_otherIn otherIn;
+        EVENT_otherIn otherIn;EVENT_numIn numIn;
     }cases;
 };
 typedef struct _STREAM_BankInputEvent_in STREAM_BankInputEvent_in;
@@ -126,7 +126,7 @@ struct _STREAM_BankInputEvent_out {
     shm_event head;
     union {
         EVENT_hole hole;
-        EVENT_numIn numIn;EVENT_otherIn otherIn;
+        EVENT_otherIn otherIn;EVENT_numIn numIn;
     }cases;
 };
 typedef struct _STREAM_BankInputEvent_out STREAM_BankInputEvent_out;
@@ -178,7 +178,7 @@ typedef struct _EVENT_Clear EVENT_Clear;
 struct _STREAM_BankEvent_in {
     shm_event head;
     union {
-        EVENT_SawTransfer SawTransfer;EVENT_SawWithdraw SawWithdraw;EVENT_SawBalance SawBalance;EVENT_SawTransferFail SawTransferFail;EVENT_SawWithdrawFail SawWithdrawFail;EVENT_SawDeposit SawDeposit;EVENT_Clear Clear;
+        EVENT_SawTransfer SawTransfer;EVENT_SawDeposit SawDeposit;EVENT_SawTransferFail SawTransferFail;EVENT_Clear Clear;EVENT_SawWithdrawFail SawWithdrawFail;EVENT_SawBalance SawBalance;EVENT_SawWithdraw SawWithdraw;
     }cases;
 };
 typedef struct _STREAM_BankEvent_in STREAM_BankEvent_in;
@@ -188,7 +188,7 @@ struct _STREAM_BankEvent_out {
     shm_event head;
     union {
         EVENT_hole hole;
-        EVENT_SawTransfer SawTransfer;EVENT_SawWithdraw SawWithdraw;EVENT_SawBalance SawBalance;EVENT_SawTransferFail SawTransferFail;EVENT_SawWithdrawFail SawWithdrawFail;EVENT_SawDeposit SawDeposit;EVENT_Clear Clear;
+        EVENT_SawTransfer SawTransfer;EVENT_SawDeposit SawDeposit;EVENT_SawTransferFail SawTransferFail;EVENT_Clear Clear;EVENT_SawWithdrawFail SawWithdrawFail;EVENT_SawBalance SawBalance;EVENT_SawWithdraw SawWithdraw;
     }cases;
 };
 typedef struct _STREAM_BankEvent_out STREAM_BankEvent_out;
@@ -2235,10 +2235,10 @@ fprintf(stderr, "Seems all rules are waiting for some events that are not coming
 	return 0;
 }
 int arbiter() {
-    
-    while (!are_streams_done()) {
-        int rule_sets_match_count = 0;
-		if (current_rule_set == SWITCH_TO_RULE_SET_aligning) { 
+        
+        while (!are_streams_done()) {
+            int rule_sets_match_count = 0;
+    		if (current_rule_set == SWITCH_TO_RULE_SET_aligning) { 
 			rule_sets_match_count += RULE_SET_aligning();
 		}
 		if (current_rule_set == SWITCH_TO_RULE_SET_align_in) { 
@@ -2248,29 +2248,29 @@ int arbiter() {
 			rule_sets_match_count += RULE_SET_working();
 		}
 
-        if(rule_sets_match_count == 0) {
-            // increment counter of no consecutive matches
-            no_matches_count++;
-        } else {
-            // if there is a match reinit counter
-            no_matches_count = 0;
-        }
-        
-        if(no_matches_count == no_consecutive_matches_limit) {
-            printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\n", no_consecutive_matches_limit);
-            print_buffers_state();
-            // cleanup code
-            printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
+            if(rule_sets_match_count == 0) {
+                // increment counter of no consecutive matches
+                no_matches_count++;
+            } else {
+                // if there is a match reinit counter
+                no_matches_count = 0;
+            }
+            
+            if(no_matches_count == no_consecutive_matches_limit) {
+                printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\n", no_consecutive_matches_limit);
+                print_buffers_state();
+                // cleanup code
+                printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
  printf("in_holes: %i, out_holes: %i\n", in_holes, out_holes);
  fflush(stdout);
  fclose(tessla_in);
  
-            abort();
+                abort();
+            }
         }
+        shm_monitor_set_finished(monitor_buffer);
     }
-    shm_monitor_set_finished(monitor_buffer);
-}
-    
+        
 
 static void sig_handler(int sig) {
 	printf("signal %d caught...", sig);	shm_stream_detach(EV_SOURCE_In);
@@ -2312,7 +2312,7 @@ int main(int argc, char **argv) {
 
 	// connect to event source In
 	EV_SOURCE_In = shm_stream_create_from_argv("In", argc, argv);
-	BUFFER_In = shm_arbiter_buffer_create(EV_SOURCE_In,  sizeof(STREAM_BankInputEvent_out), 1024);
+	BUFFER_In = shm_arbiter_buffer_create(EV_SOURCE_In,  sizeof(STREAM_BankInputEvent_out), 8);
 
 	// register events in In
 	if (shm_stream_register_event(EV_SOURCE_In, "numIn", BANKINPUTEVENT_NUMIN) < 0) {
@@ -2329,7 +2329,7 @@ int main(int argc, char **argv) {
 	}
 	// connect to event source Out
 	EV_SOURCE_Out = shm_stream_create_from_argv("Out", argc, argv);
-	BUFFER_Out = shm_arbiter_buffer_create(EV_SOURCE_Out,  sizeof(STREAM_BankOutputEvent_out), 1024);
+	BUFFER_Out = shm_arbiter_buffer_create(EV_SOURCE_Out,  sizeof(STREAM_BankOutputEvent_out), 8);
 
 	// register events in Out
 	if (shm_stream_register_event(EV_SOURCE_Out, "balance", BANKOUTPUTEVENT_BALANCE) < 0) {
@@ -2423,21 +2423,21 @@ int main(int argc, char **argv) {
      thrd_create(&ARBITER_THREAD, arbiter, 0);
      
  
-    // monitor
-    STREAM_BankEvent_out * received_event;
-    while(true) {
-        received_event = fetch_arbiter_stream(monitor_buffer);
-        if (received_event == NULL) {
-            break;
-        }
+        // monitor
+        STREAM_BankEvent_out * received_event;
+        while(true) {
+            received_event = fetch_arbiter_stream(monitor_buffer);
+            if (received_event == NULL) {
+                break;
+            }
 
 		if (received_event->head.kind == 2) {
 			int account = received_event->cases.SawBalance.account;
 			int balance = received_event->cases.SawBalance.balance;
 
-		  if (true ) {
-		      fprintf(tessla_in, "%lu: ubound = (%d, %d)\n", ++timestamp, account, balance);
-         fprintf(tessla_in, "%lu: lbound = (%d, %d)\n", timestamp, account, balance);
+		  if (account == 100003 ) {
+		      fprintf(tessla_in, "%lu: ubound = %d\n", ++timestamp, balance);
+         fprintf(tessla_in, "%lu: lbound = %d\n", timestamp, balance);
      
 		  }
 		}
@@ -2446,8 +2446,8 @@ int main(int argc, char **argv) {
 			int account = received_event->cases.SawDeposit.account;
 			int amount = received_event->cases.SawDeposit.amount;
 
-		  if (true ) {
-		      fprintf(tessla_in, "%lu: change = (%d, %d)\n", ++timestamp, account, amount);
+		  if (account == 100003  ) {
+		      fprintf(tessla_in, "%lu: change = %d\n", ++timestamp, amount);
      
 		  }
 		}
@@ -2456,9 +2456,9 @@ int main(int argc, char **argv) {
 			int account = received_event->cases.SawWithdraw.account;
 			int amount = received_event->cases.SawWithdraw.amount;
 
-		  if (true ) {
-		      fprintf(tessla_in, "%lu: check_atleast = (%d, %d)\n", ++timestamp, account, amount);
-         fprintf(tessla_in, "%lu: change = (%d, %d)\n", ++timestamp, account, -amount);
+		  if (account == 100003  ) {
+		      fprintf(tessla_in, "%lu: check_atleast = %d\n", ++timestamp, amount);
+         fprintf(tessla_in, "%lu: change = %d\n", ++timestamp, -amount);
      
 		  }
 		}
@@ -2467,8 +2467,8 @@ int main(int argc, char **argv) {
 			int account = received_event->cases.SawWithdrawFail.account;
 			int amount = received_event->cases.SawWithdrawFail.amount;
 
-		  if (true ) {
-		      fprintf(tessla_in, "%lu: check_less = (%d, %d)\n", ++timestamp, account, amount);
+		  if (account == 100003 ) {
+		      /* todo */
      
 		  }
 		}
@@ -2478,10 +2478,12 @@ int main(int argc, char **argv) {
 			int to_ = received_event->cases.SawTransfer.to_;
 			int amount = received_event->cases.SawTransfer.amount;
 
-		  if (true ) {
-		      fprintf(tessla_in, "%lu: check_atleast = (%d, %d)\n", ++timestamp, from_, amount);
-         fprintf(tessla_in, "%lu: change = (%d, %d)\n", ++timestamp, from_, -amount);
-         fprintf(tessla_in, "%lu: change = (%d, %d)\n", ++timestamp, to_, amount);
+		  if (from_ == 100003 || to_ == 100003 ) {
+		      if (from_ == 10003) {
+             fprintf(tessla_in, "%lu: check_atleast = %d\n", ++timestamp, amount);
+ 	}
+         fprintf(tessla_in, "%lu: change = %d\n", ++timestamp,
+                 from_ == 10003 ? -amount : amount);
      
 		  }
 		}
@@ -2491,10 +2493,9 @@ int main(int argc, char **argv) {
 			int to_ = received_event->cases.SawTransferFail.to_;
 			int amount = received_event->cases.SawTransferFail.amount;
 
-		  if (true ) {
+		  if (from_ == 100003 ) {
 		      if (amount > 0) {
-             fprintf(tessla_in, "%lu: check_less = (%d, %d)\n", ++timestamp, from_, amount);
-             fprintf(tessla_in, "%lu: ubound = (%d, %d)\n", ++timestamp, from_, amount - 1);
+             fprintf(tessla_in, "%lu: ubound = %d\n", ++timestamp, amount - 1);
  	}
      
 		  }
