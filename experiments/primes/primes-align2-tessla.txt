@@ -1,0 +1,87 @@
+stream type Primes(pos : int)
+{
+    prime(n : int, p : int);
+}
+
+stream type NumberPairs
+{
+    NumberPair(i : int, n : int, m : int);
+}
+
+event source P[2] : Primes(0) process using FORWARD to autodrop(16)
+
+globals
+$$
+    size_t timestamp = 0;
+    FILE *tessla_in;
+$$
+
+startup
+$$
+    tessla_in = fopen("/tmp/tessla.in", "w");
+    if (tessla_in == NULL) {
+	fprintf(stderr, "Failed openning TeSSLa fifo\n");
+	abort();
+    }
+$$
+
+cleanup
+$$
+fclose(tessla_in);
+$$
+
+arbiter : NumberPairs
+{
+    rule set rs
+    {
+        on P[0]: | prime(ln, lp),
+	   P[1]: | prime(rn, rp)
+	   where $$ true $$
+        $$
+	    if(ln < rn)
+            {
+                fprintf(tessla_in, "%lu: primes1 = (%d, %d)\n", ++timestamp, ln, lp);
+                $drop 1 from P[0];
+            }
+            else
+            {
+                fprintf(tessla_in, "%lu: primes2 = (%d, %d)\n", ++timestamp, rn, rn);
+                $drop 1 from P[1];
+            }
+        $$
+
+	on P[0]: hole(n) | where $$ true $$
+	$$
+                fprintf(tessla_in, "%lu: holes1 = %d\n", ++timestamp, n);
+	$$
+
+	on P[1]: hole(n) | where $$ true $$
+	$$
+                fprintf(tessla_in, "%lu: holes2 = %d\n", ++timestamp, n);
+	$$
+
+        on P[0]: done where $$ true $$ $$ $switch to finish; $$
+        on P[1]: done where $$ true $$ $$ $switch to finish; $$
+    }
+
+    rule set finish {
+        on P[0]: prime(ln, lp) |  where $$ true $$
+        $$
+             fprintf(tessla_in, "%lu: primes1 = (%d, %d)\n", ++timestamp, ln, lp);
+        $$
+
+        on P[1]: prime(rn, rp) |  where $$ true $$
+        $$
+             fprintf(tessla_in, "%lu: primes2 = (%d, %d)\n", ++timestamp, rn, rp);
+        $$
+    }
+}
+
+monitor
+{
+    on NumberPair(i, n, m) where $$ true $$
+    $$
+        /* delete me */
+    $$
+}
+
