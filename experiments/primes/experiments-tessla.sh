@@ -36,8 +36,7 @@ for SHM_BUFSIZE in 8 16; do
 		$GENCC monitor-tessla.c
 		mv monitor vamos-tessla
 
-                for PRIMES_NUM in 10000 ; do
-                #for PRIMES_NUM in 10000 20000 30000 40000; do
+                for PRIMES_NUM in 10000 20000 30000 40000; do
                 	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "fwd"
                 done
 
@@ -51,8 +50,7 @@ for SHM_BUFSIZE in 8 16; do
 		$GENCC monitor-tessla.c ./intmap.o $SRCDIR/compiler/cfiles/compiler_utils.c -lstdc++
 		mv monitor vamos-tessla
 
-                for PRIMES_NUM in 10000 ; do
-                #for PRIMES_NUM in 10000 20000 30000 40000; do
+                for PRIMES_NUM in 10000 20000 30000 40000; do
                 	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "align"
                 done
 
@@ -66,8 +64,7 @@ for SHM_BUFSIZE in 8 16; do
 		$GENCC monitor-tessla.c
 		mv monitor vamos-tessla
 
-                for PRIMES_NUM in 10000 ; do
-                #for PRIMES_NUM in 10000 20000 30000 40000; do
+                for PRIMES_NUM in 10000 20000 30000 40000; do
                 	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "align2"
                 done
 

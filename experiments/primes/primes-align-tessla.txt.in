@@ -8,13 +8,13 @@ stream type NumberPairs
     NumberPair(i : int, n : int, m : int);
 }
 
-event source P[2] : Primes(0) process using FORWARD to autodrop(16)
+event source P[2] : Primes(0) process using FORWARD to autodrop(ARBITER_BUFSIZE)
 
 buffer group Ps : Primes order by pos includes P[all]
 
 globals
 $$
-    #include "./compiler/cfiles/intmap.h"
+    #include "SRCDIR/compiler/cfiles/intmap.h"
     intmap buf;
     int count = 0;
 

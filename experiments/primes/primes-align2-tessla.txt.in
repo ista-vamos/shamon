@@ -8,7 +8,7 @@ stream type NumberPairs
     NumberPair(i : int, n : int, m : int);
 }
 
-event source P[2] : Primes(0) process using FORWARD to autodrop(16)
+event source P[2] : Primes(0) process using FORWARD to autodrop(ARBITER_BUFSIZE)
 
 globals
 $$
