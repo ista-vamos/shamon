@@ -420,9 +420,6 @@ static void parser_thread(void *data) {
         }
 
         if (++no_line > 10) {
-            _mm_pause();
-            _mm_pause();
-
             if (no_line > 1000) {
                 if (all_done())
                     goto finish;
@@ -745,6 +742,15 @@ static void event_exit(void) {
     }
     info(" finished!\n");
 
+#ifndef NDEBUG
+    for (int i = 0; i < 3; ++i) {
+        if (shmbuf[i] == 0)
+            continue;
+        assert(shm_list_embedded_empty(&lines[i].list) &&
+               "Have unprocessed lines");
+    }
+#endif
+
     if (!drmgr_unregister_cls_field(event_thread_context_init,
                                     event_thread_context_exit, tcls_idx) ||
         !drmgr_unregister_pre_syscall_event(event_pre_syscall) ||
@@ -773,6 +779,8 @@ static void event_exit(void) {
         free(signatures[fd]);
         free(re[fd]);
     }
+
+    VEC_DESTROY(line_pool);
 
     free(tmpline);
 #ifndef NDEBUG
