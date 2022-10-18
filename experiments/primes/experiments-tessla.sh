@@ -14,7 +14,7 @@ GENCC="$SRCDIR/gen/compile.sh"
 TESSLA_JAR=/opt/vamos/tessla/tessla-rust.jar
 
 # compile the tessla monitor
-#java -jar $TESSLA_JAR compile-rust primes.tessla -b tessla-monitor
+java -jar $TESSLA_JAR compile-rust primes.tessla -b tessla-monitor
 
 #for SHM_BUFSIZE in 1 8 32 64; do
 for SHM_BUFSIZE in 8 16; do
