@@ -640,7 +640,6 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         usage_and_exit(1);
     }
 
-    info("Allocating  memory\n");
     char **exprs[3];
     char **names[3];
     size_t num;
@@ -649,25 +648,16 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         if (num == 0)
             continue;
 
-        info("alloc mem line %d\n", __LINE__);
         exprs[i] = xmalloc(num * sizeof(char *));
-        info("alloc mem line %d\n", __LINE__);
         names[i] = xmalloc(num * sizeof(char *));
-        info("alloc mem line %d\n", __LINE__);
         signatures[i] = xmalloc(num * sizeof(char *));
-        info("alloc mem line %d\n", __LINE__);
         re[i] = xmalloc(num * sizeof(regex_t));
 
-        info("alloc mem line %d\n", __LINE__);
         VEC_INIT(lines[i].data);
-        info("alloc mem line %d\n", __LINE__);
         shm_list_embedded_init(&lines[i].list);
-        info("alloc mem line %d\n", __LINE__);
         init_new_line(i);
-        info("alloc mem line %d\n", __LINE__);
     }
 
-    info("Parsing arguments\n");
     int err = parse_args(argc, argv, exprs, names);
     if (err < 0) {
         usage_and_exit(1);
@@ -720,7 +710,11 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         if (err < 0) {
             if (err != EINTR) {
                 warn("failed waiting: %s\n", strerror(-err));
-		abort();
+                /* simulate the end of thread so that event_exit()
+                 * does not wait for that */
+                __parser_finished = 1;
+                event_exit();
+                exit(1);
             }
             return;
         }
@@ -738,20 +732,18 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
 
 static void event_exit(void) {
     /* notify thread that this is the end */
-    info("Exiiiit\n");
     for (int i = 0; i < 3; ++i) {
         if (shmbuf[i] == 0)
             continue;
         atomic_store_explicit(&__done[i], 1, memory_order_release);
-        info("Signal %d\n", i);
     }
 
-    info("Waiting for thread\n");
+    info("Waiting for thread...");
     /* wait until the thread finishes */
     while (!__parser_finished) {
         dr_sleep(5);
     }
-    info("Thread finished, all fine!\n");
+    info(" finished!\n");
 
     if (!drmgr_unregister_cls_field(event_thread_context_init,
                                     event_thread_context_exit, tcls_idx) ||
