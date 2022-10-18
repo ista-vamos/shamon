@@ -65,7 +65,6 @@ static size_t tmpline_len;
 struct line {
     STRING(data);
 
-    size_t timestamp;
     shm_list_embedded list;
 };
 
@@ -168,16 +167,19 @@ typedef struct {
     size_t thread;
 } per_thread_t;
 
-static _Atomic uint64_t timestamp = 0;
+#ifdef SUPPORT_MT
+static _Atomic uint64_t timestamp = 1;
+#else
+static uint64_t timestamp = 1;
+#endif
 
-static int parse_line(int fd, struct line *line_info) {
+static int parse_line(int fd, char *line) {
     assert(fd >= 0 && fd < 3);
 
     int               status;
     signature_operand op;
     ssize_t           len;
     regmatch_t        matches[MAXMATCH + 1];
-    char *line = line_info->data;
 
     int            num = (int)exprs_num[fd];
     struct buffer *shm = shmbuf[fd];
@@ -195,6 +197,11 @@ static int parse_line(int fd, struct line *line_info) {
             continue;
         }
 
+#ifdef SUPPORT_MT
+            uint64_t ts = atomic_fetch_and_add(&timestamp, 1, memory_order_seq_cst);
+#else
+            uint64_t ts = ++timestamp;
+#endif
         int   m = 1;
         void *addr;
 
@@ -221,9 +228,7 @@ static int parse_line(int fd, struct line *line_info) {
         addr = buffer_partial_push(shm, addr, ev, sizeof(*ev));
         if (timestamps) {
             assert(*o == 't');
-            addr = buffer_partial_push(shm, addr,
-                                       &line_info->timestamp,
-                                       sizeof(line_info->timestamp));
+            addr = buffer_partial_push(shm, addr, &ts, sizeof(ts));
             ++o;
         }
 
@@ -355,7 +360,7 @@ static bool monitor_disconected() {
     return true;
 }
 
-static volatile _Atomic int __parsers_finished = 0;
+static volatile _Atomic int __parser_finished = 0;
 
 _Atomic bool __done[3];
 
@@ -369,8 +374,7 @@ static inline bool all_done() {
 }
 
 static void parser_thread(void *data) {
-    int fd = (int)(size_t)data;
-    //(void)data;
+    (void)data;
     size_t no_line = 0;
     struct line *line;
 
@@ -379,23 +383,33 @@ static void parser_thread(void *data) {
     }
 
     while (1) {
-        list_lock();
-        line = get_line(fd);
-        if (line) {
-            assert(!shm_list_embedded_empty(&lines[fd].list));
-            shm_list_embedded_remove(&line->list);
-            list_unlock();
-
-            //info("parse line: '%s'\n", line->data);
-            if (parse_line(fd, line) < 0) {
-                warn("parse line returned error\n");
-                goto finish;
+        for (int i = 0; i < 3; ++i) {
+            if (shmbuf[i] == 0) {
+                continue;
             }
-            /* TODO: insert into pool */
-            put_to_pool(line);
-            no_line = 0;
-        } else {
-            list_unlock();
+
+            while (1) {
+                list_lock();
+                line = get_line(i);
+                if (!line) {
+                    list_unlock();
+                    break;
+                }
+
+                assert(!shm_list_embedded_empty(&lines[i].list));
+                shm_list_embedded_remove(&line->list);
+                list_unlock();
+
+                assert(line);
+                //info("parse line: '%s'\n", line->data);
+                if (parse_line(i, line->data) < 0) {
+                    warn("parse line returned error\n");
+                    goto finish;
+                }
+                /* TODO: insert into pool */
+                put_to_pool(line);
+                no_line = 0;
+            }
         }
 
         if (++no_line > 10) {
@@ -408,8 +422,9 @@ static void parser_thread(void *data) {
                 }
 
                 dr_sleep(5);
-                if (no_line > 100000) {
+                if (no_line > 1000000) {
                     dr_sleep(10);
+                    info("no line long time\n");
                 }
             }
 
@@ -417,7 +432,7 @@ static void parser_thread(void *data) {
     }
 
 finish:
-    __parsers_finished += 1;
+    __parser_finished = 1;
 }
 
 
@@ -443,8 +458,6 @@ static struct line *init_new_line(int fd) {
         line = create_new_line();
     }
 
-    /* atomic, we should use explicit memory ordering */
-    line->timestamp = ++timestamp;
     current_line[fd] = line;
     return line;
 }
@@ -709,7 +722,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
                 warn("failed waiting: %s\n", strerror(-err));
                 /* simulate the end of thread so that event_exit()
                  * does not wait for that */
-                __parsers_finished = 3;
+                __parser_finished = 1;
                 event_exit();
                 exit(1);
             }
@@ -718,32 +731,26 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     }
     info("done\n");
 
-    for (int i = 0; i < 3; ++i) {
-        if (shmbuf[i] == NULL)
-            continue;
-        info("Creating parser thread for fd %d ...", i);
-        if (!dr_create_client_thread(parser_thread, (void*)(size_t)i)) {
-            warn("failed creating the parser thread\n");
-            abort();
-        }
-        info(" done\n");
+    info("Creating parser thread...");
+    if (!dr_create_client_thread(parser_thread, 0)) {
+        warn("failed creating the parser thread\n");
+        abort();
     }
+    info("done\n");
     info("Continue program\n");
 }
 
 static void event_exit(void) {
     /* notify thread that this is the end */
     for (int i = 0; i < 3; ++i) {
-        if (shmbuf[i] == 0) {
-            ++__parsers_finished;
+        if (shmbuf[i] == 0)
             continue;
-        }
         atomic_store_explicit(&__done[i], 1, memory_order_release);
     }
 
     info("Waiting for thread...");
     /* wait until the thread finishes */
-    while (__parsers_finished < 3) {
+    while (!__parser_finished) {
         dr_sleep(5);
     }
     info(" finished!\n");
