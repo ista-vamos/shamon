@@ -48,6 +48,17 @@
 
 #define MAXMATCH 20
 
+static void *xmalloc(size_t sz) {
+    assert(sz > 0);
+    void *mem = malloc(sz);
+    if (!mem) {
+        assert(0 && "Allocation failed");
+        abort();
+    }
+    return mem;
+}
+
+
 static char  *tmpline;
 static size_t tmpline_len;
 
@@ -80,10 +91,15 @@ static _Atomic bool  _list_lock = false;
 static _Atomic bool  _pool_lock = false;
 
 static inline void _lock(_Atomic bool *l) {
-    bool unlocked;
-    do {
-        unlocked = false;
-    } while (atomic_compare_exchange_weak(l, &unlocked, true));
+    while (atomic_exchange_explicit(l, true, memory_order_acquire))
+        ;
+
+#ifndef NDEBUG
+    size_t tmp = 0;
+    while(tmp++ < 1000) {
+        assert(atomic_load_explicit(l, memory_order_relaxed) == true);
+    }
+#endif
 }
 
 static inline void _unlock(_Atomic bool *l) {
@@ -243,8 +259,7 @@ static int parse_line(int fd, char *line) {
             /* make sure we have big enough temporary buffer */
             if (tmpline_len < (size_t)len) {
                 free(tmpline);
-                tmpline = malloc(sizeof(char) * len + 1);
-                assert(tmpline && "Memory allocation failed");
+                tmpline = xmalloc(sizeof(char) * len + 1);
                 tmpline_len = len;
             }
 
@@ -419,6 +434,7 @@ static void parser_thread(void *data) {
                 dr_sleep(5);
                 if (no_line > 1000000) {
                     dr_sleep(10);
+                    info("no line long time\n");
                 }
             }
 
@@ -432,12 +448,7 @@ finish:
 
 
 struct line *create_new_line() {
-    struct line *line = malloc(sizeof *line);
-    if (!line) {
-        assert(0 && "Allocation failed");
-        abort();
-    }
-
+    struct line *line = xmalloc(sizeof *line);
     STRING_INIT(line->data);
     shm_list_embedded_init(&line->list);
 
@@ -531,8 +542,7 @@ int parse_args(int argc, const char *argv[], char **exprs[3], char **names[3]) {
         exprs[cur_fd][arg_i] = (char*)argv[i++];
 
         /* +2 for 0 byte and possibly "t" for timestamp */
-        signatures[cur_fd][arg_i] = malloc(sizeof(char) * strlen(argv[i]) + 2);
-        assert(signatures[cur_fd][arg_i] && "Allocation failed");
+        signatures[cur_fd][arg_i] = xmalloc(sizeof(char) * strlen(argv[i]) + 2);
         sprintf(signatures[cur_fd][arg_i], timestamps ? "t%s" : "%s", argv[i]);
 
         /* compile the regex, use extended RE */
@@ -619,7 +629,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
          */
         dr_enable_console_printing();
 #endif
-        dr_fprintf(STDERR, "Client Shamon-drrregex is running\n");
+        info("Client Shamon-drrregex is running\n");
     }
 
     if (argc < 6) {
@@ -630,25 +640,34 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         usage_and_exit(1);
     }
 
+    info("Allocating  memory\n");
     char **exprs[3];
     char **names[3];
+    size_t num;
     for (int i = 0; i < 3; ++i) {
-        exprs[i] = malloc(exprs_num[i] * sizeof(char *));
-        DR_ASSERT(exprs[i]);
-        names[i] = malloc(exprs_num[i] * sizeof(char *));
-        DR_ASSERT(names[i]);
-        signatures[i] = malloc(exprs_num[i] * sizeof(char *));
-        DR_ASSERT(signatures[i]);
-        re[i] = malloc(exprs_num[i] * sizeof(regex_t));
-        DR_ASSERT(re[i]);
+        num = exprs_num[i];
+        if (num == 0)
+            continue;
 
-        if (exprs_num[i] > 0) {
-            VEC_INIT(lines[i].data);
-            shm_list_embedded_init(&lines[i].list);
-            init_new_line(i);
-        }
+        info("alloc mem line %d\n", __LINE__);
+        exprs[i] = xmalloc(num * sizeof(char *));
+        info("alloc mem line %d\n", __LINE__);
+        names[i] = xmalloc(num * sizeof(char *));
+        info("alloc mem line %d\n", __LINE__);
+        signatures[i] = xmalloc(num * sizeof(char *));
+        info("alloc mem line %d\n", __LINE__);
+        re[i] = xmalloc(num * sizeof(regex_t));
+
+        info("alloc mem line %d\n", __LINE__);
+        VEC_INIT(lines[i].data);
+        info("alloc mem line %d\n", __LINE__);
+        shm_list_embedded_init(&lines[i].list);
+        info("alloc mem line %d\n", __LINE__);
+        init_new_line(i);
+        info("alloc mem line %d\n", __LINE__);
     }
 
+    info("Parsing arguments\n");
     int err = parse_args(argc, argv, exprs, names);
     if (err < 0) {
         usage_and_exit(1);
@@ -660,6 +679,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
 
     char extended_shmkey[256];
     int  filter_fd_mask = 0;
+
+    info("Creating SHM buffers\n");
 
     /* Create shared memory buffers */
     for (int i = 0; i < 3; ++i) {
@@ -717,12 +738,15 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
 
 static void event_exit(void) {
     /* notify thread that this is the end */
+    info("Exiiiit\n");
     for (int i = 0; i < 3; ++i) {
         if (shmbuf[i] == 0)
             continue;
         atomic_store_explicit(&__done[i], 1, memory_order_release);
+        info("Signal %d\n", i);
     }
 
+    info("Waiting for thread\n");
     /* wait until the thread finishes */
     while (!__parser_finished) {
         dr_sleep(5);
