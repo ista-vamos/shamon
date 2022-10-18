@@ -490,20 +490,38 @@ static void handle_event(per_thread_t *data) {
     size_t n = 0;
     const size_t data_len = data->len;
     struct line *line = current_line[fd];
-    /* TODO: in STRING_APPEND we check sizes of the string every iteration.
-     * Don't do that, get the allocation size of the string and fill
-     * as many characters as possible */
+    size_t space = 0;
     while (n < data_len) {
-        char c = ((char*)data->buf)[n++];
-        STRING_APPEND(line->data, c);
+        if (space == 0) {
+            STRING_ENSURE_SPACE(line->data);
+            assert(STRING_SIZE(line->data) < STRING_ALLOC_SIZE(line->data));
+            space = STRING_ALLOC_SIZE(line->data) - STRING_SIZE(line->data);
+            assert(space > 0);
+        }
 
-        if (c == '\n' || c == '\0') {
-            STRING_TOP(line->data) = '\0';
+        while (n < data_len && space > 0) {
+            char c = ((char*)data->buf)[n++];
+            --space;
 
-            /* finish this line and start a new one */
-            finish_line(fd);
-            line = init_new_line(fd);
-            continue;
+            if (c == '\n' || c == '\0') {
+                assert(STRING_SIZE(line->data) < STRING_ALLOC_SIZE(line->data));
+                ++STRING_SIZE(line->data);
+                STRING_TOP(line->data) = '\0';
+
+                /* finish this line and start a new one */
+                finish_line(fd);
+                line = init_new_line(fd);
+                assert(STRING_SIZE(line->data) == 0);
+
+                /* break this loop and let the outer loop
+                 * recompute available space */
+                space = 0;
+                break;
+            }
+
+            assert(STRING_SIZE(line->data) < STRING_ALLOC_SIZE(line->data));
+            ++STRING_SIZE(line->data);
+            STRING_TOP(line->data) = c;
         }
     }
 }

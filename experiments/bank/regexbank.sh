@@ -41,9 +41,12 @@ logout "Logged out!" $'' \
 -stdin \
 numIn "^\s*([0-9]+)\s*$" i \
 otherIn ".*[^\s].*" $'' -- $(dirname $0)/bank $@ < /tmp/fifoA  > /tmp/fifoB &
+BANK_PID=$!
 
 echo "-- Starting interact --"
 cat /tmp/fifoB | ./interact inputs.last.txt interact.log >/tmp/fifoA &
+
+/usr/lib/linux-intel-iotg-5.15-tools-5.15.0-1016/perf record --call-graph lbr -p $BANK_PID
 
 wait $MON_PID
 
