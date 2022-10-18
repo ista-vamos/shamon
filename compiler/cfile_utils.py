@@ -649,26 +649,28 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         event_src_ref = tree[1]
         assert(event_src_ref[0] == 'event_src_ref')
         stream_name = event_src_ref[1]
+        buffer_name = stream_name[:]
         out_type = stream_types[stream_name][1]
         if event_src_ref[2] is not None:
             stream_name += f"_{str(event_src_ref[2])}"
+            buffer_name += f"{str(event_src_ref[2])}"
         if context is not None:
             if stream_name in context.keys():
                 stream_name = context[stream_name]
         if len(tree) == 3:
             if not is_scan:
                 if tree[PPBUFFER_MATCH_ARG1] == "nothing":
-                    return f'''if (check_at_least_n_events(count_{stream_name}, 0)) {"{"}
+                    return f'''if (check_at_least_n_events(count_{buffer_name}, 0)) {"{"}
                     {inner_code}
                     {"}"}'''
                 elif tree[PPBUFFER_MATCH_ARG1] == "done":
-                    return f'''if (count_{stream_name} == 0 && is_stream_done(EV_SOURCE_{stream_name})) {"{"}
+                    return f'''if (count_{buffer_name} == 0 && is_stream_done(EV_SOURCE_{stream_name})) {"{"}
                         {inner_code}
                     {"}"}
                     '''
                 else:
                     # check if there are n events
-                    return f'''if (check_at_least_n_events(count_{stream_name}, {tree[PPBUFFER_MATCH_ARG1]})) {"{"}
+                    return f'''if (check_at_least_n_events(count_{buffer_name}, {tree[PPBUFFER_MATCH_ARG1]})) {"{"}
                         {inner_code}
                     {"}"}'''
             return []
