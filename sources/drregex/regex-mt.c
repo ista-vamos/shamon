@@ -93,13 +93,6 @@ static _Atomic bool  _pool_lock = false;
 static inline void _lock(_Atomic bool *l) {
     while (atomic_exchange_explicit(l, true, memory_order_acquire))
         ;
-
-#ifndef NDEBUG
-    size_t tmp = 0;
-    while(tmp++ < 1000) {
-        assert(atomic_load_explicit(l, memory_order_relaxed) == true);
-    }
-#endif
 }
 
 static inline void _unlock(_Atomic bool *l) {
