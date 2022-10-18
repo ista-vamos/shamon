@@ -59,5 +59,8 @@ TESSLA_PID=$!
 wait $TESSLA_PID
 
 rm -f /tmp/fifo{A,B} /tmp/tessla.in
+pkill -9 monitor-tessla
+pkill -9 cat
+pkill -9 bank
 
 cat interact.log

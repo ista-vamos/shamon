@@ -5,20 +5,26 @@
 #include <assert.h>
 #include <regex.h>
 #include <errno.h>
+#include <stdatomic.h>
 #include <string.h> /* memset */
+#include <immintrin.h> // For _mm_pause
 
 #include "dr_api.h"
 #include "drmgr.h"
+#include "shm_string-macro.h"
 
 #include "buffer.h"
 #include "client.h"
-#include "event.h"
 #include "signatures.h"
 #include "source.h"
+#include "utils.h"
+#include "list-embedded.h"
+#include "vector-macro.h"
+#include "spsc_ringbuf.h"
 #include "streams/stream-drregex.h" /* event type */
 
-#define warn(...) fprintf(stderr, "warning: " __VA_ARGS__)
-#define info(...) fprintf(stderr, __VA_ARGS__)
+#define warn(...) dr_fprintf(STDERR, "warning: " __VA_ARGS__)
+#define info(...) dr_fprintf(STDERR, __VA_ARGS__)
 
 #ifdef UNIX
 #if defined(MACOS) || defined(ANDROID)
@@ -45,9 +51,20 @@
 static char  *tmpline;
 static size_t tmpline_len;
 
-static char  *current_line[3];
-static size_t current_line_alloc_len[3];
-static size_t current_line_idx[3];
+struct line {
+    STRING(data);
+
+    shm_list_embedded list;
+};
+
+struct line lines[3];
+VEC(line_pool, struct line *);
+
+static struct line *current_line[3];
+
+#ifndef NDEBUG
+static size_t pool_max_size;
+#endif
 
 bool first_match_only = true;
 bool timestamps       = false;
@@ -59,25 +76,46 @@ static int tcls_idx;
 /* we'll number threads from 0 up */
 static size_t thread_num = 0;
 
-#ifdef SUPPORT_MT
-static _Atomic(bool) _write_lock = false;
+static _Atomic bool  _list_lock = false;
+static _Atomic bool  _pool_lock = false;
 
-static inline void write_lock() {
-    _Atomic bool *l = &_write_lock;
-    bool          unlocked;
+static inline void _lock(_Atomic bool *l) {
+    bool unlocked;
     do {
         unlocked = false;
     } while (atomic_compare_exchange_weak(l, &unlocked, true));
 }
 
-static inline void write_unlock() {
-    /* FIXME: use explicit memory ordering, seq_cnt is not needed here */
-    _write_lock = false;
+static inline void _unlock(_Atomic bool *l) {
+    atomic_store_explicit(l, false, memory_order_release);
 }
-#else
-static inline void write_lock() {}
-static inline void write_unlock() {}
-#endif /* SUPPORT_MT */
+
+static inline void list_lock() {
+    _lock(&_list_lock);
+}
+
+static inline void list_unlock() {
+    _unlock(&_list_lock);
+}
+
+static inline void pool_lock() {
+    _lock(&_pool_lock);
+}
+
+static inline void pool_unlock() {
+    _unlock(&_pool_lock);
+}
+
+//static _Atomic bool  _write_lock = false;
+
+static inline void write_lock() {
+    /* We have just one thread */
+    //_lock(&_write_lock);
+}
+
+static inline void write_unlock() {
+    //_unlock(&_write_lock);
+}
 
 /* The system call number of SYS_write/NtWriteFile */
 static int write_sysnum, read_sysnum;
@@ -101,14 +139,6 @@ static void usage_and_exit(int ret) {
     exit(ret);
 }
 
-static size_t line_alloc_size(size_t x) {
-    size_t n = 256; /* make it at least 256 bytes */
-    while (n < x) {
-        n <<= 1;
-    }
-    return n;
-}
-
 char **exprs[3];
 char **names[3];
 static size_t        exprs_num[3];
@@ -128,8 +158,13 @@ typedef struct {
     size_t thread;
 } per_thread_t;
 
-static int parse_line(per_thread_t *data, uint64_t ts, char *line) {
-    int fd = data->fd;
+#ifdef SUPPORT_MT
+static _Atomic uint64_t timestamp = 1;
+#else
+static uint64_t timestamp = 1;
+#endif
+
+static int parse_line(int fd, char *line) {
     assert(fd >= 0 && fd < 3);
 
     int               status;
@@ -139,6 +174,8 @@ static int parse_line(per_thread_t *data, uint64_t ts, char *line) {
 
     int            num = (int)exprs_num[fd];
     struct buffer *shm = shmbuf[fd];
+
+    // info("[%d] parsing line (%p): '%s'\n", fd, line, line);
 
     shm_event *ev = &evs[fd];
     for (int i = 0; i < num; ++i) {
@@ -150,6 +187,12 @@ static int parse_line(per_thread_t *data, uint64_t ts, char *line) {
         if (status != 0) {
             continue;
         }
+
+#ifdef SUPPORT_MT
+            uint64_t ts = atomic_fetch_and_add(&timestamp, 1, memory_order_seq_cst);
+#else
+            uint64_t ts = ++timestamp;
+#endif
         int   m = 1;
         void *addr;
 
@@ -255,58 +298,205 @@ static int parse_line(per_thread_t *data, uint64_t ts, char *line) {
     return 0;
 }
 
-#ifdef SUPPORT_MT
-static _Atomic uint64_t timestamp = 1;
-#else
-static uint64_t timestamp = 1;
+/*
+static void dump_line(struct line *line) {
+    printf("[%p, len %lu] ", line, STRING_SIZE(line->data));
+    printf("'%.*s'\n",
+           STRING_SIZE(line->data) > 10 ? 10 : (int)STRING_SIZE(line->data),
+           line->data);
+}
+
+static void dump_lines(int fd) {
+    int n = 0;
+    struct line *line;
+    info("Lines [%d]:\n", fd);
+    shm_list_embedded_foreach(line, &lines[fd].list, list) {
+        printf("  fd %d, line %d: ", fd, ++n);
+        dump_line(line);
+    }
+    info("----\n");
+}
+*/
+
+static inline void put_to_pool(struct line *line) {
+    /* reset the string */
+    STRING_SIZE(line->data) = 0;
+
+    pool_lock();
+    VEC_PUSH(line_pool, &line);
+#ifndef NDEBUG
+    if (VEC_SIZE(line_pool) > pool_max_size) {
+        pool_max_size = VEC_SIZE(line_pool);
+    }
 #endif
+    pool_unlock();
+}
+
+
+static inline struct line *get_line(int fd) {
+    struct line *line;
+    shm_list_embedded_foreach(line, &lines[fd].list, list) {
+        return line;
+    }
+    return NULL;
+}
+
+static bool monitor_disconected() {
+    for (int i = 0; i < 3; ++i) {
+        if (shmbuf[i] == 0)
+            continue;
+        if (buffer_monitor_attached(shmbuf[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static volatile _Atomic int __parser_finished = 0;
+
+_Atomic bool __done[3];
+
+static inline bool all_done() {
+    for (int i = 0; i < 3; ++i) {
+        if (atomic_load_explicit(&__done[i], memory_order_acquire) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void parser_thread(void *data) {
+    (void)data;
+    size_t no_line = 0;
+    struct line *line;
+
+    for (int i = 0; i < 3; ++i) {
+        __done[i] = (shmbuf[i] == 0);
+    }
+
+    while (1) {
+        for (int i = 0; i < 3; ++i) {
+            if (shmbuf[i] == 0) {
+                continue;
+            }
+
+            while (1) {
+                list_lock();
+                line = get_line(i);
+                if (!line) {
+                    list_unlock();
+                    break;
+                }
+
+                assert(!shm_list_embedded_empty(&lines[i].list));
+                shm_list_embedded_remove(&line->list);
+                list_unlock();
+
+                assert(line);
+                //info("parse line: '%s'\n", line->data);
+                if (parse_line(i, line->data) < 0) {
+                    warn("parse line returned error\n");
+                    goto finish;
+                }
+                /* TODO: insert into pool */
+                put_to_pool(line);
+                no_line = 0;
+            }
+        }
+
+        if (++no_line > 10) {
+            _mm_pause();
+            _mm_pause();
+
+            if (no_line > 1000) {
+                if (all_done())
+                    goto finish;
+                if (monitor_disconected()) {
+                    warn("Parser thread: all disconnected, exitting...\n");
+                    goto finish;
+                }
+
+                dr_sleep(5);
+                if (no_line > 1000000) {
+                    dr_sleep(10);
+                }
+            }
+
+        }
+    }
+
+finish:
+    __parser_finished = 1;
+}
+
+
+
+struct line *create_new_line() {
+    struct line *line = malloc(sizeof *line);
+    if (!line) {
+        assert(0 && "Allocation failed");
+        abort();
+    }
+
+    STRING_INIT(line->data);
+    shm_list_embedded_init(&line->list);
+
+    return line;
+}
+
+static struct line *init_new_line(int fd) {
+    struct line *line = NULL;
+    pool_lock();
+    if (VEC_SIZE(line_pool) > 0) {
+        line = VEC_POP_TOP(line_pool);
+    }
+    pool_unlock();
+
+    if (line == NULL) {
+        line = create_new_line();
+    }
+
+    current_line[fd] = line;
+    return line;
+}
+
+static inline void finish_line(int fd) {
+    list_lock();
+    /* insert at the end */
+    shm_list_embedded_insert_after(lines[fd].list.prev, &current_line[fd]->list);
+    list_unlock();
+}
 
 static void handle_event(per_thread_t *data) {
     DR_ASSERT(data->len > 0);
     /*
-    fprintf(stderr, "---- [fd: %d, len: %ld, size: %lu\n]"
-                    "'%*s'\n",
+    info("---- [fd: %d, len: %ld, size: %lu\n]"
+                 "'%*s'\n",
             data->fd, data->len, data->size, (int)data->len, (char*)data->buf);
             */
 
     const int fd = data->fd;
     assert(fd >= 0 && fd < 3);
 
-    /* FIXME: user temporary variables, do not access via 'fd' all the time
-     * (although a good compiler could optimize this) */
-    for (ssize_t i = 0; i < data->len; ++i) {
-        if (current_line_idx[fd] >= current_line_alloc_len[fd]) {
-            current_line_alloc_len[fd] += line_alloc_size(data->len);
-            current_line[fd] =
-                realloc(current_line[fd], current_line_alloc_len[fd]);
-            assert(current_line[fd] && "Allocation failed");
-        }
+    size_t n = 0;
+    const size_t data_len = data->len;
+    struct line *line = current_line[fd];
+    /* TODO: in STRING_APPEND we check sizes of the string every iteration.
+     * Don't do that, get the allocation size of the string and fill
+     * as many characters as possible */
+    while (n < data_len) {
+        char c = ((char*)data->buf)[n++];
+        STRING_APPEND(line->data, c);
 
-        char c = ((char*)data->buf)[i];
         if (c == '\n' || c == '\0') {
-            /* temporary end */
-            assert(current_line_idx[fd] < current_line_alloc_len[fd]);
-            current_line[fd][current_line_idx[fd]] = '\0';
-            /* start new line */
-            current_line_idx[fd] = 0;
+            STRING_TOP(line->data) = '\0';
 
-#ifdef SUPPORT_MT
-            uint64_t ts = atomic_fetch_and_add(&timestamp, 1, memory_order_seq_cst);
-#else
-            uint64_t ts = ++timestamp;
-#endif
-            if (parse_line(data, ts, current_line[fd]) < 0) {
-                warn("parse_line failed");
-                return;
-            }
+            /* finish this line and start a new one */
+            finish_line(fd);
+            line = init_new_line(fd);
             continue;
         }
-
-        assert(current_line_idx[fd] < current_line_alloc_len[fd]);
-        current_line[fd][current_line_idx[fd]++] = c;
     }
-
-    return;
 }
 
 int parse_args(int argc, const char *argv[], char **exprs[3], char **names[3]) {
@@ -443,14 +633,20 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     char **exprs[3];
     char **names[3];
     for (int i = 0; i < 3; ++i) {
-        exprs[i] = dr_global_alloc(exprs_num[i] * sizeof(char *));
+        exprs[i] = malloc(exprs_num[i] * sizeof(char *));
         DR_ASSERT(exprs[i]);
-        names[i] = dr_global_alloc(exprs_num[i] * sizeof(char *));
+        names[i] = malloc(exprs_num[i] * sizeof(char *));
         DR_ASSERT(names[i]);
-        signatures[i] = dr_global_alloc(exprs_num[i] * sizeof(char *));
+        signatures[i] = malloc(exprs_num[i] * sizeof(char *));
         DR_ASSERT(signatures[i]);
-        re[i] = dr_global_alloc(exprs_num[i] * sizeof(regex_t));
+        re[i] = malloc(exprs_num[i] * sizeof(regex_t));
         DR_ASSERT(re[i]);
+
+        if (exprs_num[i] > 0) {
+            VEC_INIT(lines[i].data);
+            shm_list_embedded_init(&lines[i].list);
+            init_new_line(i);
+        }
     }
 
     int err = parse_args(argc, argv, exprs, names);
@@ -509,10 +705,30 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         }
     }
     info("done\n");
+
+    info("Creating parser thread...");
+    if (!dr_create_client_thread(parser_thread, 0)) {
+        warn("failed creating the parser thread\n");
+        abort();
+    }
+    info("done\n");
     info("Continue program\n");
 }
 
 static void event_exit(void) {
+    /* notify thread that this is the end */
+    for (int i = 0; i < 3; ++i) {
+        if (shmbuf[i] == 0)
+            continue;
+        atomic_store_explicit(&__done[i], 1, memory_order_release);
+    }
+
+    /* wait until the thread finishes */
+    while (!__parser_finished) {
+        dr_sleep(5);
+    }
+    info("Thread finished, all fine!\n");
+
     if (!drmgr_unregister_cls_field(event_thread_context_init,
                                     event_thread_context_exit, tcls_idx) ||
         !drmgr_unregister_pre_syscall_event(event_pre_syscall) ||
@@ -521,9 +737,15 @@ static void event_exit(void) {
     drmgr_exit();
 
     for (unsigned fd = 0; fd < 3; ++fd) {
+        if (shmbuf[fd] == NULL)
+            continue;
+
         info(
             "[fd %d] info: sent %lu events, busy waited on buffer %lu cycles\n",
             fd, evs[fd].id, waiting_for_buffer[fd]);
+
+        destroy_shared_buffer(shmbuf[fd]);
+
         for (int i = 0; i < (int)exprs_num[fd]; ++i) {
             regfree(&re[fd][i]);
         }
@@ -534,15 +756,13 @@ static void event_exit(void) {
         }
         free(signatures[fd]);
         free(re[fd]);
-
-        free(current_line[fd]);
-
-        if (shmbuf[fd]) {
-            destroy_shared_buffer(shmbuf[fd]);
-        }
     }
 
     free(tmpline);
+#ifndef NDEBUG
+    info("Max pool size: %lu\n", pool_max_size);
+#endif
+    /*info("Clean up done\n");*/
 }
 
 static void event_thread_context_init(void *drcontext, bool new_depth) {

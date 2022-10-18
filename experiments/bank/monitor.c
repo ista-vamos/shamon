@@ -85,7 +85,7 @@ typedef struct _EVENT_numOut EVENT_numOut;
 struct _STREAM_BankOutputEvent_in {
     shm_event head;
     union {
-        EVENT_numOut numOut;EVENT_balance balance;EVENT_depositTo depositTo;EVENT_selectedAccount selectedAccount;EVENT_depositSuccess depositSuccess;EVENT_transfer transfer;EVENT_depositFail depositFail;EVENT_transferSuccess transferSuccess;EVENT_logout logout;EVENT_withdrawFail withdrawFail;EVENT_withdraw withdraw;EVENT_withdrawSuccess withdrawSuccess;
+        EVENT_logout logout;EVENT_withdrawSuccess withdrawSuccess;EVENT_transferSuccess transferSuccess;EVENT_withdraw withdraw;EVENT_withdrawFail withdrawFail;EVENT_selectedAccount selectedAccount;EVENT_balance balance;EVENT_depositTo depositTo;EVENT_depositSuccess depositSuccess;EVENT_transfer transfer;EVENT_depositFail depositFail;EVENT_numOut numOut;
     }cases;
 };
 typedef struct _STREAM_BankOutputEvent_in STREAM_BankOutputEvent_in;
@@ -95,7 +95,7 @@ struct _STREAM_BankOutputEvent_out {
     shm_event head;
     union {
         EVENT_hole hole;
-        EVENT_numOut numOut;EVENT_balance balance;EVENT_depositTo depositTo;EVENT_selectedAccount selectedAccount;EVENT_depositSuccess depositSuccess;EVENT_transfer transfer;EVENT_depositFail depositFail;EVENT_transferSuccess transferSuccess;EVENT_logout logout;EVENT_withdrawFail withdrawFail;EVENT_withdraw withdraw;EVENT_withdrawSuccess withdrawSuccess;
+        EVENT_logout logout;EVENT_withdrawSuccess withdrawSuccess;EVENT_transferSuccess transferSuccess;EVENT_withdraw withdraw;EVENT_withdrawFail withdrawFail;EVENT_selectedAccount selectedAccount;EVENT_balance balance;EVENT_depositTo depositTo;EVENT_depositSuccess depositSuccess;EVENT_transfer transfer;EVENT_depositFail depositFail;EVENT_numOut numOut;
     }cases;
 };
 typedef struct _STREAM_BankOutputEvent_out STREAM_BankOutputEvent_out;
@@ -116,7 +116,7 @@ typedef struct _EVENT_otherIn EVENT_otherIn;
 struct _STREAM_BankInputEvent_in {
     shm_event head;
     union {
-        EVENT_numIn numIn;EVENT_otherIn otherIn;
+        EVENT_otherIn otherIn;EVENT_numIn numIn;
     }cases;
 };
 typedef struct _STREAM_BankInputEvent_in STREAM_BankInputEvent_in;
@@ -126,7 +126,7 @@ struct _STREAM_BankInputEvent_out {
     shm_event head;
     union {
         EVENT_hole hole;
-        EVENT_numIn numIn;EVENT_otherIn otherIn;
+        EVENT_otherIn otherIn;EVENT_numIn numIn;
     }cases;
 };
 typedef struct _STREAM_BankInputEvent_out STREAM_BankInputEvent_out;
@@ -178,7 +178,7 @@ typedef struct _EVENT_Clear EVENT_Clear;
 struct _STREAM_BankEvent_in {
     shm_event head;
     union {
-        EVENT_SawDeposit SawDeposit;EVENT_Clear Clear;EVENT_SawTransferFail SawTransferFail;EVENT_SawWithdraw SawWithdraw;EVENT_SawWithdrawFail SawWithdrawFail;EVENT_SawBalance SawBalance;EVENT_SawTransfer SawTransfer;
+        EVENT_SawTransferFail SawTransferFail;EVENT_SawWithdraw SawWithdraw;EVENT_SawBalance SawBalance;EVENT_SawDeposit SawDeposit;EVENT_SawWithdrawFail SawWithdrawFail;EVENT_SawTransfer SawTransfer;EVENT_Clear Clear;
     }cases;
 };
 typedef struct _STREAM_BankEvent_in STREAM_BankEvent_in;
@@ -188,7 +188,7 @@ struct _STREAM_BankEvent_out {
     shm_event head;
     union {
         EVENT_hole hole;
-        EVENT_SawDeposit SawDeposit;EVENT_Clear Clear;EVENT_SawTransferFail SawTransferFail;EVENT_SawWithdraw SawWithdraw;EVENT_SawWithdrawFail SawWithdrawFail;EVENT_SawBalance SawBalance;EVENT_SawTransfer SawTransfer;
+        EVENT_SawTransferFail SawTransferFail;EVENT_SawWithdraw SawWithdraw;EVENT_SawBalance SawBalance;EVENT_SawDeposit SawDeposit;EVENT_SawWithdrawFail SawWithdrawFail;EVENT_SawTransfer SawTransfer;EVENT_Clear Clear;
     }cases;
 };
 typedef struct _STREAM_BankEvent_out STREAM_BankEvent_out;
@@ -2233,10 +2233,10 @@ fprintf(stderr, "Seems all rules are waiting for some events that are not coming
 	return 0;
 }
 int arbiter() {
-    
-    while (!are_streams_done()) {
-        int rule_sets_match_count = 0;
-		if (current_rule_set == SWITCH_TO_RULE_SET_aligning) { 
+        
+        while (!are_streams_done()) {
+            int rule_sets_match_count = 0;
+    		if (current_rule_set == SWITCH_TO_RULE_SET_aligning) { 
 			rule_sets_match_count += RULE_SET_aligning();
 		}
 		if (current_rule_set == SWITCH_TO_RULE_SET_align_in) { 
@@ -2246,19 +2246,19 @@ int arbiter() {
 			rule_sets_match_count += RULE_SET_working();
 		}
 
-        if(rule_sets_match_count == 0) {
-            // increment counter of no consecutive matches
-            no_matches_count++;
-        } else {
-            // if there is a match reinit counter
-            no_matches_count = 0;
-        }
-        
-        if(no_matches_count == no_consecutive_matches_limit) {
-            printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\n", no_consecutive_matches_limit);
-            print_buffers_state();
-            // cleanup code
-            printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
+            if(rule_sets_match_count == 0) {
+                // increment counter of no consecutive matches
+                no_matches_count++;
+            } else {
+                // if there is a match reinit counter
+                no_matches_count = 0;
+            }
+            
+            if(no_matches_count == no_consecutive_matches_limit) {
+                printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\n", no_consecutive_matches_limit);
+                print_buffers_state();
+                // cleanup code
+                printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
  printf("in_holes: %i, out_holes: %i\n", in_holes, out_holes);
  printf("Errors found: %d\n", errors);
  fflush(stdout);
@@ -2266,12 +2266,12 @@ int arbiter() {
  destroy_intmap(&upper_bounds);
  destroy_intmap(&lower_bounds);
  
-            abort();
+                abort();
+            }
         }
+        shm_monitor_set_finished(monitor_buffer);
     }
-    shm_monitor_set_finished(monitor_buffer);
-}
-    
+        
 
 static void sig_handler(int sig) {
 	printf("signal %d caught...", sig);	shm_stream_detach(EV_SOURCE_In);
@@ -2422,13 +2422,13 @@ int main(int argc, char **argv) {
      thrd_create(&ARBITER_THREAD, arbiter, 0);
      
  
-    // monitor
-    STREAM_BankEvent_out * received_event;
-    while(true) {
-        received_event = fetch_arbiter_stream(monitor_buffer);
-        if (received_event == NULL) {
-            break;
-        }
+        // monitor
+        STREAM_BankEvent_out * received_event;
+        while(true) {
+            received_event = fetch_arbiter_stream(monitor_buffer);
+            if (received_event == NULL) {
+                break;
+            }
 
 		if (received_event->head.kind == 8) {
 

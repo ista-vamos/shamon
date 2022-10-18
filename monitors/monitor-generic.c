@@ -27,9 +27,12 @@ static inline void dump_args(shm_stream *stream, shm_event_generic *ev, const ch
             printf(", ");
         if (*o == 'S' || *o == 'L' || *o == 'M') {
 	    const char *str = shm_stream_get_str(stream, (*(uint64_t *)p));
-            printf("S[%lu, %lu]('%6s'%s)", (*(uint64_t *)p) >> 32,
+	    const size_t len = strlen(str);
+            printf("S[%lu, %lu]('%.*s%s)", (*(uint64_t *)p) >> 32,
                    (*(uint64_t *)p) & 0xffffffff,
-                   str, strlen(str) > 6 ? "..." : "");
+                   len > 6 ? 6 : (int)len,
+		   str,
+		   len > 6 ? "...'" : "'");
             p += sizeof(uint64_t);
             continue;
         }
