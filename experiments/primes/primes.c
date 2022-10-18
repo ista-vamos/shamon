@@ -102,6 +102,10 @@ long findPrime(int target)
 	return current;
 }
 
+void printPrime(size_t n, size_t p) {
+	printf("#%lu: %lu\n", n, p);
+}
+
 int main(int argc, char **argv)
 {
 	struct timespec begin, end;
@@ -169,7 +173,7 @@ int main(int argc, char **argv)
 		unsigned long count=1;
 		if(target>0)
 		{
-			printf("#1: 2\n");
+			printPrime(1, 2);
 		}
 		while(count<target)
 		{
@@ -192,7 +196,7 @@ int main(int argc, char **argv)
 				last->next=newnode;
 				last=newnode;
 				count++;
-				printf("#%lu: %lu\n", count, current);
+				printPrime(count, current);
 			}
 			current++;
 		}
