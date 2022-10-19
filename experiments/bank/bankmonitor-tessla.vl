@@ -22,48 +22,45 @@ stream type BankInputEvent
 
 stream type BankEvent
 {
-    SawBalance(account : int, balance : int);
-    SawDeposit(account : int, amount : int);
-    SawWithdraw(account : int, amount : int);
-    SawWithdrawFail(account : int, amount : int);
-    SawTransfer(from_ : int, to_ : int, amount : int);
-    SawTransferFail(from_ : int, to_ : int, amount : int);
-    Clear();
+    monbalance(account : int, balance : int);
+    deposit(account : int, amount : int);
+    monwithdraw(account : int, amount : int, success : bool);
+    montransfer(from_ : int, to_ : int, amount : int, success : bool);
+    reset();
 }
 
-event source In : BankInputEvent to autodrop(8)
-event source Out : BankOutputEvent to autodrop(8)
+event source In : BankInputEvent to autodrop(1024)
+event source Out : BankOutputEvent to autodrop(1024)
 
 globals
 $$
-    #include <stdio.h>
     #include "./compiler/cfiles/intmap.h"
-
+    intmap balances;
+    intmap upper_bounds;
+    intmap lower_bounds;
     int in_processed=0;
     int out_processed=0;
     int in_holes=0;
     int out_holes=0;
-
-    uint64_t timestamp = 0;
-
-    FILE *tessla_in;
+    int errors=0;
 $$
 
 startup
 $$
-    tessla_in = fopen("/tmp/tessla.in", "w");
-    if (tessla_in == NULL) {
-	fprintf(stderr, "Failed openning TeSSLa fifo\n");
-	abort();
-    }
+init_intmap(&balances);
+init_intmap(&upper_bounds);
+init_intmap(&lower_bounds);
 $$
 
 cleanup
 $$
 printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
 printf("in_holes: %i, out_holes: %i\n", in_holes, out_holes);
+printf("Errors found: %d\n", errors);
 fflush(stdout);
-fclose(tessla_in);
+destroy_intmap(&balances);
+destroy_intmap(&upper_bounds);
+destroy_intmap(&lower_bounds);
 $$
 
 arbiter : BankEvent
@@ -71,7 +68,7 @@ arbiter : BankEvent
     rule set aligning {
         on Out : hole(n) | where $$ true $$
         $$
-            $yield Clear();
+            $yield reset();
             ++out_holes;
             ++out_processed;
         $$
@@ -182,7 +179,7 @@ arbiter : BankEvent
 
 	on Out : 1, In: hole(n) | where $$ true $$
 	$$
-            $yield Clear();
+            $yield reset();
 	    ++in_holes;
 	    ++in_processed;
 	$$
@@ -212,7 +209,7 @@ arbiter : BankEvent
            where $$ true $$
         $$
             assert(action == 4);
-            $yield SawTransfer(from_, to_, amnt);
+            $yield montransfer(from_, to_, amnt, true);
             out_processed += 2;
             in_processed += 3;
             $switch to aligning;
@@ -233,7 +230,7 @@ arbiter : BankEvent
            where $$ true $$
         $$
             assert(action == 4);
-            $yield SawTransferFail(from_, to_, amnt);
+            $yield montransfer(from_, to_, amnt, false);
             out_processed += 2;
             in_processed += 3;
 	    $switch to aligning;
@@ -273,7 +270,7 @@ arbiter : BankEvent
            In  : numIn(t1, action) | where $$ true $$
         $$
             assert(action == 3);
-            $yield SawBalance(acc, amnt);
+            $yield monbalance(acc, amnt);
             out_processed += 2;
             ++in_processed;
             $switch to aligning;
@@ -292,7 +289,7 @@ arbiter : BankEvent
             assert(action == 1);
 	    assert(t2 == t1 + 1);
 	    assert(t3 == t2 + 1);
-            $yield SawDeposit(acc, amnt);
+            $yield deposit(acc, amnt);
             out_processed += 2;
             in_processed += 2;
             $switch to aligning;
@@ -340,7 +337,7 @@ arbiter : BankEvent
            where $$ true $$
         $$
             assert(act == 2);
-            $yield SawWithdraw(acc, amnt);
+            $yield monwithdraw(acc, amnt, true);
             out_processed += 2;
             in_processed += 2;
             $switch to aligning;
@@ -351,7 +348,7 @@ arbiter : BankEvent
            where $$ true $$
         $$
             assert(act == 2);
-            $yield SawWithdrawFail(acc, amnt);
+            $yield monwithdraw(acc, amnt, false);
             out_processed += 2;
             in_processed += 2;
             $switch to aligning;
@@ -392,52 +389,8 @@ arbiter : BankEvent
             $switch to aligning;
         $$
     }
+
 }
 
 
-
-monitor (128) {
-
-    on SawBalance(account, balance) where $$ account == 100003 $$
-    $$
-        fprintf(tessla_in, "%lu: ubound = %d\n", ++timestamp, balance);
-        fprintf(tessla_in, "%lu: lbound = %d\n", timestamp, balance);
-    $$
-
-    on SawDeposit(account, amount) where $$  account == 100003  $$
-    $$
-        fprintf(tessla_in, "%lu: change = %d\n", ++timestamp, amount);
-    $$
-
-    on SawWithdraw(account, amount) where $$  account == 100003  $$
-    $$
-        fprintf(tessla_in, "%lu: check_atleast = %d\n", ++timestamp, amount);
-        fprintf(tessla_in, "%lu: change = %d\n", ++timestamp, -amount);
-    $$
-
-    on SawWithdrawFail(account, amount) where $$ account == 100003 $$
-    $$
-       /* todo */
-    $$
-
-    on SawTransfer(from_, to_, amount) where $$  from_ == 100003 || to_ == 100003 $$
-    $$
-	if (from_ == 10003) {
-            fprintf(tessla_in, "%lu: check_atleast = %d\n", ++timestamp, amount);
-	}
-        fprintf(tessla_in, "%lu: change = %d\n", ++timestamp,
-                from_ == 10003 ? -amount : amount);
-    $$
-
-    on SawTransferFail(from_, to_, amount) where $$ from_ == 100003 $$
-    $$
-	if (amount > 0) {
-            fprintf(tessla_in, "%lu: ubound = %d\n", ++timestamp, amount - 1);
-	}
-    $$
-
-    on Clear() where $$ true $$
-    $$
-        fprintf(tessla_in, "%lu: reset\n", ++timestamp);
-    $$
-}
+monitor(128) {}

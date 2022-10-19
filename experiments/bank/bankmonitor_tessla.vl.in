@@ -22,10 +22,10 @@ stream type BankInputEvent
 
 stream type BankEvent
 {
-    balance(account : int, balance : int);
+    monbalance(account : int, balance : int);
     deposit(account : int, amount : int);
-    withdraw(account : int, amount : int, success : int);
-    transfer(from_ : int, to_ : int, amount : int, success : int);
+    monwithdraw(account : int, amount : int, success : bool);
+    montransfer(from_ : int, to_ : int, amount : int, success : bool);
     reset();
 }
 
@@ -68,7 +68,7 @@ arbiter : BankEvent
     rule set aligning {
         on Out : hole(n) | where $$ true $$
         $$
-            $yield Clear();
+            $yield reset();
             ++out_holes;
             ++out_processed;
         $$
@@ -179,7 +179,7 @@ arbiter : BankEvent
 
 	on Out : 1, In: hole(n) | where $$ true $$
 	$$
-            $yield Clear();
+            $yield reset();
 	    ++in_holes;
 	    ++in_processed;
 	$$
@@ -209,7 +209,7 @@ arbiter : BankEvent
            where $$ true $$
         $$
             assert(action == 4);
-            $yield transfer(from_, to_, amnt, true);
+            $yield montransfer(from_, to_, amnt, true);
             out_processed += 2;
             in_processed += 3;
             $switch to aligning;
@@ -230,7 +230,7 @@ arbiter : BankEvent
            where $$ true $$
         $$
             assert(action == 4);
-            $yield transfer(from_, to_, amnt, false);
+            $yield montransfer(from_, to_, amnt, false);
             out_processed += 2;
             in_processed += 3;
 	    $switch to aligning;
@@ -270,7 +270,7 @@ arbiter : BankEvent
            In  : numIn(t1, action) | where $$ true $$
         $$
             assert(action == 3);
-            $yield balance(acc, amnt);
+            $yield monbalance(acc, amnt);
             out_processed += 2;
             ++in_processed;
             $switch to aligning;
@@ -337,7 +337,7 @@ arbiter : BankEvent
            where $$ true $$
         $$
             assert(act == 2);
-            $yield withdraw(acc, amnt, true);
+            $yield monwithdraw(acc, amnt, true);
             out_processed += 2;
             in_processed += 2;
             $switch to aligning;
@@ -348,7 +348,7 @@ arbiter : BankEvent
            where $$ true $$
         $$
             assert(act == 2);
-            $yield withdrawFail(acc, amnt, false);
+            $yield monwithdraw(acc, amnt, false);
             out_processed += 2;
             in_processed += 2;
             $switch to aligning;
@@ -393,4 +393,4 @@ arbiter : BankEvent
 }
 
 
-monitor(128) use tessla(bank.tessla)
+monitor(128) {}
