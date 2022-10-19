@@ -61,7 +61,7 @@ if args.with_tessla:
 		print("ERROR: Must provide the directory path where Tessla files are located")
 		exit(1)
 	if not os.path.isdir(args.dir):
-		raise Exception("{output_dir} directory does not exist!")
+		raise Exception(f"{output_path} directory does not exist!")
 
 	update_toml(args.dir)
 
@@ -98,7 +98,7 @@ if args.with_tessla:
 			break
 	file.write(program)
 	file.close()
-
+	print("DO NOT FORGET to add target/debug/libmonitor.a to the build file of your monitor")
 else:
 
 	program = get_c_program(components, ast, streams_to_events_map, stream_types, arbiter_event_source,
