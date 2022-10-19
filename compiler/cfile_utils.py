@@ -1085,10 +1085,18 @@ def check_progress(rule_set_name, tree, existing_buffers):
 
     answer += "if (ok == 0) {\n"
 
+    buffer_to_src_idx = {}
+    for (event_source_index, (event_source, data) )in enumerate(TypeChecker.event_sources_data.items()):
+        if event_source in existing_buffers:
+            buffer_to_src_idx[event_source] = event_source_index
+        else:
+            buffer_to_src_idx[event_source] = -1
+
     for (buffer_name, desired_count) in buffers_to_peek.items():
+        src_idx = buffer_to_src_idx[buffer_name]
         answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
         answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, &e1_{buffer_name}, &i1_{buffer_name}, &e2_{buffer_name}, &i2_{buffer_name});\n"
-        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
+        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
     answer += "fprintf(stderr, \"No rule matched even though there was enough events, CYCLING WITH NO PROGRESS!\\n\");"
     answer += "abort();"
     answer += "}\n"
@@ -1097,9 +1105,10 @@ def check_progress(rule_set_name, tree, existing_buffers):
         \tRULE_SET_{rule_set_name}_nomatch_cnt = 0;"
     answer += f"\tfprintf(stderr, \"\\033[31mRule set '{rule_set_name}' cycles long time without progress\\033[0m\\n\");"
     for (buffer_name, desired_count) in buffers_to_peek.items():
+        src_idx = buffer_to_src_idx[buffer_name]
         answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
         answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, &e1_{buffer_name}, &i1_{buffer_name}, &e2_{buffer_name}, &i2_{buffer_name});\n"
-        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
+        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
     answer += "fprintf(stderr, \"Seems all rules are waiting for some events that are not coming\\n\");"
     answer += "}\n"
 
@@ -1230,21 +1239,64 @@ void print_event_name(int ev_src_index, int event_index) {"{"}
 {"}"}
     '''
 
+def get_event_name(stream_types, mapping):
+
+    def local_build_if_from_events(events) -> str:
+        answer = ""
+        for (event, data) in events.items():
+            answer += f'''
+        if (event_index == {data['index']} ) {"{"}
+            return "{event}";
+        {"}"}
+            '''
+        return answer
+
+    code = ""
+    for (event_source_index, (event_source, data) )in enumerate(TypeChecker.event_sources_data.items()):
+        output_type = stream_types[event_source][1]
+        code += f'''
+    if(ev_src_index == {event_source_index}) {"{"}
+        {local_build_if_from_events(mapping[output_type])}
+        fprintf(stderr, "No event matched! this should not happen, please report!\\n");
+        return "";
+    {"}"}
+        '''
+
+    return f'''
+const char *get_event_name(int ev_src_index, int event_index) {"{"}
+    if (event_index == -1) {"{"}
+        return "<none>";
+    {"}"}
+    
+    if (event_index == 1) {"{"}
+        return "hole";
+    {"}"}
+    
+    {code}
+    printf("Invalid event source! this should not happen, please report!\\n");
+{"}"}
+    '''
+
+
+
 
 def print_buffers_state():
-    code = ""
+    code = "int count;\n"\
+           "char **e1, **e2;\n"\
+           "size_t i1, i2;\n\n"
     for (event_source_index, (event_source, data)) in enumerate(TypeChecker.event_sources_data.items()):
         copies = data["copies"]
         if copies:
             for i in range(copies):
-                name_ev_source = event_source + str(i)
-                code += f"\tevent_index = get_event_at_head(BUFFER_{name_ev_source});\n"
-                code += f'\tprintf("{name_ev_source} -> ");\n'
-                code += f'\tprint_event_name({event_source_index}, event_index);\n'
+                buffer_name = event_source + str(i)
+                code += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
+                code += f"\tcount = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 10, (void**)&e1, &i1, (void**)&e2, &i2);\n"
+                code += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {event_source_index}, i1 + i2, count, e1, i1, e2, i2);\n"
         else:
-            code += f"\tevent_index = get_event_at_head(BUFFER_{event_source});\n"
-            code += f'\tprintf("{event_source} -> ");\n'
-            code += f'\tprint_event_name({event_source_index}, event_index);\n'
+            buffer_name = event_source
+            code += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
+            code += f"\tcount = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 10, (void**)&e1, &i1, (void**)&e2, &i2);\n"
+            code += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {event_source_index}, i1 + i2, count, e1, i1, e2, i2);\n"
     return f'''
 void print_buffers_state() {"{"}
     int event_index;

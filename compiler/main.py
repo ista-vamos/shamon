@@ -158,8 +158,23 @@ bool are_events_in_head(char* e1, size_t i1, char* e2, size_t i2, int count, siz
 	return true;
 {"}"}
 
+#define vamos_check(cond) do {{ if (!cond) {{fprintf(stderr, "Check '" #cond "'failed!\\n"); print_buffers_state(); }} }} while(0)
+#define vamos_assert(cond) do{{ if (!cond) {{fprintf(stderr, "Assert '" #cond "'failed!\\n"); print_buffers_state(); abort(); }} }} while(0)
+
+{get_event_name(stream_types, streams_to_events_map)}
+
+static inline dump_event_data(shm_event *ev, size_t ev_size) {{
+    unsigned char *data = ev;
+    fprintf(stderr, "[");
+    for (unsigned i = sizeof(*ev); i < ev_size; ++i) {{
+        fprintf(stderr, "0x%x ", data[i]);
+    }}
+    fprintf(stderr, "]");
+}}
+
+/* src_idx = -1 if unknown */
 static void
-print_buffer_prefix(shm_arbiter_buffer *b, size_t n_events, int cnt, char* e1, size_t i1, char* e2, size_t i2) {"{"}
+print_buffer_prefix(shm_arbiter_buffer *b, int src_idx, size_t n_events, int cnt, char* e1, size_t i1, char* e2, size_t i2) {"{"}
     if (cnt == 0) {{
         fprintf(stderr, " empty\\n");
         return;
@@ -169,8 +184,12 @@ print_buffer_prefix(shm_arbiter_buffer *b, size_t n_events, int cnt, char* e1, s
 	int i = 0;
 	while (i < i1) {"{"}
 	    shm_event * ev = (shm_event *) (e1);
-        fprintf(stderr, "  %d: {{id: %lu, kind: %lu}}\\n", ++n,
+        fprintf(stderr, "  %d: {{id: %5lu, kind: %3lu", ++n,
                 shm_event_id(ev), shm_event_kind(ev));
+        if (src_idx != -1)
+            fprintf(stderr, " -> %-12s", get_event_name(src_idx, shm_event_kind(ev)));
+        /*dump_event_data(ev, ev_size);*/
+        fprintf(stderr, "}}\\n");
         if (--n_events == 0)
             return;
 	    i+=1;
@@ -180,8 +199,13 @@ print_buffer_prefix(shm_arbiter_buffer *b, size_t n_events, int cnt, char* e1, s
 	i = 0;
 	while (i < i2) {"{"}
 	    shm_event * ev = (shm_event *) e2;
-        fprintf(stderr, "  %d: {{id: %lu, kind: %lu}}\\n", ++n,
+        fprintf(stderr, "  %d: {{id: %5lu, kind: %3lu", ++n,
                 shm_event_id(ev), shm_event_kind(ev));
+        if (src_idx != -1)
+            fprintf(stderr, " -> %-12s", get_event_name(src_idx, shm_event_kind(ev)));
+        /*dump_event_data(ev, ev_size);*/
+        fprintf(stderr, "}}\\n");
+
         if (--n_events == 0)
             return;
 	    i+=1;
