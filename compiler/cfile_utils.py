@@ -960,8 +960,9 @@ def monitor_code(tree, mapping, arbiter_event_source) -> str:
         possible_events = mapping[arbiter_event_source]
     else:
         possible_events = None
+
     assert (tree[0] == "monitor_def")
-    if possible_events is not None:
+    if tree[PPMONITOR_RULE_LIST] is not None:
         return f'''
         // monitor
         STREAM_{arbiter_event_source}_out * received_event;
