@@ -598,30 +598,14 @@ def arbiter_code(tree, components):
     rule_set_invocations = ""
     for name in rule_set_names:
         rule_set_invocations += f"\t\tif (current_rule_set == SWITCH_TO_RULE_SET_{name}) {'{'} \n" \
-                                f"\t\t\trule_sets_match_count += RULE_SET_{name}();\n" \
+                                f"\t\t\tRULE_SET_{name}();\n" \
                                 f"\t\t{'}'}\n"
 
     if len(rule_set_names) > 0:
         return f'''int arbiter() {"{"}
         
         while (!are_streams_done()) {"{"}
-            int rule_sets_match_count = 0;
     {rule_set_invocations}
-            if(rule_sets_match_count == 0) {"{"}
-                // increment counter of no consecutive matches
-                no_matches_count++;
-            {"}"} else {"{"}
-                // if there is a match reinit counter
-                no_matches_count = 0;
-            {"}"}
-            
-            if(no_matches_count == no_consecutive_matches_limit) {"{"}
-                printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\\n", no_consecutive_matches_limit);
-                print_buffers_state();
-                // cleanup code
-                {get_pure_c_code(components, 'cleanup')}
-                abort();
-            {"}"}
         {"}"}
         shm_monitor_set_finished(monitor_buffer);
     {"}"}
