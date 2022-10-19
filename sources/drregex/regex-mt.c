@@ -87,24 +87,33 @@ static int tcls_idx;
 /* we'll number threads from 0 up */
 static size_t thread_num = 0;
 
-static _Atomic bool  _list_lock = false;
-static _Atomic bool  _pool_lock = false;
+struct lock {
+    CACHELINE_ALIGNED _Atomic bool  locked;
+};
 
-static inline void _lock(_Atomic bool *l) {
-    while (atomic_exchange_explicit(l, true, memory_order_acquire))
+/* one lock for each fd */
+static struct lock _list_lock[3] = {
+    { .locked = false },
+    { .locked = false },
+    { .locked = false }
+};
+static struct lock _pool_lock = { .locked = false };
+
+static inline void _lock(struct lock *l) {
+    while (atomic_exchange_explicit(&l->locked, true, memory_order_acquire))
         ;
 }
 
-static inline void _unlock(_Atomic bool *l) {
-    atomic_store_explicit(l, false, memory_order_release);
+static inline void _unlock(struct lock *l) {
+    atomic_store_explicit(&l->locked, false, memory_order_release);
 }
 
-static inline void list_lock() {
-    _lock(&_list_lock);
+static inline void list_lock(int i) {
+    _lock(_list_lock + i);
 }
 
-static inline void list_unlock() {
-    _unlock(&_list_lock);
+static inline void list_unlock(int i) {
+    _unlock(_list_lock + i);
 }
 
 static inline void pool_lock() {
@@ -371,16 +380,16 @@ static void parser_thread(void *data) {
             }
 
             while (1) {
-                list_lock();
+                list_lock(i);
                 line = get_line(i);
                 if (!line) {
-                    list_unlock();
+                    list_unlock(i);
                     break;
                 }
 
                 assert(!shm_list_embedded_empty(&lines[i].list));
                 shm_list_embedded_remove(&line->list);
-                list_unlock();
+                list_unlock(i);
 
                 assert(line);
                 //info("parse line: '%s'\n", line->data);
@@ -445,10 +454,10 @@ static struct line *init_new_line(int fd) {
 }
 
 static inline void finish_line(int fd) {
-    list_lock();
+    list_lock(fd);
     /* insert at the end */
     shm_list_embedded_insert_after(lines[fd].list.prev, &current_line[fd]->list);
-    list_unlock();
+    list_unlock(fd);
 }
 
 static void handle_event(per_thread_t *data) {
