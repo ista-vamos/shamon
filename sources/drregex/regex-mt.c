@@ -66,7 +66,7 @@ struct line {
     STRING(data);
     size_t timestamp;
     shm_list_embedded list;
-};
+} __attribute__((aligned(CACHELINE_SIZE)));
 
 struct line lines[3];
 VEC(line_pool, struct line *);
