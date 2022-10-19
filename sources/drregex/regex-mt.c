@@ -115,17 +115,6 @@ static inline void pool_unlock() {
     _unlock(&_pool_lock);
 }
 
-//static _Atomic bool  _write_lock = false;
-
-static inline void write_lock() {
-    /* We have just one thread */
-    //_lock(&_write_lock);
-}
-
-static inline void write_unlock() {
-    //_unlock(&_write_lock);
-}
-
 /* The system call number of SYS_write/NtWriteFile */
 static int write_sysnum, read_sysnum;
 
@@ -207,17 +196,11 @@ static int parse_line(int fd, char *line) {
 
         size_t      waiting = 0;
         const char *o       = signatures[fd][i];
-        /** LOCKED --
-         * FIXME: we hold the lock long, first create the event locally and only
-         * then push it **/
-        write_lock();
-
         while (!(addr = buffer_start_push(shm))) {
             ++waiting_for_buffer[fd];
             if (++waiting > 5000) {
                 if (!buffer_monitor_attached(shm)) {
                     warn("buffer detached while waiting for space");
-                    write_unlock();
                     return -1;
                 }
                 waiting = 0;
@@ -297,7 +280,6 @@ static int parse_line(int fd, char *line) {
             }
         }
         buffer_finish_push(shm);
-        write_unlock();
 
         if (first_match_only)
             break;
