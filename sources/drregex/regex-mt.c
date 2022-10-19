@@ -306,7 +306,7 @@ static int parse_line(int fd, char *line) {
     return 0;
 }
 
-/*
+#ifndef NDEBUG
 static void dump_line(struct line *line) {
     printf("[%p, len %lu] ", line, STRING_SIZE(line->data));
     printf("'%.*s'\n",
@@ -324,7 +324,7 @@ static void dump_lines(int fd) {
     }
     info("----\n");
 }
-*/
+#endif /* not NDEBUG */
 
 static inline void put_to_pool(struct line *line) {
     /* clear the string */
@@ -759,8 +759,14 @@ static void event_exit(void) {
     for (int i = 0; i < 3; ++i) {
         if (shmbuf[i] == 0)
             continue;
-        assert(shm_list_embedded_empty(&lines[i].list) &&
-               "Have unprocessed lines");
+
+	if (!shm_list_embedded_empty(&lines[i].list)) {
+            if (buffer_monitor_attached(shmbuf[i])) {
+	        dump_lines(i);
+                assert(0 && "Have unprocessed lines");
+	    } /* else the monitor probably crashed and it makes
+		 sense we have unprocessed lines */
+	}
     }
 #endif
 
