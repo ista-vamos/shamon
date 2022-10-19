@@ -25,12 +25,13 @@ VAMOS_PID=$!
 
 $MONITOR < /tmp/tessla.in > tessla.out
 
+wait $VAMOS_PID
+wait $PRIMES_PID
+
 CHECKED=$(cat tessla.out | wc -l)
 ERRS=$(grep "ok = false" tessla.out | wc -l)
 
 echo "$CHECKED,$ERRS" >> tessla-$TYPE-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$PRIMES_NUM.csv
-
-wait $VAMOS_PID
-wait $PRIMES_PID
+echo "$TYPE,$SHM_BUFSIZE,$ARBITER_BUFSIZE,$PRIMES_NUM,$CHECKED,$ERRS" >> tessla-all.csv
 
 rm -f /tmp/tessla.in
