@@ -532,7 +532,8 @@ def event_sources_thread_funcs(event_sources, mapping) -> str:
         else:
             stream_out_name = stream_in_name
             perf_layer_code = f"memcpy(outevent, inevent, sizeof(STREAM_{stream_out_name}_out));"
-        answer+= f'''int PERF_LAYER_{stream_name} (shm_arbiter_buffer *buffer) {"{"}
+        answer+= f'''int PERF_LAYER_{stream_name} (void *data) {"{"}
+    shm_arbiter_buffer *buffer = (shm_arbiter_buffer *)data;
     shm_stream *stream = shm_arbiter_buffer_stream(buffer);   
     STREAM_{stream_in_name}_in *inevent;
     STREAM_{stream_out_name}_out *outevent;   
