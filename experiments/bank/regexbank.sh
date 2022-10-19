@@ -48,6 +48,7 @@ BANK_PID=$!
 echo "-- Starting interact --"
 cat /tmp/fifoB | ./interact inputs.last.txt interact.log >/tmp/fifoA &
 
+#/usr/lib/linux-intel-iotg-5.15-tools-5.15.0-1016/perf record --call-graph lbr -p $BANK_PID
 wait $MON_PID
 
 rm -f /tmp/fifo{A,B}

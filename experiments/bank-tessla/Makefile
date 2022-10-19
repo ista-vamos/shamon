@@ -11,7 +11,7 @@ all: monitor ../bank/bank ../bank/interact
 ../bank/bank:
 	make -C ../bank bank
 
-monitor:
+monitor: bankmonitor.vl.in
 	./compile.sh
 
 experiments: ../bank/interact ../bank/bank monitor

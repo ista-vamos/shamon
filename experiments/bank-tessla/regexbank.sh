@@ -27,7 +27,7 @@ python3 $BANK_DIR/inputs.py $NUM > inputs.last.txt
 
 # we can start it a bit before as it is waiting for the connection
 echo "-- Starting the monitor --"
-$MONITOR Out:regex:/bank.stdout In:regex:/bank.stdin&
+$MONITOR Out:regex:/bank.stdout In:regex:/bank.stdin > mon.stdout &
 MON_PID=$!
 
 $DRRUN -t /bank \
@@ -52,6 +52,11 @@ echo "-- Starting interact --"
 cat /tmp/fifoB | $BANK_DIR/interact inputs.last.txt interact.log >/tmp/fifoA &
 
 wait $MON_PID
+
+grep -E 'balancemismatch|balancenegative' mon.stdout
+ERRSNUM=$(grep -E 'balancemismatch|balancenegative' mon.stdout | wc -l)
+
+echo "Errors found: " $ERRSNUM
 
 rm -f /tmp/fifo{A,B}
 

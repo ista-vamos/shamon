@@ -64,17 +64,22 @@ static size_t tmpline_len;
 
 struct line {
     STRING(data);
-
+    size_t timestamp;
     shm_list_embedded list;
-};
+} __attribute__((aligned(CACHELINE_SIZE)));
 
 struct line lines[3];
-VEC(line_pool, struct line *);
+
+struct line_pool {
+    VEC(lines, struct line *);
+} __attribute__((aligned(CACHELINE_SIZE)));
+
+struct line_pool line_pool[3];
 
 static struct line *current_line[3];
 
 #ifndef NDEBUG
-static size_t pool_max_size;
+static size_t pool_max_size[3];
 #endif
 
 bool first_match_only = true;
@@ -87,43 +92,45 @@ static int tcls_idx;
 /* we'll number threads from 0 up */
 static size_t thread_num = 0;
 
-static _Atomic bool  _list_lock = false;
-static _Atomic bool  _pool_lock = false;
+struct lock {
+    CACHELINE_ALIGNED _Atomic bool  locked;
+};
 
-static inline void _lock(_Atomic bool *l) {
-    while (atomic_exchange_explicit(l, true, memory_order_acquire))
+/* one lock for each fd */
+static struct lock _list_lock[3] = {
+    { .locked = false },
+    { .locked = false },
+    { .locked = false }
+};
+static struct lock _pool_lock[3] = {
+    { .locked = false },
+    { .locked = false },
+    { .locked = false }
+};
+
+static inline void _lock(struct lock *l) {
+    while (atomic_exchange_explicit(&l->locked, true, memory_order_acquire))
         ;
 }
 
-static inline void _unlock(_Atomic bool *l) {
-    atomic_store_explicit(l, false, memory_order_release);
+static inline void _unlock(struct lock *l) {
+    atomic_store_explicit(&l->locked, false, memory_order_release);
 }
 
-static inline void list_lock() {
-    _lock(&_list_lock);
+static inline void list_lock(int i) {
+    _lock(_list_lock + i);
 }
 
-static inline void list_unlock() {
-    _unlock(&_list_lock);
+static inline void list_unlock(int i) {
+    _unlock(_list_lock + i);
 }
 
-static inline void pool_lock() {
-    _lock(&_pool_lock);
+static inline void pool_lock(int i) {
+    _lock(_pool_lock + i);
 }
 
-static inline void pool_unlock() {
-    _unlock(&_pool_lock);
-}
-
-//static _Atomic bool  _write_lock = false;
-
-static inline void write_lock() {
-    /* We have just one thread */
-    //_lock(&_write_lock);
-}
-
-static inline void write_unlock() {
-    //_unlock(&_write_lock);
+static inline void pool_unlock(int i) {
+    _unlock(_pool_lock + i);
 }
 
 /* The system call number of SYS_write/NtWriteFile */
@@ -167,13 +174,9 @@ typedef struct {
     size_t thread;
 } per_thread_t;
 
-#ifdef SUPPORT_MT
-static _Atomic uint64_t timestamp = 1;
-#else
-static uint64_t timestamp = 1;
-#endif
+static size_t timestamp = 0;
 
-static int parse_line(int fd, char *line) {
+static int parse_line(int fd, struct line *line_info) {
     assert(fd >= 0 && fd < 3);
 
     int               status;
@@ -183,6 +186,7 @@ static int parse_line(int fd, char *line) {
 
     int            num = (int)exprs_num[fd];
     struct buffer *shm = shmbuf[fd];
+    char *line = line_info->data;
 
     // info("[%d] parsing line (%p): '%s'\n", fd, line, line);
 
@@ -197,27 +201,16 @@ static int parse_line(int fd, char *line) {
             continue;
         }
 
-#ifdef SUPPORT_MT
-            uint64_t ts = atomic_fetch_and_add(&timestamp, 1, memory_order_seq_cst);
-#else
-            uint64_t ts = ++timestamp;
-#endif
         int   m = 1;
         void *addr;
 
         size_t      waiting = 0;
         const char *o       = signatures[fd][i];
-        /** LOCKED --
-         * FIXME: we hold the lock long, first create the event locally and only
-         * then push it **/
-        write_lock();
-
         while (!(addr = buffer_start_push(shm))) {
             ++waiting_for_buffer[fd];
             if (++waiting > 5000) {
                 if (!buffer_monitor_attached(shm)) {
                     warn("buffer detached while waiting for space");
-                    write_unlock();
                     return -1;
                 }
                 waiting = 0;
@@ -228,7 +221,9 @@ static int parse_line(int fd, char *line) {
         addr = buffer_partial_push(shm, addr, ev, sizeof(*ev));
         if (timestamps) {
             assert(*o == 't');
-            addr = buffer_partial_push(shm, addr, &ts, sizeof(ts));
+            addr = buffer_partial_push(shm, addr,
+                                       &line_info->timestamp,
+                                       sizeof(line_info->timestamp));
             ++o;
         }
 
@@ -297,7 +292,6 @@ static int parse_line(int fd, char *line) {
             }
         }
         buffer_finish_push(shm);
-        write_unlock();
 
         if (first_match_only)
             break;
@@ -306,7 +300,7 @@ static int parse_line(int fd, char *line) {
     return 0;
 }
 
-/*
+#ifndef NDEBUG
 static void dump_line(struct line *line) {
     printf("[%p, len %lu] ", line, STRING_SIZE(line->data));
     printf("'%.*s'\n",
@@ -324,20 +318,20 @@ static void dump_lines(int fd) {
     }
     info("----\n");
 }
-*/
+#endif /* not NDEBUG */
 
-static inline void put_to_pool(struct line *line) {
+static inline void put_to_pool(int fd, struct line *line) {
     /* clear the string */
     STRING_SIZE(line->data) = 0;
 
-    pool_lock();
-    VEC_PUSH(line_pool, &line);
+    pool_lock(fd);
+    VEC_PUSH(line_pool[fd].lines, &line);
 #ifndef NDEBUG
-    if (VEC_SIZE(line_pool) > pool_max_size) {
-        pool_max_size = VEC_SIZE(line_pool);
+    if (VEC_SIZE(line_pool[fd].lines) > pool_max_size[fd]) {
+        pool_max_size[fd] = VEC_SIZE(line_pool[fd].lines);
     }
 #endif
-    pool_unlock();
+    pool_unlock(fd);
 }
 
 
@@ -389,25 +383,25 @@ static void parser_thread(void *data) {
             }
 
             while (1) {
-                list_lock();
+                list_lock(i);
                 line = get_line(i);
                 if (!line) {
-                    list_unlock();
+                    list_unlock(i);
                     break;
                 }
 
                 assert(!shm_list_embedded_empty(&lines[i].list));
                 shm_list_embedded_remove(&line->list);
-                list_unlock();
+                list_unlock(i);
 
                 assert(line);
                 //info("parse line: '%s'\n", line->data);
-                if (parse_line(i, line->data) < 0) {
+                if (parse_line(i, line) < 0) {
                     warn("parse line returned error\n");
                     goto finish;
                 }
                 /* TODO: insert into pool */
-                put_to_pool(line);
+                put_to_pool(i, line);
                 no_line = 0;
             }
         }
@@ -446,27 +440,44 @@ struct line *create_new_line() {
     return line;
 }
 
-static struct line *init_new_line(int fd) {
+static struct line *get_line_from_pool(int fd) {
     struct line *line = NULL;
-    pool_lock();
-    if (VEC_SIZE(line_pool) > 0) {
-        line = VEC_POP_TOP(line_pool);
+    pool_lock(fd);
+    if (VEC_SIZE(line_pool[fd].lines) > 0) {
+        line = VEC_POP_TOP(line_pool[fd].lines);
     }
-    pool_unlock();
+    pool_unlock(fd);
 
+    return line;
+}
+
+#define ALLOCATED_LINES_THRESHOLD 2000
+static size_t allocated_lines[3];
+
+static struct line *init_new_line(int fd) {
+    struct line *line = get_line_from_pool(fd);
     if (line == NULL) {
-        line = create_new_line();
+        if (allocated_lines[fd] >= ALLOCATED_LINES_THRESHOLD) {
+            do {
+                line = get_line_from_pool(fd);
+            } while(line == NULL);
+        } else {
+            line = create_new_line();
+            ++allocated_lines[fd];
+        }
     }
 
+    assert(line);
     current_line[fd] = line;
     return line;
 }
 
 static inline void finish_line(int fd) {
-    list_lock();
+    current_line[fd]->timestamp = ++timestamp;
+    list_lock(fd);
     /* insert at the end */
     shm_list_embedded_insert_after(lines[fd].list.prev, &current_line[fd]->list);
-    list_unlock();
+    list_unlock(fd);
 }
 
 static void handle_event(per_thread_t *data) {
@@ -759,8 +770,14 @@ static void event_exit(void) {
     for (int i = 0; i < 3; ++i) {
         if (shmbuf[i] == 0)
             continue;
-        assert(shm_list_embedded_empty(&lines[i].list) &&
-               "Have unprocessed lines");
+
+	if (!shm_list_embedded_empty(&lines[i].list)) {
+            if (buffer_monitor_attached(shmbuf[i])) {
+	        dump_lines(i);
+                assert(0 && "Have unprocessed lines");
+	    } /* else the monitor probably crashed and it makes
+		 sense we have unprocessed lines */
+	}
     }
 #endif
 
@@ -778,7 +795,9 @@ static void event_exit(void) {
         info(
             "[fd %d] info: sent %lu events, busy waited on buffer %lu cycles\n",
             fd, evs[fd].id, waiting_for_buffer[fd]);
-
+#ifndef NDEBUG
+        info("[fd %d] info: maximum lines pool size: %lu\n", fd, pool_max_size[fd]);
+#endif
         destroy_shared_buffer(shmbuf[fd]);
 
         for (int i = 0; i < (int)exprs_num[fd]; ++i) {
@@ -791,14 +810,11 @@ static void event_exit(void) {
         }
         free(signatures[fd]);
         free(re[fd]);
+        VEC_DESTROY(line_pool[fd].lines);
     }
 
-    VEC_DESTROY(line_pool);
 
     free(tmpline);
-#ifndef NDEBUG
-    info("Max pool size: %lu\n", pool_max_size);
-#endif
     /*info("Clean up done\n");*/
 }
 
