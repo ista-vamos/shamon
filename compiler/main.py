@@ -164,14 +164,16 @@ bool are_events_in_head(char* e1, size_t i1, char* e2, size_t i2, int count, siz
 
 {get_event_name(stream_types, streams_to_events_map)}
 
-static inline dump_event_data(shm_event *ev, size_t ev_size) {{
-    unsigned char *data = ev;
+/*
+static inline void dump_event_data(shm_event *ev, size_t ev_size) {{
+    unsigned char *data = (unsigned char *)ev;
     fprintf(stderr, "[");
     for (unsigned i = sizeof(*ev); i < ev_size; ++i) {{
         fprintf(stderr, "0x%x ", data[i]);
     }}
     fprintf(stderr, "]");
 }}
+*/
 
 /* src_idx = -1 if unknown */
 static void

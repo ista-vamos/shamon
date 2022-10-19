@@ -1080,7 +1080,7 @@ def check_progress(rule_set_name, tree, existing_buffers):
     for (buffer_name, desired_count) in buffers_to_peek.items():
         src_idx = buffer_to_src_idx[buffer_name]
         answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
-        answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, &e1_{buffer_name}, &i1_{buffer_name}, &e2_{buffer_name}, &i2_{buffer_name});\n"
+        answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, (void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
         answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
     answer += f"fprintf(stderr, \"No rule in rule set '{rule_set_name}' matched even though there was enough events, CYCLING WITH NO PROGRESS!\\n\");"
     answer += "abort();"
@@ -1092,7 +1092,7 @@ def check_progress(rule_set_name, tree, existing_buffers):
     for (buffer_name, desired_count) in buffers_to_peek.items():
         src_idx = buffer_to_src_idx[buffer_name]
         answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
-        answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, &e1_{buffer_name}, &i1_{buffer_name}, &e2_{buffer_name}, &i2_{buffer_name});\n"
+        answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, (void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
         answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
     answer += "fprintf(stderr, \"Seems all rules are waiting for some events that are not coming\\n\");"
     answer += "}\n"
@@ -1267,7 +1267,7 @@ const char *get_event_name(int ev_src_index, int event_index) {"{"}
 
 def print_buffers_state():
     code = "int count;\n"\
-           "char **e1, **e2;\n"\
+           "void *e1, *e2;\n"\
            "size_t i1, i2;\n\n"
     for (event_source_index, (event_source, data)) in enumerate(TypeChecker.event_sources_data.items()):
         copies = data["copies"]
@@ -1275,7 +1275,7 @@ def print_buffers_state():
             for i in range(copies):
                 buffer_name = event_source + str(i)
                 code += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
-                code += f"\tcount = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 10, (void**)&e1, &i1, (void**)&e2, &i2);\n"
+                code += f"\tcount = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 10, &e1, &i1, &e2, &i2);\n"
                 code += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {event_source_index}, i1 + i2, count, e1, i1, e2, i2);\n"
         else:
             buffer_name = event_source
