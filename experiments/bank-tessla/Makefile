@@ -14,6 +14,14 @@ all: monitor ../bank/bank ../bank/interact
 monitor: bankmonitor.vl.in
 	./compile.sh
 
+monitor-tessla-pipe.c: bankmonitor-tessla.vl  $(VLCC)
+	$(VLCC) bankmon-pipe.vl monitor-tessla-pipe.c
+	-clang-format -i monitor-tessla-pipe.c
+
+monitor-tessla-pipe: monitor-tessla.c $(GENCC) intmap.o $(SHAMON_LIB)
+	$(GENCC) monitor-tessla-pipe.c intmap.o -lstdc++
+	mv monitor monitor-tessla
+
 experiments: ../bank/interact ../bank/bank monitor
 	./experiments.sh
 
