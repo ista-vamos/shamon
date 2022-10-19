@@ -107,7 +107,7 @@ arbiter : BankEvent
 	       } else {
 		   /* the event is incomplete, there must have been some hole,
 		      try once more */
-		   vamos_assert(in_holes > 0);
+		   vamos_assert(in_holes > 0 && "invalid balance event");
                    ++out_processed;
 		   $drop 1 from Out;
 		   $switch to aligning;
@@ -127,7 +127,7 @@ arbiter : BankEvent
 	       } else {
 		   /* the event is incomplete, there must have been some hole,
 		      try once more */
-		   vamos_assert(in_holes > 0);
+		   vamos_assert(in_holes > 0 && "invalid deposit event");
                    ++out_processed;
 		   $drop 1 from Out;
 		   $switch to aligning;
@@ -147,7 +147,7 @@ arbiter : BankEvent
 	       } else {
 		   /* the event is incomplete, there must have been some hole,
 		      try once more */
-		   vamos_assert(in_holes > 0);
+		   vamos_assert(in_holes > 0 && "invalid withdraw event");
                    ++out_processed;
 		   $drop 1 from Out;
 		   $switch to aligning;
@@ -167,7 +167,7 @@ arbiter : BankEvent
 	       } else {
 		   /* the event is incomplete, there must have been some hole,
 		      try once more */
-		   vamos_assert(in_holes > 0);
+		   vamos_assert(in_holes > 0 && "invalid transfer event");
                    ++out_processed;
 		   $drop 1 from Out;
 		   $switch to aligning;
