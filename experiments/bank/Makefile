@@ -17,7 +17,7 @@ interact: interact.c
 	$(CC) $^ $(CFLAGS) $(CPPFLAGS) -o $@ -g
 
 monitor.c: bankmonitor.vl  $(VLCC)
-	$(VLCC) bankmonitor.vl monitor.c
+	$(VLCC) bankmonitor.vl -o monitor.c
 	-clang-format -i monitor.c
 
 monitor-vamos: monitor.c $(GENCC) intmap.o $(SHAMON_LIB)
@@ -25,7 +25,7 @@ monitor-vamos: monitor.c $(GENCC) intmap.o $(SHAMON_LIB)
 	mv monitor monitor-vamos
 
 monitor-tessla.c: bankmonitor-tessla.vl  $(VLCC)
-	$(VLCC) bankmonitor-tessla.vl monitor-tessla.c
+	$(VLCC) bankmonitor-tessla.vl -o monitor-tessla.c
 	-clang-format -i monitor-tessla.c
 
 monitor-tessla: monitor-tessla.c $(GENCC) intmap.o $(SHAMON_LIB)
