@@ -158,9 +158,9 @@ bool are_events_in_head(char* e1, size_t i1, char* e2, size_t i2, int count, siz
 	return true;
 {"}"}
 
-#define vamos_check(cond) do {{ if (!cond) {{fprintf(stderr, "Check '" #cond "'failed!\\n"); print_buffers_state(); }} }} while(0)
-#define vamos_assert(cond) do{{ if (!cond) {{fprintf(stderr, "Assert '" #cond "'failed!\\n"); print_buffers_state(); __work_done = 1; }} }} while(0)
-#define vamos_hard_assert(cond) do{{ if (!cond) {{fprintf(stderr, "Assert '" #cond "'failed!\\n"); print_buffers_state(); abort(); }} }} while(0)
+#define vamos_check(cond) do {{ if (!cond) {{fprintf(stderr, "\033[31m%s:%s:%d: check '" #cond "' failed!\033[0m\\n", __FILE__, __func__, __LINE__); print_buffers_state(); }} }} while(0)
+#define vamos_assert(cond) do{{ if (!cond) {{fprintf(stderr, "\033[31m%s:%s:%d: assert '" #cond "' failed!\033[0m\\n", __FILE__, __func__, __LINE__); print_buffers_state(); __work_done = 1; }} }} while(0)
+#define vamos_hard_assert(cond) do{{ if (!cond) {{fprintf(stderr, "\033[31m%s:%s:%d: assert '" #cond "' failed!\033[0m\\n", __FILE__, __func__, __LINE__); print_buffers_state(); __work_done = 1; abort();}} }} while(0)
 
 {get_event_name(stream_types, streams_to_events_map)}
 
