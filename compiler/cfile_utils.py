@@ -1070,7 +1070,7 @@ def check_progress(rule_set_name, tree, existing_buffers):
 
     answer += "if (ok == 0) {\n"
 
-    buffer_to_src_idx = {}
+    buffer_to_src_idx = { bn : -1 for bn in existing_buffers}
     for (event_source_index, (event_source, data) )in enumerate(TypeChecker.event_sources_data.items()):
         if event_source in existing_buffers:
             buffer_to_src_idx[event_source] = event_source_index
