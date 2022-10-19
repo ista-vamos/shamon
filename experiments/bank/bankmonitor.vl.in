@@ -44,6 +44,8 @@ $$
     int out_processed=0;
     int in_holes=0;
     int out_holes=0;
+    int in_dropped=0;
+    int out_dropped=0;
     int errors=0;
 $$
 
@@ -58,6 +60,7 @@ cleanup
 $$
 printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
 printf("in_holes: %i, out_holes: %i\n", in_holes, out_holes);
+printf("in_dropped: %i, out_dropped: %i\n", in_dropped, out_dropped);
 printf("Errors found: %d\n", errors);
 fflush(stdout);
 destroy_intmap(&balances);
@@ -72,6 +75,7 @@ arbiter : BankEvent
         $$
             $yield Clear();
             ++out_holes;
+            out_dropped += n;
             ++out_processed;
         $$
 
@@ -183,11 +187,13 @@ arbiter : BankEvent
 	$$
             $yield Clear();
 	    ++in_holes;
+	    in_dropped += n;
 	    ++in_processed;
 	$$
 
         on Out : 1, In  : otherIn(tin) | where $$ true $$
 	$$
+	   ++in_processed;
 	$$
 
         on Out : done, In : 1 where $$ true $$
@@ -221,8 +227,8 @@ arbiter : BankEvent
            In  : 3 where $$ true $$
         $$
 	    /* some In event is not matching */
-	    in_processed += 2;
 	    out_processed += 2;
+	    ++in_processed;
 	    $drop 1 from In; /* drop the number */
             $switch to aligning;
         $$
@@ -242,8 +248,8 @@ arbiter : BankEvent
            In  : 3 where $$ true $$
         $$
 	    /* some In event is not matching */
-	    in_processed += 2;
 	    out_processed += 2;
+	    ++in_processed;
 	    $drop 1 from In; /* drop the number */
             $switch to aligning;
         $$
@@ -257,6 +263,8 @@ arbiter : BankEvent
         on Out : transfer(t2, f, t) |,
            In  : numIn(t0, action) | hole(n) where $$ true $$
         $$
+	    ++in_processed;
+	    ++out_processed;
 	    /* some In event is not matching */
             $switch to aligning;
         $$
@@ -265,6 +273,8 @@ arbiter : BankEvent
            In  : numIn(t0, action) otherIn(t1) | where $$ true $$
         $$
 	    /* some In event is not matching */
+	    ++out_processed;
+	    in_processed += 2;
             $switch to aligning;
         $$
 
