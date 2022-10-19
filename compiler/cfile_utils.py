@@ -1082,8 +1082,8 @@ def check_progress(rule_set_name, tree, existing_buffers):
         answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
         answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, (void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
         answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
-    answer += f"fprintf(stderr, \"No rule in rule set '{rule_set_name}' matched even though there was enough events, CYCLING WITH NO PROGRESS!\\n\");"
-    answer += "abort();"
+    answer += f"fprintf(stderr, \"No rule in rule set '{rule_set_name}' matched even though there was enough events, CYCLING WITH NO PROGRESS (exiting)!\\n\");"
+    answer += "__work_done=1; abort();"
     answer += "}\n"
 
     answer += f"if (++RULE_SET_{rule_set_name}_nomatch_cnt > 8000000) {{\
