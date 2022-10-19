@@ -13,13 +13,15 @@ class StaticCounter:
     match_expr_counter = 0
     match_expr_calls_counter = 0
 
+
 def get_pure_c_code(component, token) -> str:
     answer = ""
     if token in component.keys():
         for tree in component[token]:
-            assert(tree[0] == "startup" or tree[0] == "cleanup")
+            assert (tree[0] == "startup" or tree[0] == "cleanup")
             answer += tree[1]
     return answer
+
 
 def get_globals_code(components, mapping, stream_types) -> str:
     answer = ""
@@ -27,9 +29,10 @@ def get_globals_code(components, mapping, stream_types) -> str:
         globals = components["globals"]
         answer = f"STREAM_{TypeChecker.arbiter_output_type}_out *arbiter_outevent;\n\n"
         for tree in globals:
-            assert(tree[0] == "globals")
+            assert (tree[0] == "globals")
             answer += get_arb_rule_stmt_list_code(tree[1], mapping, {}, stream_types, TypeChecker.arbiter_output_type)
     return answer
+
 
 def declare_order_expressions():
     answer = ""
@@ -46,6 +49,7 @@ bool {buff_name}_ORDER_EXP (void *args1, void *args2) {"{"}
 '''
     return answer
 
+
 def declare_buffer_groups():
     answer = ""
 
@@ -54,6 +58,7 @@ def declare_buffer_groups():
 buffer_group BG_{buff_name};
         '''
     return answer
+
 
 def init_buffer_groups():
     answer = ""
@@ -67,6 +72,7 @@ def init_buffer_groups():
 '''
     return answer
 
+
 def get_stream_struct_fields(field_declarations):
     if field_declarations is None:
         return ""
@@ -77,10 +83,11 @@ def get_stream_struct_fields(field_declarations):
         struct_fields += f"\t{field['type']} {field['name']};\n"
     return struct_fields
 
+
 def stream_arg_structs(stream_types) -> str:
     answer = ""
     for tree in stream_types:
-        assert(tree[0] == "stream_type")
+        assert (tree[0] == "stream_type")
         if tree[2] is not None:
             struct_fields = get_stream_struct_fields(tree[2])
             answer += f'''
@@ -92,11 +99,12 @@ typedef struct  _{tree[1]}_ARGS  {tree[1]}_ARGS;
             '''
     return answer
 
+
 def events_declaration_structs(tree) -> str:
     if tree[0] == "event_list":
-        return events_declaration_structs(tree[PLIST_BASE_CASE]) + "\n"+ events_declaration_structs(tree[PLIST_TAIL])
+        return events_declaration_structs(tree[PLIST_BASE_CASE]) + "\n" + events_declaration_structs(tree[PLIST_TAIL])
     else:
-        assert(tree[0] == "event_decl")
+        assert (tree[0] == "event_decl")
         event_name = tree[PPEVENT_NAME]
         fields = []
         if tree[PPEVENT_PARAMS_LIST]:
@@ -104,7 +112,7 @@ def events_declaration_structs(tree) -> str:
         struct_fields = ""
         index = 0
         for data in fields:
-            is_last = index == len(data)-1
+            is_last = index == len(data) - 1
             if not is_last:
                 struct_fields += f"\t{data['type']} {data['name']};\n"
             else:
@@ -115,10 +123,11 @@ def events_declaration_structs(tree) -> str:
 {"}"};
 typedef struct _EVENT_{event_name} EVENT_{event_name};'''
 
+
 def stream_type_args_structs(stream_types) -> str:
     answer = ""
     for tree in stream_types:
-        assert(tree[0] == "stream_type")
+        assert (tree[0] == "stream_type")
         stream_name = tree[PPSTREAM_TYPE_NAME]
         stream_arg_fields = get_stream_struct_fields(tree[2])
         if stream_arg_fields != "":
@@ -129,6 +138,7 @@ def stream_type_args_structs(stream_types) -> str:
             '''
     return answer
 
+
 def instantiate_stream_args():
     answer = ""
     for (stream_name, data) in TypeChecker.event_sources_data.items():
@@ -137,6 +147,7 @@ def instantiate_stream_args():
             for i in range(data['copies']):
                 answer += f"STREAM_{stream_type}_ARGS *stream_args_{stream_name}_{i};\n"
     return answer
+
 
 def initialize_stream_args():
     answer = ""
@@ -152,7 +163,7 @@ def initialize_stream_args():
 
     for (event_source, data) in TypeChecker.event_sources_data.items():
         stream_args = TypeChecker.args_table[data["input_stream_type"]]
-        if len(data['input_stream_args']) :
+        if len(data['input_stream_args']):
             if data['copies']:
                 for i in range(data['copies']):
                     for stream_arg, arg_value in zip(stream_args, data["input_stream_args"]):
@@ -164,10 +175,11 @@ def initialize_stream_args():
                     answer += f"\tstream_args_{event_source}->{arg_name} = {arg_value};\n"
     return answer
 
+
 def stream_type_structs(stream_types) -> str:
     answer = ""
     for tree in stream_types:
-        assert(tree[0] == "stream_type")
+        assert (tree[0] == "stream_type")
         stream_name = tree[PPSTREAM_TYPE_NAME]
         union_events = ""
         for name in TypeChecker.stream_types_to_events[stream_name]:
@@ -197,32 +209,33 @@ typedef struct _STREAM_{stream_name}_out STREAM_{stream_name}_out;
         answer += value
     return answer
 
+
 def declare_event_sources(event_sources):
     event_srcs_names = []
     get_event_sources_names(event_sources, event_srcs_names)
     answer = ""
     for name in event_srcs_names:
         if TypeChecker.event_sources_data[name]["copies"]:
-            for  i in range(TypeChecker.event_sources_data[name]["copies"]):
+            for i in range(TypeChecker.event_sources_data[name]["copies"]):
                 answer += f"shm_stream *EV_SOURCE_{name}_{i};\n"
         else:
             answer += f"shm_stream *EV_SOURCE_{name};\n"
     return answer
 
+
 def define_signal_handlers(event_sources):
     event_srcs_names = []
     get_event_sources_names(event_sources, event_srcs_names)
-    answer = "static void sig_handler(int sig) {\n"\
+    answer = "static void sig_handler(int sig) {\n" \
              "\tprintf(\"signal %d caught...\", sig);"
     for name in event_srcs_names:
         if TypeChecker.event_sources_data[name]["copies"]:
-            for  i in range(TypeChecker.event_sources_data[name]["copies"]):
+            for i in range(TypeChecker.event_sources_data[name]["copies"]):
                 answer += f"\tshm_stream_detach(EV_SOURCE_{name}_{i});\n"
         else:
             answer += f"\tshm_stream_detach(EV_SOURCE_{name});\n"
     answer += "\t__work_done = 1;\n}"
     return answer
-
 
 
 def declare_event_sources_flags(ast):
@@ -234,6 +247,7 @@ def declare_event_sources_flags(ast):
         answer += f"bool is_{name}_done;\n"
     return answer
 
+
 def get_count_events_sources():
     total_count = 0
     for (event_source, data) in TypeChecker.event_sources_data.items():
@@ -242,6 +256,7 @@ def get_count_events_sources():
         else:
             total_count += 1
     return total_count
+
 
 def stream_type_from_ev_source(event_source):
     stream_type = event_source[3]
@@ -264,17 +279,16 @@ def events_enum_kinds(event_sources, streams_to_events_map) -> str:
         answer += "};"
     return answer
 
+
 def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
-
-
     answer = ""
     for event_source in event_sources:
-        assert(event_source[0] == "event_source")
+        assert (event_source[0] == "event_source")
         event_src_declaration = event_source[2]
-        assert(event_src_declaration[0] == 'event-decl')
+        assert (event_src_declaration[0] == 'event-decl')
         stream_name, args = get_name_with_args(event_src_declaration[1])
         copies = TypeChecker.event_sources_data[stream_name]["copies"]
-        
+
         processor_name = TypeChecker.event_sources_data[stream_name]["processor_name"]
 
         if processor_name.lower() == "forward":
@@ -283,7 +297,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             out_name = TypeChecker.stream_processors_data[processor_name]["output_type"]
 
         connection_kind = TypeChecker.event_sources_data[stream_name]["connection_kind"]
-        assert(connection_kind[0] == "conn_kind")
+        assert (connection_kind[0] == "conn_kind")
         buff_size = connection_kind[2]
         min_size_uninterrupt = None
 
@@ -323,6 +337,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
 
     return answer
 
+
 def declare_evt_srcs_threads() -> str:
     answer = ""
     for (event_source, data) in TypeChecker.event_sources_data.items():
@@ -351,6 +366,7 @@ def declare_arbiter_buffers(components, ast) -> str:
                 answer += f"shm_arbiter_buffer *BUFFER_{name}{i};\n\n"
     return answer
 
+
 def activate_threads() -> str:
     answer = ""
     for (event_source, data) in TypeChecker.event_sources_data.items():
@@ -361,7 +377,6 @@ def activate_threads() -> str:
                 answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{event_source},BUFFER_{event_source}{i});\n"
         else:
             answer += f"\tthrd_create(&THREAD_{event_source}, PERF_LAYER_{event_source},BUFFER_{event_source});\n"
-
 
     return answer
 
@@ -386,10 +401,10 @@ def process_performance_match(tree) -> str:
             return "return false;"
         else:
 
-            assert(performance_action[0] == "perf_act_forward")
+            assert (performance_action[0] == "perf_act_forward")
             return "return true;"
     else:
-        assert(tree[0] == 'perf_match2')
+        assert (tree[0] == 'perf_match2')
         return f'''if ({tree[PPPERF_MATCH_EXPRESSION]}) {"{"}
             {process_performance_match(tree[PPPERF_MATCH_TRUE_PART])}
         {"}"} else {"{"}
@@ -403,7 +418,7 @@ def build_drop_funcs_conds(tree, stream_name, mapping) -> str:
         return build_drop_funcs_conds(tree[PLIST_BASE_CASE], stream_name, mapping) \
                + build_drop_funcs_conds(tree[PLIST_TAIL], stream_name, mapping)
     else:
-        assert(tree[0] == "perf_layer_rule")
+        assert (tree[0] == "perf_layer_rule")
         event_name, _ = get_name_with_args(tree[1])
         creates_at_most = tree[2]
         if creates_at_most is not None:
@@ -417,7 +432,7 @@ def build_drop_funcs_conds(tree, stream_name, mapping) -> str:
 def build_should_keep_funcs(event_sources, mapping) -> str:
     answer = ""
     for tree in event_sources:
-        assert(tree[0] == 'event_source')
+        assert (tree[0] == 'event_source')
         ev_src_name = get_event_src_name(tree[2])
         stream_type, _ = get_name_with_args(tree[3])
 
@@ -448,21 +463,22 @@ def assign_args(event_name, args, list_expressions, level) -> str:
     expressions = []
     get_expressions(list_expressions, expressions)
     answer = ""
-    tabs = "\t"*level
+    tabs = "\t" * level
     for (arg, expr) in zip(args, expressions):
-        answer+=f"{tabs}outevent->cases.{event_name}.{arg[0]} = {expr};\n"
+        answer += f"{tabs}outevent->cases.{event_name}.{arg[0]} = {expr};\n"
     return answer
+
 
 def declare_performance_layer_args(event_case: str, mapping_in: Dict[str, Any], ids) -> str:
     to_declare_ids = []
     get_expressions(ids, to_declare_ids)
-    assert(len(to_declare_ids) == len(mapping_in['args']))
+    assert (len(to_declare_ids) == len(mapping_in['args']))
     answer = ""
     args = mapping_in['args']
     for i in range(len(to_declare_ids)):
         answer += f"{args[i][1]} {to_declare_ids[i]} = inevent->cases.{event_case}.{args[i][0]} ;\n"
     return answer
-    
+
 
 def build_switch_performance_match(tree, mapping_in, mapping_out, level) -> str:
     if tree[0] == 'perf_match1':
@@ -471,46 +487,46 @@ def build_switch_performance_match(tree, mapping_in, mapping_out, level) -> str:
             # this shouldn't happen
             return "return 1;"
         else:
-            tabs = "\t"*level
-            assert(performance_action[0] == "perf_act_forward")
+            tabs = "\t" * level
+            assert (performance_action[0] == "perf_act_forward")
             event_out_name = performance_action[PPPERF_ACTION_FORWARD_EVENT]
             return f'''
 {tabs}(outevent->head).kind = {mapping_out[performance_action[PPPERF_ACTION_FORWARD_EVENT]]["enum"]};
 {tabs}(outevent->head).id = (inevent->head).id;
-{declare_performance_layer_args(performance_action[PPPERF_ACTION_FORWARD_EVENT], 
-                                mapping_in[performance_action[PPPERF_ACTION_FORWARD_EVENT]], 
+{declare_performance_layer_args(performance_action[PPPERF_ACTION_FORWARD_EVENT],
+                                mapping_in[performance_action[PPPERF_ACTION_FORWARD_EVENT]],
                                 performance_action[PPPERF_ACTION_FORWARD_EXPRS])}
-{assign_args(event_out_name, mapping_out[performance_action[PPPERF_ACTION_FORWARD_EVENT]]["args"], 
+{assign_args(event_out_name, mapping_out[performance_action[PPPERF_ACTION_FORWARD_EVENT]]["args"],
              performance_action[PPPERF_ACTION_FORWARD_EXPRS], level)}'''
     else:
-        assert(tree[0] == 'perf_match2')
+        assert (tree[0] == 'perf_match2')
         return f'''
         if ({tree[PPPERF_MATCH_EXPRESSION]}) {"{"}
-            {build_switch_performance_match(tree[PPPERF_MATCH_TRUE_PART], mapping_in, mapping_out, level+1)}
+            {build_switch_performance_match(tree[PPPERF_MATCH_TRUE_PART], mapping_in, mapping_out, level + 1)}
         {"}"} else {"{"}
-            {build_switch_performance_match(tree[PPPERF_MATCH_FALSE_PART], mapping_in, mapping_out, level+1)}
+            {build_switch_performance_match(tree[PPPERF_MATCH_FALSE_PART], mapping_in, mapping_out, level + 1)}
         {"}"}'''
 
 
 def get_stream_switch_cases(ast, mapping_in, mapping_out, level) -> str:
-
     if ast[0] == 'perf_layer_list':
         return get_stream_switch_cases(ast[PLIST_BASE_CASE], mapping_in, mapping_out, level) \
                + get_stream_switch_cases(ast[PLIST_TAIL], mapping_in, mapping_out, level)
     else:
-        tabs = "\t"*level
-        tabs_plus1 = "\t" * (level+1)
-        assert(ast[0] == 'perf_layer_rule')
+        tabs = "\t" * level
+        tabs_plus1 = "\t" * (level + 1)
+        assert (ast[0] == 'perf_layer_rule')
         event_name, _ = get_name_with_args(ast[PPPERF_LAYER_EVENT])
         return f'''
 {tabs}case {mapping_in[event_name]["enum"]}:
-{build_switch_performance_match(ast[-1], mapping_in, mapping_out, level=level+1)}
+{build_switch_performance_match(ast[-1], mapping_in, mapping_out, level=level + 1)}
 {tabs_plus1}break;'''
+
 
 def event_sources_thread_funcs(event_sources, mapping) -> str:
     answer = ""
     for tree in event_sources:
-        assert(tree[0] == "event_source")
+        assert (tree[0] == "event_source")
         stream_name = get_event_src_name(tree[2])
         stream_in_name, args_in = get_name_with_args(tree[3])
         stream_tail = tree[-1]
@@ -532,7 +548,7 @@ def event_sources_thread_funcs(event_sources, mapping) -> str:
         else:
             stream_out_name = stream_in_name
             perf_layer_code = f"memcpy(outevent, inevent, sizeof(STREAM_{stream_out_name}_out));"
-        answer+= f'''int PERF_LAYER_{stream_name} (shm_arbiter_buffer *buffer) {"{"}
+        answer += f'''int PERF_LAYER_{stream_name} (shm_arbiter_buffer *buffer) {"{"}
     shm_stream *stream = shm_arbiter_buffer_stream(buffer);   
     STREAM_{stream_in_name}_in *inevent;
     STREAM_{stream_out_name}_out *outevent;   
@@ -543,13 +559,13 @@ def event_sources_thread_funcs(event_sources, mapping) -> str:
     {"}"}
     while(true) {"{"}
         inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_{stream_name});
-        
+
         if (inevent == NULL) {"{"}
             // no more events
             break;
         {"}"}
         outevent = shm_arbiter_buffer_write_ptr(buffer);
-        
+
         {perf_layer_code}
         shm_arbiter_buffer_write_finish(buffer);
         shm_stream_consume(stream, 1);
@@ -571,6 +587,7 @@ def declare_rule_sets(tree):
         rule_set_declarations += f"int RULE_SET_{name}();\n"
     return rule_set_declarations
 
+
 def are_buffers_empty():
     code = "\tint c = 0;\n"
     for (event_source, data) in TypeChecker.event_sources_data.items():
@@ -588,8 +605,9 @@ bool are_buffers_empty() {"{"}
 {"}"}
     '''
 
+
 def arbiter_code(tree, components):
-    assert(tree[0] == "arbiter_def")
+    assert (tree[0] == "arbiter_def")
 
     rule_set_names = []
     get_rule_set_names(tree[PPARBITER_RULE_SET_LIST], rule_set_names)
@@ -602,7 +620,7 @@ def arbiter_code(tree, components):
 
     if len(rule_set_names) > 0:
         return f'''int arbiter() {"{"}
-        
+
         while (!are_streams_done()) {"{"}
             int rule_sets_match_count = 0;
     {rule_set_invocations}
@@ -613,7 +631,7 @@ def arbiter_code(tree, components):
                 // if there is a match reinit counter
                 no_matches_count = 0;
             {"}"}
-            
+
             if(no_matches_count == no_consecutive_matches_limit) {"{"}
                 printf("******** NO RULES MATCHED FOR %d ITERATIONS, exiting program... **************\\n", no_consecutive_matches_limit);
                 print_buffers_state();
@@ -629,48 +647,50 @@ def arbiter_code(tree, components):
         return f'''int arbiter() {"{"}
 
     while (!are_streams_done()) {"{"}
-        
+
     {"}"}
     shm_monitor_set_finished(monitor_buffer);
 {"}"}
     '''
 
-def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_scan=False, context=None, current_tail=None):
+
+def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_scan=False, context=None,
+                               current_tail=None):
     # output_stream should be the output type of the event source
     if tree[0] == 'l_buff_match_exp':
         if not is_scan:
-            code_tail = rule_set_streams_condition(tree[PLIST_TAIL], mapping, stream_types, inner_code, is_scan, context, current_tail)
-            code_base = rule_set_streams_condition(tree[PLIST_BASE_CASE], mapping, stream_types, code_tail, is_scan, context, tree[PLIST_TAIL])
+            code_tail = rule_set_streams_condition(tree[PLIST_TAIL], mapping, stream_types, inner_code, is_scan,
+                                                   context, current_tail)
+            code_base = rule_set_streams_condition(tree[PLIST_BASE_CASE], mapping, stream_types, code_tail, is_scan,
+                                                   context, tree[PLIST_TAIL])
             return code_base
         else:
             return rule_set_streams_condition(tree[PLIST_BASE_CASE], mapping, stream_types, inner_code, is_scan) \
                    + rule_set_streams_condition(tree[PLIST_TAIL], mapping, stream_types, inner_code, is_scan)
     elif tree[0] == 'buff_match_exp':
         event_src_ref = tree[1]
-        assert(event_src_ref[0] == 'event_src_ref')
+        assert (event_src_ref[0] == 'event_src_ref')
         stream_name = event_src_ref[1]
-        buffer_name = stream_name[:]
         out_type = stream_types[stream_name][1]
         if event_src_ref[2] is not None:
             stream_name += f"_{str(event_src_ref[2])}"
-            buffer_name += f"{str(event_src_ref[2])}"
         if context is not None:
             if stream_name in context.keys():
                 stream_name = context[stream_name]
         if len(tree) == 3:
             if not is_scan:
                 if tree[PPBUFFER_MATCH_ARG1] == "nothing":
-                    return f'''if (check_at_least_n_events(count_{buffer_name}, 0)) {"{"}
+                    return f'''if (check_at_least_n_events(count_{stream_name}, 0)) {"{"}
                     {inner_code}
                     {"}"}'''
                 elif tree[PPBUFFER_MATCH_ARG1] == "done":
-                    return f'''if (count_{buffer_name} == 0 && is_stream_done(EV_SOURCE_{stream_name})) {"{"}
+                    return f'''if (count_{stream_name} == 0 && is_stream_done(EV_SOURCE_{stream_name})) {"{"}
                         {inner_code}
                     {"}"}
                     '''
                 else:
                     # check if there are n events
-                    return f'''if (check_at_least_n_events(count_{buffer_name}, {tree[PPBUFFER_MATCH_ARG1]})) {"{"}
+                    return f'''if (check_at_least_n_events(count_{stream_name}, {tree[PPBUFFER_MATCH_ARG1]})) {"{"}
                         {inner_code}
                     {"}"}'''
             return []
@@ -684,7 +704,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
 
             if not is_scan:
 
-                StaticCounter.calls_counter-=1
+                StaticCounter.calls_counter -= 1
                 buffer_name = event_src_ref[1]
                 if event_src_ref[2] is not None:
                     buffer_name += str(event_src_ref[2])
@@ -692,7 +712,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                 if (are_events_in_head(e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name}, 
                 count_{buffer_name}, sizeof(STREAM_{out_type}_out), TEMPARR{StaticCounter.calls_counter}, {len(event_kinds)})) {"{"}
                     {inner_code}
-                    
+
                 {"}"}'''
             else:
                 return [event_kinds]
@@ -720,7 +740,6 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                     count_choose = context[count_choose]
         else:
             count_choose = len(temp_binded_streams)
-        
 
         if order == "first":
             choose_statement = f"is_selection_successful = bg_get_first_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
@@ -737,7 +756,8 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
 
         assert len(binded_streams) == len(temp_binded_streams)
         for s in binded_streams:
-            stream_types[s] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"], TypeChecker.buffer_group_data[buffer_name]["in_stream"])
+            stream_types[s] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"],
+                               TypeChecker.buffer_group_data[buffer_name]["in_stream"])
 
         stream_type = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
 
@@ -758,8 +778,8 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                 local_get_buffer_peeks(current_tail, TypeChecker, buffer_peeks_res, existing_buffers)
                 if name in buffer_peeks_res.keys():
                     declared_streams += f"char* e1_{name}; size_t i1_{name}; char* e2_{name}; size_t i2_{name};\n" \
-                              f"int count_{name} = shm_arbiter_buffer_peek(BUFFER_{name}, {buffer_peeks_res[name]}, " \
-                              f"(void**)&e1_{name}, &i1_{name}, (void**)&e2_{name}, &i2_{name});\n"
+                                        f"int count_{name} = shm_arbiter_buffer_peek(BUFFER_{name}, {buffer_peeks_res[name]}, " \
+                                        f"(void**)&e1_{name}, &i1_{name}, (void**)&e2_{name}, &i2_{name});\n"
 
             permutation_streams_code += f'''
             {"{"}
@@ -774,7 +794,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                     '''
         return answer
     else:
-        assert(tree[0] == "buff_match_exp-args")
+        assert (tree[0] == "buff_match_exp-args")
         match_fun_name, arg1, arg2 = tree[1], tree[2], tree[3]
         assert match_fun_name in TypeChecker.match_fun_data.keys()
         if context is None:
@@ -789,12 +809,14 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         if arg2 is not None:
             new_args = []
             get_list_var_or_int(arg2, new_args)
-            for(original_arg, new_arg) in zip(TypeChecker.match_fun_data[match_fun_name]["in_args"], new_args):
+            for (original_arg, new_arg) in zip(TypeChecker.match_fun_data[match_fun_name]["in_args"], new_args):
                 if new_arg in context.keys():
                     context[original_arg] = context[new_arg]
                 else:
                     context[original_arg] = new_arg
-        return rule_set_streams_condition(TypeChecker.match_fun_data[match_fun_name]["buffer_match_expr"], mapping, stream_types, inner_code, is_scan, context, current_tail)
+        return rule_set_streams_condition(TypeChecker.match_fun_data[match_fun_name]["buffer_match_expr"], mapping,
+                                          stream_types, inner_code, is_scan, context, current_tail)
+
 
 def construct_arb_rule_outevent(mapping, output_ev_source, output_event, raw_args) -> str:
     local_args = []
@@ -805,8 +827,9 @@ def construct_arb_rule_outevent(mapping, output_ev_source, output_event, raw_arg
     arbiter_outevent->head.id = (*arbiter_counter)++;
     '''
     for (arg, outarg) in zip(local_args, mapping[output_ev_source][output_event]["args"]):
-        answer+= f"((STREAM_{output_ev_source}_out *) arbiter_outevent)->cases.{output_event}.{outarg[0]} = {arg};\n"
+        answer += f"((STREAM_{output_ev_source}_out *) arbiter_outevent)->cases.{output_event}.{outarg[0]} = {arg};\n"
     return answer
+
 
 def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
     if tree[0] == "switch":
@@ -816,18 +839,18 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
     if tree[0] == "yield":
         return f'''
         arbiter_outevent = (STREAM_{TypeChecker.arbiter_output_type}_out *)shm_monitor_buffer_write_ptr(monitor_buffer);
-         {construct_arb_rule_outevent(mapping, output_ev_source, 
+         {construct_arb_rule_outevent(mapping, output_ev_source,
                                       tree[PPARB_RULE_STMT_YIELD_EVENT], tree[PPARB_RULE_STMT_YIELD_EXPRS])}
          shm_monitor_buffer_write_finish(monitor_buffer);
         '''
     if tree[0] == "drop":
         event_source_ref = tree[PPARB_RULE_STMT_DROP_EV_SOURCE]
-        assert(event_source_ref[0] == "event_src_ref")
+        assert (event_source_ref[0] == "event_src_ref")
         event_source_name = event_source_ref[1]
         if event_source_ref[2] is not None:
             event_source_name += f"{event_source_ref[2]}"
         return f"\tshm_arbiter_buffer_drop(BUFFER_{event_source_name}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
-    assert(tree[0] == "field_access")
+    assert (tree[0] == "field_access")
     target_stream, index, field = tree[1], tree[2], tree[3]
     stream_name = target_stream
     if index is not None:
@@ -840,31 +863,33 @@ def process_code_stmt_list(tree, mapping, binded_args, stream_types, output_ev_s
     if len(tree) == 2:
         return tree[PCODE_STMT_LIST_TOKEN1]
 
-    assert(len(tree) > 1)
+    assert (len(tree) > 1)
 
     if len(tree) == 3:
-        assert(tree[PCODE_STMT_LIST_TOKEN2] == ";")
+        assert (tree[PCODE_STMT_LIST_TOKEN2] == ";")
         return process_arb_rule_stmt(tree[PCODE_STMT_LIST_TOKEN1], mapping, output_ev_source)
 
-    assert(len(tree) == 4)
+    assert (len(tree) == 4)
 
     if tree[PCODE_STMT_LIST_TOKEN3] == ";":
         return tree[PCODE_STMT_LIST_TOKEN1] + "\n" + process_arb_rule_stmt(tree[PCODE_STMT_LIST_TOKEN2], mapping,
-                                                                            output_ev_source)
+                                                                           output_ev_source)
     else:
-        assert(tree[PCODE_STMT_LIST_TOKEN2] == ";")
+        assert (tree[PCODE_STMT_LIST_TOKEN2] == ";")
         return process_arb_rule_stmt(tree[PCODE_STMT_LIST_TOKEN1], mapping, output_ev_source) \
                + "\n" + tree[PCODE_STMT_LIST_TOKEN3]
 
 
 def get_arb_rule_stmt_list_code(tree, mapping, binded_args, stream_types, output_ev_source) -> str:
     if tree[0] == 'arb_rule_stmt_l':
-        return process_code_stmt_list(tree[PLIST_BASE_CASE], mapping, binded_args, stream_types, output_ev_source) + get_arb_rule_stmt_list_code(tree[PLIST_TAIL], mapping,
-                                                                                        binded_args, stream_types,
-                                                                                        output_ev_source)
+        return process_code_stmt_list(tree[PLIST_BASE_CASE], mapping, binded_args, stream_types,
+                                      output_ev_source) + get_arb_rule_stmt_list_code(tree[PLIST_TAIL], mapping,
+                                                                                      binded_args, stream_types,
+                                                                                      output_ev_source)
     else:
-        assert(tree[0] == "ccode_statement_l")
+        assert (tree[0] == "ccode_statement_l")
         return process_code_stmt_list(tree, mapping, binded_args, stream_types, output_ev_source)
+
 
 def define_binded_args(binded_args, stream_types):
     answer = ""
@@ -884,12 +909,13 @@ def define_binded_args(binded_args, stream_types):
                   f"{arg_type} {arg} = event_for_{arg}->cases.{event}.{arg_name};\n\n"
     return answer
 
+
 def declare_arrays(scanned_kinds) -> str:
     answer = ""
     for kinds in scanned_kinds:
         s_kinds = [str(x) for x in kinds]
         answer += f"int TEMPARR{StaticCounter.declarations_counter}[] = {'{'}{','.join(s_kinds)}{'}'};\n"
-        StaticCounter.declarations_counter+=1
+        StaticCounter.declarations_counter += 1
     StaticCounter.calls_counter = StaticCounter.declarations_counter
     return answer
 
@@ -897,11 +923,11 @@ def declare_arrays(scanned_kinds) -> str:
 # monitor code
 
 def declare_monitor_args(tree, event_name, event_data, count_tabs) -> str:
-    tabs = "\t"*count_tabs
+    tabs = "\t" * count_tabs
     ids = []
     get_list_ids(tree, ids)
     args = event_data['args']
-    assert(len(ids) == len(args))
+    assert (len(ids) == len(args))
 
     answer = ""
     for i in range(len(args)):
@@ -914,14 +940,14 @@ def monitor_events_code(tree, stream_name, possible_events, count_tabs) -> str:
         return monitor_events_code(tree[PLIST_BASE_CASE], stream_name, possible_events, count_tabs) + \
                monitor_events_code(tree[PLIST_TAIL], stream_name, possible_events, count_tabs)
     else:
-        assert(tree[0] == "monitor_rule")
+        assert (tree[0] == "monitor_rule")
         event = tree[PPMONITOR_RULE_EV_NAME]
         if event.lower() == "hole":
             event = "hole"
-        tabs = "\t"*count_tabs
+        tabs = "\t" * count_tabs
         return f'''
 {tabs}if (received_event->head.kind == {possible_events[event]["index"]}) {"{"}
-{declare_monitor_args(tree[PPMONITOR_RULE_EV_ARGS], event, possible_events[event], count_tabs+1)}
+{declare_monitor_args(tree[PPMONITOR_RULE_EV_ARGS], event, possible_events[event], count_tabs + 1)}
 {tabs}  if ({tree[PPMONITOR_RULE_EXPR]}) {"{"}
 {tabs}      {tree[PPMONITOR_RULE_CODE]}
 {tabs}  {"}"}
@@ -934,7 +960,7 @@ def monitor_code(tree, mapping, arbiter_event_source) -> str:
         possible_events = mapping[arbiter_event_source]
     else:
         possible_events = None
-    assert(tree[0] == "monitor_def")
+    assert (tree[0] == "monitor_def")
     if possible_events is not None:
         return f'''
         // monitor
@@ -953,17 +979,19 @@ def monitor_code(tree, mapping, arbiter_event_source) -> str:
 // Empty Monitor  
 '''
 
+
 def process_where_condition(tree):
     if tree[0] == "l_where_expr":
         return process_where_condition(tree[1]) + process_where_condition(tree[2])
     else:
-        assert(tree[0] == "base_where_expr")
+        assert (tree[0] == "base_where_expr")
         if type(tree[1]) == str:
             return tree[1]
         else:
             field_access = tree[1]
-            assert(field_access[0] == "field_access")
+            assert (field_access[0] == "field_access")
             return process_arb_rule_stmt(field_access, None, None)
+
 
 def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
     # output_stream should be the output type of the event source
@@ -991,7 +1019,7 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
             inner_code = f'''
             {define_binded_args(binded_args, stream_types)}
             if({process_where_condition(tree[PPARB_RULE_CONDITION_CODE])}) {"{"}
-                
+
                 {get_arb_rule_stmt_list_code(tree[PPARB_RULE_STMT_LIST], mapping, binded_args, stream_types,
                                              output_ev_source)}
                 {stream_drops_code}
@@ -1011,7 +1039,7 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
             count_choose = len(binded_streams)
             buffer_name = tree[3]
             assert buffer_name in TypeChecker.buffer_group_data.keys()
-            if (choose_order is  None) or (choose_order[1] == "first"):
+            if (choose_order is None) or (choose_order[1] == "first"):
                 choose_statement = ""
                 if choose_order is None:
                     choose_statement += "// does not specifies order, we take first n even sources\n"
@@ -1022,9 +1050,9 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
 
             # TODO: get output type of event source correctly
             for stream in binded_streams:
-                stream_types[stream] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"], TypeChecker.buffer_group_data[buffer_name]["in_stream"])
+                stream_types[stream] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"],
+                                        TypeChecker.buffer_group_data[buffer_name]["in_stream"])
             inner_code = arbiter_rule_code(tree[5], mapping, stream_types, output_ev_source)
-
 
             # permute code
             permutation_code = ""
@@ -1051,7 +1079,6 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
                 {"}"}
                 '''
 
-
             return f'''
             bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
             {choose_statement}
@@ -1060,9 +1087,10 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
             {"}"}
             '''
 
+
 def buffer_peeks(tree, existing_buffers):
     answer = ""
-    buffers_to_peek = dict() # maps buffer_name to the number of elements we want to retrieve from the buffer
+    buffers_to_peek = dict()  # maps buffer_name to the number of elements we want to retrieve from the buffer
     get_buffers_and_peeks(tree, buffers_to_peek, TypeChecker, existing_buffers)
     for (buffer_name, desired_count) in buffers_to_peek.items():
         answer += f"char* e1_{buffer_name}; size_t i1_{buffer_name}; char* e2_{buffer_name}; size_t i2_{buffer_name};\n" \
@@ -1071,8 +1099,9 @@ def buffer_peeks(tree, existing_buffers):
 
     return answer
 
+
 def check_progress(rule_set_name, tree, existing_buffers):
-    buffers_to_peek = dict() # maps buffer_name to the number of elements we want to retrieve from the buffer
+    buffers_to_peek = dict()  # maps buffer_name to the number of elements we want to retrieve from the buffer
     get_buffers_and_peeks(tree, buffers_to_peek, TypeChecker, existing_buffers)
 
     answer = "_Bool ok = 1;\n"
@@ -1081,7 +1110,7 @@ def check_progress(rule_set_name, tree, existing_buffers):
         answer += f"if (count_{buffer_name} >= {desired_count}) {{"
         n += 1
     answer += "\tok = 0;\n"
-    answer += "}"*n
+    answer += "}" * n
 
     answer += "if (ok == 0) {\n"
 
@@ -1089,8 +1118,8 @@ def check_progress(rule_set_name, tree, existing_buffers):
         answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
         answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, &e1_{buffer_name}, &i1_{buffer_name}, &e2_{buffer_name}, &i2_{buffer_name});\n"
         answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
-    answer += "fprintf(stderr, \"No rule matched even though there was enough events, CYCLING WITH NO PROGRESS!\\n\");"
-    answer += "abort();"
+    answer += "fprintf(stderr, \"No rule matched even though there was enough events, NO PROGRESS!\\n\");"
+    answer += "assert(0);"
     answer += "}\n"
 
     answer += f"if (++RULE_SET_{rule_set_name}_nomatch_cnt > 8000000) {{\
@@ -1135,6 +1164,7 @@ def build_rule_set_functions(tree, mapping, stream_types, existing_buffers):
     arbiter_rule_set_list = tree[2]
     return local_explore_arb_rule_set_list(arbiter_rule_set_list)
 
+
 def destroy_all():
     answer = ""
 
@@ -1160,7 +1190,7 @@ def destroy_all():
         else:
             answer += f"\tshm_arbiter_buffer_free(BUFFER_{event_source});\n"
 
-    answer +="\tfree(arbiter_counter);\n"
+    answer += "\tfree(arbiter_counter);\n"
     answer += "\tfree(monitor_buffer);\n"
     answer += "\tfree(chosen_streams);\n"
 
@@ -1179,7 +1209,7 @@ def get_event_at_head():
 int get_event_at_head(shm_arbiter_buffer *b) {"{"}
     void * e1; size_t i1;
     void * e2; size_t i2;
-    
+
     int count = shm_arbiter_buffer_peek(b, 0, &e1, &i1, &e2, &i2);
     if (count == 0) {"{"}
         return -1;
@@ -1189,8 +1219,8 @@ int get_event_at_head(shm_arbiter_buffer *b) {"{"}
 {"}"}
     '''
 
-def print_event_name(stream_types, mapping):
 
+def print_event_name(stream_types, mapping):
     def local_build_if_from_events(events) -> str:
         answer = ""
         for (event, data) in events.items():
@@ -1203,7 +1233,7 @@ def print_event_name(stream_types, mapping):
         return answer
 
     code = ""
-    for (event_source_index, (event_source, data) )in enumerate(TypeChecker.event_sources_data.items()):
+    for (event_source_index, (event_source, data)) in enumerate(TypeChecker.event_sources_data.items()):
         output_type = stream_types[event_source][1]
         code += f'''
     if(ev_src_index == {event_source_index}) {"{"}
@@ -1219,12 +1249,12 @@ void print_event_name(int ev_src_index, int event_index) {"{"}
         printf("None\\n");
         return;
     {"}"}
-    
+
     if (event_index == 1) {"{"}
         printf("hole\\n");
         return;
     {"}"}
-    
+
     {code}
     printf("Invalid event source! this should not happen, please report!\\n");
 {"}"}
@@ -1250,7 +1280,7 @@ void print_buffers_state() {"{"}
     int event_index;
 {code}
 {"}"}    
-    
+
 '''
 
 
@@ -1265,6 +1295,7 @@ def declare_const_rule_set_names(tree):
         ans += f"const int SWITCH_TO_RULE_SET_{name} = {index};\n"
     return ans
 
+
 def declare_rule_set_counters(tree):
     assert (tree[0] == "arbiter_def")
 
@@ -1275,3 +1306,242 @@ def declare_rule_set_counters(tree):
     for (index, name) in enumerate(rule_set_names):
         ans += f"static size_t RULE_SET_{name}_nomatch_cnt = 0;\n"
     return ans
+
+
+def get_imports():
+    return f'''
+#include "shamon.h"
+#include "mmlib.h"
+#include "monitor.h"
+#include "./compiler/cfiles/compiler_utils.h"
+#include <threads.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdatomic.h>
+    '''
+
+
+def outside_main_code(components, streams_to_events_map, stream_types, ast, arbiter_event_source, existing_buffers):
+    return f'''
+struct _EVENT_hole
+{"{"}
+  uint64_t n;
+{"}"};
+typedef struct _EVENT_hole EVENT_hole;
+{stream_type_structs(components["stream_type"])}
+{stream_type_args_structs(components["stream_type"])}
+{events_enum_kinds(components["event_source"], streams_to_events_map)}
+
+{instantiate_stream_args()}
+int *arbiter_counter;
+// monitor buffer
+shm_monitor_buffer *monitor_buffer;
+
+bool is_selection_successful;
+dll_node **chosen_streams; // used in rule set for get_first/last_n
+
+// globals code
+{get_globals_code(components, streams_to_events_map, stream_types)}
+{build_should_keep_funcs(components["event_source"], streams_to_events_map)}
+
+atomic_int count_event_streams = {get_count_events_sources()};
+
+// declare event streams
+{declare_event_sources(components["event_source"])}
+
+// event sources threads
+{declare_evt_srcs_threads()}
+
+// declare arbiter thread
+thrd_t ARBITER_THREAD;
+{declare_const_rule_set_names(ast[2])}
+{declare_rule_set_counters(ast[2])}
+int current_rule_set = {get_first_const_rule_set_name(ast[2])};
+
+{declare_arbiter_buffers(components, ast)}
+
+
+// buffer groups
+{declare_order_expressions()}
+{declare_buffer_groups()}
+
+{event_sources_thread_funcs(components["event_source"], streams_to_events_map)}
+
+// variables used to debug arbiter
+long unsigned no_consecutive_matches_limit = 1UL<<35;
+int no_matches_count = 0;
+
+bool are_there_events(shm_arbiter_buffer * b) {"{"}
+  return shm_arbiter_buffer_size(b) > 0;
+{"}"}
+
+{are_buffers_empty()}
+
+static int __work_done = 0;
+/* TODO: make a keywork from this */
+void done() {{
+    __work_done = 1;
+}}
+
+static inline bool are_streams_done() {"{"}
+    assert(count_event_streams >=0);
+    return count_event_streams == 0 && are_buffers_empty() || __work_done;
+{"}"}
+
+static inline bool is_stream_done(shm_stream *s) {"{"}
+    return !shm_stream_is_ready(s);
+{"}"}
+
+
+static inline
+bool check_at_least_n_events(size_t count, size_t n) {"{"}
+    // count is the result after calling shm_arbiter_buffer_peek
+	return count >= n;
+{"}"}
+
+static
+bool are_events_in_head(char* e1, size_t i1, char* e2, size_t i2, int count, size_t ev_size, int event_kinds[], int n_events) {"{"}
+    assert(n_events > 0);
+	if (count < n_events) {"{"}
+	    return false;
+    {"}"}
+
+	int i = 0;
+	while (i < i1) {"{"}
+	    shm_event * ev = (shm_event *) (e1);
+	     if (ev->kind != event_kinds[i]) {"{"}
+	        return false;
+	    {"}"}
+        if (--n_events == 0)
+            return true;
+	    i+=1;
+	    e1 += ev_size;
+	{"}"}
+
+	i = 0;
+	while (i < i2) {"{"}
+	    shm_event * ev = (shm_event *) e2;
+	     if (ev->kind != event_kinds[i1+i]) {"{"}
+	        return false;
+	    {"}"}
+        if (--n_events == 0)
+            return true;
+	    i+=1;
+	    e2 += ev_size;
+	{"}"}
+
+	return true;
+{"}"}
+
+static void
+print_buffer_prefix(shm_arbiter_buffer *b, size_t n_events, int cnt, char* e1, size_t i1, char* e2, size_t i2) {"{"}
+    if (cnt == 0) {{
+        fprintf(stderr, " empty\\n");
+        return;
+    }}
+    const size_t ev_size = shm_arbiter_buffer_elem_size(b);
+    int n = 0;
+	int i = 0;
+	while (i < i1) {"{"}
+	    shm_event * ev = (shm_event *) (e1);
+        fprintf(stderr, "  %d: {{id: %lu, kind: %lu}}\\n", ++n,
+                shm_event_id(ev), shm_event_kind(ev));
+        if (--n_events == 0)
+            return;
+	    i+=1;
+	    e1 += ev_size;
+	{"}"}
+
+	i = 0;
+	while (i < i2) {"{"}
+	    shm_event * ev = (shm_event *) e2;
+        fprintf(stderr, "  %d: {{id: %lu, kind: %lu}}\\n", ++n,
+                shm_event_id(ev), shm_event_kind(ev));
+        if (--n_events == 0)
+            return;
+	    i+=1;
+	    e2 += ev_size;
+	{"}"}
+{"}"}
+
+
+static inline
+shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t size_event, int element_index) {"{"}
+	if (element_index < i1) {"{"}
+		return (shm_event *) (e1 + (element_index*size_event));
+	{"}"} else {"{"}
+		element_index -=i1;
+		return (shm_event *) (e2 + (element_index*size_event));
+	{"}"}
+{"}"}
+
+//arbiter outevent
+STREAM_{arbiter_event_source}_out *arbiter_outevent;
+{declare_rule_sets(ast[2])}
+
+{print_event_name(stream_types, streams_to_events_map)}
+{get_event_at_head()}
+{print_buffers_state()}
+{build_rule_set_functions(ast[2], streams_to_events_map, stream_types, existing_buffers)}
+{arbiter_code(ast[2], components)}
+
+{define_signal_handlers(components["event_source"])}
+
+static void setup_signals() {{
+    if (signal(SIGINT, sig_handler) == SIG_ERR) {{
+	perror("failed setting SIGINT handler");
+    }}
+
+    if (signal(SIGABRT, sig_handler) == SIG_ERR) {{
+	perror("failed setting SIGINT handler");
+    }}
+
+    if (signal(SIGIOT, sig_handler) == SIG_ERR) {{
+	perror("failed setting SIGINT handler");
+    }}
+
+    if (signal(SIGSEGV, sig_handler) == SIG_ERR) {{
+	perror("failed setting SIGINT handler");
+    }}
+}}
+
+    '''
+
+
+def get_c_program(components, ast, streams_to_events_map, stream_types, arbiter_event_source, existing_buffers):
+    program = f'''
+
+{get_imports()}
+
+{outside_main_code(components, streams_to_events_map, stream_types, ast, arbiter_event_source, existing_buffers)}
+int main(int argc, char **argv) {"{"}
+    setup_signals();
+
+	chosen_streams = (dll_node *) malloc({get_count_events_sources()}); // the maximum size this can have is the total number of event sources
+	arbiter_counter = malloc(sizeof(int));
+	*arbiter_counter = 10;
+	{get_pure_c_code(components, 'startup')}
+{initialize_stream_args()}
+
+{event_sources_conn_code(components['event_source'], streams_to_events_map)}
+     // activate buffers
+{activate_buffers()}
+ 	monitor_buffer = shm_monitor_buffer_create(sizeof(STREAM_{arbiter_event_source}_out), {TypeChecker.monitor_buffer_size});
+
+ 		// init buffer groups
+	{init_buffer_groups()}
+
+     // create source-events threads
+{activate_threads()}
+
+     // create arbiter thread
+     thrd_create(&ARBITER_THREAD, arbiter, 0);
+
+ {monitor_code(ast[3], streams_to_events_map, arbiter_event_source)}
+
+{destroy_all()}
+
+{get_pure_c_code(components, 'cleanup')}
+{"}"}
+'''
+    return program
