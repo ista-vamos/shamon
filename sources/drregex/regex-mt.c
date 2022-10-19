@@ -468,12 +468,12 @@ static struct line *init_new_line(int fd) {
     }
 
     assert(line);
-    line->timestamp = ++timestamp;
     current_line[fd] = line;
     return line;
 }
 
 static inline void finish_line(int fd) {
+    current_line[fd]->timestamp = ++timestamp;
     list_lock(fd);
     /* insert at the end */
     shm_list_embedded_insert_after(lines[fd].list.prev, &current_line[fd]->list);
