@@ -174,14 +174,10 @@ arbiter : BankEvent
 	       }
 	   $$
 
-        on Out : | logout(t) where $$ true $$             $$ vamos_assert(0 && "Should not happen"); $$
-        on Out : | numOut(t, n) where $$ true $$          $$ vamos_assert(0 && "Should not happen"); $$
-        on Out : | selectedAccount(t, a) where $$ true $$ $$ vamos_assert(0 && "Should not happen"); $$
-        on Out : | depositSuccess(t) where $$ true $$     $$ vamos_assert(0 && "Should not happen"); $$
-        on Out : | depositFail(t) where $$ true $$        $$ vamos_assert(0 && "Should not happen"); $$
-        on Out : | withdrawSuccess(t) where $$ true $$    $$ vamos_assert(0 && "Should not happen"); $$
-        on Out : | withdrawFail(t) where $$ true $$       $$ vamos_assert(0 && "Should not happen"); $$
-        on Out : | transferSuccess(t) where $$ true $$    $$ vamos_assert(0 && "Should not happen"); $$
+        on Out : | hole(n) where $$ true $$
+        $$
+	    $switch to aligning;
+        $$
 
 	on Out : 1, In: hole(n) | where $$ true $$
 	$$
