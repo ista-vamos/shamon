@@ -69,12 +69,17 @@ struct line {
 } __attribute__((aligned(CACHELINE_SIZE)));
 
 struct line lines[3];
-VEC(line_pool, struct line *);
+
+struct line_pool {
+    VEC(lines, struct line *);
+} __attribute__((aligned(CACHELINE_SIZE)));
+
+struct line_pool line_pool[3];
 
 static struct line *current_line[3];
 
 #ifndef NDEBUG
-static size_t pool_max_size;
+static size_t pool_max_size[3];
 #endif
 
 bool first_match_only = true;
@@ -97,7 +102,11 @@ static struct lock _list_lock[3] = {
     { .locked = false },
     { .locked = false }
 };
-static struct lock _pool_lock = { .locked = false };
+static struct lock _pool_lock[3] = {
+    { .locked = false },
+    { .locked = false },
+    { .locked = false }
+};
 
 static inline void _lock(struct lock *l) {
     while (atomic_exchange_explicit(&l->locked, true, memory_order_acquire))
@@ -116,12 +125,12 @@ static inline void list_unlock(int i) {
     _unlock(_list_lock + i);
 }
 
-static inline void pool_lock() {
-    _lock(&_pool_lock);
+static inline void pool_lock(int i) {
+    _lock(_pool_lock + i);
 }
 
-static inline void pool_unlock() {
-    _unlock(&_pool_lock);
+static inline void pool_unlock(int i) {
+    _unlock(_pool_lock + i);
 }
 
 /* The system call number of SYS_write/NtWriteFile */
@@ -311,18 +320,18 @@ static void dump_lines(int fd) {
 }
 #endif /* not NDEBUG */
 
-static inline void put_to_pool(struct line *line) {
+static inline void put_to_pool(int fd, struct line *line) {
     /* clear the string */
     STRING_SIZE(line->data) = 0;
 
-    pool_lock();
-    VEC_PUSH(line_pool, &line);
+    pool_lock(fd);
+    VEC_PUSH(line_pool[fd].lines, &line);
 #ifndef NDEBUG
-    if (VEC_SIZE(line_pool) > pool_max_size) {
-        pool_max_size = VEC_SIZE(line_pool);
+    if (VEC_SIZE(line_pool[fd].lines) > pool_max_size[fd]) {
+        pool_max_size[fd] = VEC_SIZE(line_pool[fd].lines);
     }
 #endif
-    pool_unlock();
+    pool_unlock(fd);
 }
 
 
@@ -392,7 +401,7 @@ static void parser_thread(void *data) {
                     goto finish;
                 }
                 /* TODO: insert into pool */
-                put_to_pool(line);
+                put_to_pool(i, line);
                 no_line = 0;
             }
         }
@@ -433,11 +442,11 @@ struct line *create_new_line() {
 
 static struct line *init_new_line(int fd) {
     struct line *line = NULL;
-    pool_lock();
-    if (VEC_SIZE(line_pool) > 0) {
-        line = VEC_POP_TOP(line_pool);
+    pool_lock(fd);
+    if (VEC_SIZE(line_pool[fd].lines) > 0) {
+        line = VEC_POP_TOP(line_pool[fd].lines);
     }
-    pool_unlock();
+    pool_unlock(fd);
 
     if (line == NULL) {
         line = create_new_line();
@@ -770,7 +779,9 @@ static void event_exit(void) {
         info(
             "[fd %d] info: sent %lu events, busy waited on buffer %lu cycles\n",
             fd, evs[fd].id, waiting_for_buffer[fd]);
-
+#ifndef NDEBUG
+        info("[fd %d] info: maximum lines pool size: %lu\n", fd, pool_max_size[fd]);
+#endif
         destroy_shared_buffer(shmbuf[fd]);
 
         for (int i = 0; i < (int)exprs_num[fd]; ++i) {
@@ -783,14 +794,11 @@ static void event_exit(void) {
         }
         free(signatures[fd]);
         free(re[fd]);
+        VEC_DESTROY(line_pool[fd].lines);
     }
 
-    VEC_DESTROY(line_pool);
 
     free(tmpline);
-#ifndef NDEBUG
-    info("Max pool size: %lu\n", pool_max_size);
-#endif
     /*info("Clean up done\n");*/
 }
 
