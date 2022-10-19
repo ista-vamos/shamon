@@ -29,10 +29,9 @@ java -jar tessla.jar compile-rust  <TESSLA_SPECIFICATION_FILE> --project-dir <OU
 python3 compiler/main.py -o <OUTPUT_FILE> --with-tessla <VAMOS_SPECIFICATION_FILE> --dir <OUTPUT_DIR>
 ```
 
-The compiler will update the `Cargo.toml` file and generate a Foreign Function Interface (FFI) so that the final monitor can make use of Tessla code.
+The compiler will update the `Cargo.toml` file and generate a Foreign Function Interface (FFI) so that the final monitor can make use of Tessla-generated code.
 
 3. Generate a static library by running `cargo build` inside `OUTPUT_DIR`. This will generate the file `<OUTPUT_DIR>/target/debug/libmonitor.a`, which you have to link when compiling the final monitor.
-
 
 
 
