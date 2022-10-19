@@ -440,7 +440,7 @@ struct line *create_new_line() {
     return line;
 }
 
-static struct line *init_new_line(int fd) {
+static struct line *get_line_from_pool(int fd) {
     struct line *line = NULL;
     pool_lock(fd);
     if (VEC_SIZE(line_pool[fd].lines) > 0) {
@@ -448,10 +448,26 @@ static struct line *init_new_line(int fd) {
     }
     pool_unlock(fd);
 
+    return line;
+}
+
+#define ALLOCATED_LINES_THRESHOLD 2000
+static size_t allocated_lines[3];
+
+static struct line *init_new_line(int fd) {
+    struct line *line = get_line_from_pool(fd);
     if (line == NULL) {
-        line = create_new_line();
+        if (allocated_lines[fd] >= ALLOCATED_LINES_THRESHOLD) {
+            do {
+                line = get_line_from_pool(fd);
+            } while(line == NULL);
+        } else {
+            line = create_new_line();
+            ++allocated_lines[fd];
+        }
     }
 
+    assert(line);
     line->timestamp = ++timestamp;
     current_line[fd] = line;
     return line;
