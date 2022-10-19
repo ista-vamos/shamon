@@ -345,65 +345,79 @@ static bool monitor_disconected() {
     return true;
 }
 
-static volatile _Atomic int __parsers_finished = 0;
+static volatile _Atomic int __parser_finished = 0;
 
 _Atomic bool __done[3];
 
-static inline bool is_done(int fd) {
-    return atomic_load_explicit(__done + fd, memory_order_acquire) == 1;
+static inline bool all_done() {
+    for (int i = 0; i < 3; ++i) {
+        if (atomic_load_explicit(&__done[i], memory_order_acquire) == 0) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static void parser_thread(void *data) {
-    int fd = (int)(size_t)data;
+    (void)data;
     size_t no_line = 0;
     struct line *line;
 
-    assert(shmbuf[fd] != 0);
+    for (int i = 0; i < 3; ++i) {
+        __done[i] = (shmbuf[i] == 0);
+    }
 
     while (1) {
-        /* get the current line */
-        list_lock(fd);
-        line = get_line(fd);
-        if (line) {
-            assert(!shm_list_embedded_empty(&lines[fd].list));
-            shm_list_embedded_remove(&line->list);
-            list_unlock(fd);
-
-            assert(line);
-            //info("[fd %d] parse line: '%s'\n", fd, line->data);
-            if (parse_line(fd, line) < 0) {
-                warn("parse line returned error\n");
-                goto finish;
+        for (int i = 0; i < 3; ++i) {
+            if (shmbuf[i] == 0) {
+                continue;
             }
 
-            put_to_pool(line);
-            no_line = 0;
-        } else {
-            list_unlock(fd);
+            while (1) {
+                list_lock(i);
+                line = get_line(i);
+                if (!line) {
+                    list_unlock(i);
+                    break;
+                }
+
+                assert(!shm_list_embedded_empty(&lines[i].list));
+                shm_list_embedded_remove(&line->list);
+                list_unlock(i);
+
+                assert(line);
+                //info("parse line: '%s'\n", line->data);
+                if (parse_line(i, line) < 0) {
+                    warn("parse line returned error\n");
+                    goto finish;
+                }
+                /* TODO: insert into pool */
+                put_to_pool(line);
+                no_line = 0;
+            }
         }
 
         if (++no_line > 10) {
             if (no_line > 1000) {
-                if (is_done(fd)) {
+                if (all_done())
                     goto finish;
-                }
                 if (monitor_disconected()) {
                     warn("Parser thread: all disconnected, exitting...\n");
                     goto finish;
                 }
 
                 dr_sleep(5);
-
                 if (no_line > 1000000) {
                     dr_sleep(10);
                     info("no line long time\n");
                 }
             }
+
         }
     }
 
 finish:
-    ++__parsers_finished;
+    __parser_finished = 1;
 }
 
 
@@ -694,7 +708,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
                 warn("failed waiting: %s\n", strerror(-err));
                 /* simulate the end of thread so that event_exit()
                  * does not wait for that */
-                __parsers_finished = 3;
+                __parser_finished = 1;
                 event_exit();
                 exit(1);
             }
@@ -703,31 +717,26 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     }
     info("done\n");
 
-    for (int i = 0; i < 3; ++i) {
-        if (shmbuf[i] == NULL)
-            continue;
-        info("Creating parser thread for fd %d ...", i);
-        if (!dr_create_client_thread(parser_thread, (void*)(size_t)i)) {
-            warn("failed creating the parser thread\n");
-            abort();
-        }
-        info("done\n");
+    info("Creating parser thread...");
+    if (!dr_create_client_thread(parser_thread, 0)) {
+        warn("failed creating the parser thread\n");
+        abort();
     }
+    info("done\n");
     info("Continue program\n");
 }
 
 static void event_exit(void) {
     /* notify thread that this is the end */
     for (int i = 0; i < 3; ++i) {
-        if (shmbuf[i] == 0) {
-            ++__parsers_finished;
+        if (shmbuf[i] == 0)
             continue;
-        }
         atomic_store_explicit(&__done[i], 1, memory_order_release);
     }
 
-    info("Waiting for parser threads...");
-    while (__parsers_finished < 3) {
+    info("Waiting for thread...");
+    /* wait until the thread finishes */
+    while (!__parser_finished) {
         dr_sleep(5);
     }
     info(" finished!\n");
