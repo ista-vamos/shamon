@@ -1,0 +1,450 @@
+stream type BankOutputEvent
+{
+    balance(timestamp: uint64_t, account : int);
+    depositTo(timestamp: uint64_t, account : int);
+    withdraw(timestamp: uint64_t, account: int);
+    transfer(timestamp: uint64_t, fromAccount: int, toAccount: int);
+    depositSuccess(timestamp: uint64_t);
+    depositFail(timestamp: uint64_t);
+    withdrawSuccess(timestamp: uint64_t);
+    withdrawFail(timestamp: uint64_t);
+    transferSuccess(timestamp: uint64_t);
+    selectedAccount(timestamp: uint64_t, account: int);
+    logout(timestamp: uint64_t);
+    numOut(timestamp: uint64_t, num: int);
+}
+
+stream type BankInputEvent
+{
+    numIn(timestamp: uint64_t, num : int);
+    otherIn(timestamp: uint64_t);
+}
+
+stream type BankEvent
+{
+    SawBalance(account : int, balance : int);
+    SawDeposit(account : int, amount : int);
+    SawWithdraw(account : int, amount : int, success : int);
+    SawTransfer(from_ : int, to_ : int, amount : int, success : int);
+    Reset();
+}
+
+event source In : BankInputEvent to autodrop(@BUFSIZE)
+event source Out : BankOutputEvent to autodrop(@BUFSIZE)
+
+globals
+$$
+    #include "./compiler/cfiles/intmap.h"
+    int in_processed=0;
+    int out_processed=0;
+    int in_holes=0;
+    int out_holes=0;
+    int in_dropped=0;
+    int out_dropped=0;
+
+extern void  mondeposit(void *mon, int acc, int amnt, long timestamp);
+extern void  monwithdraw(void *mon, int acc, int amnt, int success,
+                         long timestamp);
+extern void  montransfer(void *mon, int src, int tgt, int amnt, int success,
+                         long timestamp);
+extern void  monbalance(void *mon, int acc, int amnt, long timestamp);
+extern void  monreset(void *mon, long timestamp);
+extern void *moninit();
+$$
+
+startup
+$$
+void *monstate     = moninit();
+long  curtimestamp = 1;
+$$
+
+cleanup
+$$
+printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
+printf("in_holes: %i, out_holes: %i\n", in_holes, out_holes);
+printf("in_dropped: %i, out_dropped: %i\n", in_dropped, out_dropped);
+fflush(stdout);
+$$
+
+arbiter : BankEvent
+{
+    rule set aligning {
+        on Out : hole(n) | where $$ true $$
+        $$
+            $yield Reset();
+            ++out_holes;
+            out_dropped += n;
+            ++out_processed;
+        $$
+
+        on Out : | balance(t, a)     where $$ true $$  $$ $switch to align_in; $$
+        on Out : | depositTo(t, a)   where $$ true $$  $$ $switch to align_in; $$
+        on Out : | withdraw(t, a)    where $$ true $$  $$ $switch to align_in; $$
+        on Out : | transfer(t, s, r) where $$ true $$  $$ $switch to align_in; $$
+
+        on Out : 1 where $$ true $$
+	$$
+	    ++out_processed;
+	    $drop 1 from Out;
+	$$
+
+        on Out : done where $$ true $$ $$ $switch to align_in; $$
+    }
+
+    rule set align_in {
+        on Out : | balance(tout, account),
+           In  : | numIn(tin, action)
+	   where $$ true $$
+	   $$
+	       if (tout == tin + 1) {
+		   vamos_assert(action == 3);
+	           $switch to working;
+	       } else if (tout > tin) {
+                   ++in_processed;
+		   $drop 1 from In;
+	       } else {
+		   /* the event is incomplete, there must have been some hole,
+		      try once more */
+		   vamos_assert(in_holes > 0 && "invalid balance event");
+                   ++out_processed;
+		   $drop 1 from Out;
+		   $switch to aligning;
+	       }
+	   $$
+
+        on Out : | depositTo(tout, account),
+           In  : | numIn(tin, action)
+	   where $$ true $$
+	   $$
+	       if (tout == tin + 1) {
+		   vamos_assert(action == 1);
+	           $switch to working;
+	       } else if (tout > tin) {
+                   ++in_processed;
+		   $drop 1 from In;
+	       } else {
+		   /* the event is incomplete, there must have been some hole,
+		      try once more */
+		   vamos_assert(in_holes > 0 && "invalid deposit event");
+                   ++out_processed;
+		   $drop 1 from Out;
+		   $switch to aligning;
+	       }
+	   $$
+
+        on Out : | withdraw(tout, account),
+           In  : | numIn(tin, action)
+	   where $$ true $$
+	   $$
+	       if (tout == tin + 1) {
+		   vamos_assert(action == 2);
+	           $switch to working;
+	       } else if (tout > tin) {
+                   ++in_processed;
+		   $drop 1 from In;
+	       } else {
+		   /* the event is incomplete, there must have been some hole,
+		      try once more */
+		   vamos_assert(in_holes > 0 && "invalid withdraw event");
+                   ++out_processed;
+		   $drop 1 from Out;
+		   $switch to aligning;
+	       }
+	   $$
+
+        on Out : | transfer(tout, from_, to_),
+           In  : | numIn(tin, action)
+	   where $$ true $$
+	   $$
+	       if (tout == tin + 4) {
+		   vamos_assert(action == 4);
+	           $switch to working;
+	       } else if (tout > tin + 4) {
+                   ++in_processed;
+		   $drop 1 from In;
+	       } else {
+		   /* the event is incomplete, there must have been some hole,
+		      try once more */
+		   vamos_assert(in_holes > 0 && "invalid transfer event");
+                   ++out_processed;
+		   $drop 1 from Out;
+		   $switch to aligning;
+	       }
+	   $$
+
+        on Out : | logout(t) where $$ true $$             $$ vamos_assert(0 && "Should not happen"); $$
+        on Out : | numOut(t, n) where $$ true $$          $$ vamos_assert(0 && "Should not happen"); $$
+        on Out : | selectedAccount(t, a) where $$ true $$ $$ vamos_assert(0 && "Should not happen"); $$
+        on Out : | depositSuccess(t) where $$ true $$     $$ vamos_assert(0 && "Should not happen"); $$
+        on Out : | depositFail(t) where $$ true $$        $$ vamos_assert(0 && "Should not happen"); $$
+        on Out : | withdrawSuccess(t) where $$ true $$    $$ vamos_assert(0 && "Should not happen"); $$
+        on Out : | withdrawFail(t) where $$ true $$       $$ vamos_assert(0 && "Should not happen"); $$
+        on Out : | transferSuccess(t) where $$ true $$    $$ vamos_assert(0 && "Should not happen"); $$
+
+	on Out : 1, In: hole(n) | where $$ true $$
+	$$
+            $yield Reset();
+	    ++in_holes;
+	    in_dropped += n;
+	    ++in_processed;
+	$$
+
+        on Out : 1, In  : otherIn(tin) | where $$ true $$
+	$$
+	   ++in_processed;
+	$$
+
+        on Out : done, In : 1 where $$ true $$
+        $$
+            ++in_processed;
+            $drop 1 from In;
+        $$
+
+        on Out : 1, In : done where $$ true $$
+        $$
+            ++out_processed;
+            $drop 1 from Out;
+	    $switch to aligning;
+        $$
+    }
+
+    rule set working
+    {
+        on Out : transfer(t2, from_, to_) transferSuccess(t4) |,
+           In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) |
+           where $$ true $$
+        $$
+            vamos_assert(action == 4);
+            $yield SawTransfer(from_, to_, amnt, 1);
+            out_processed += 2;
+            in_processed += 3;
+            $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) transferSuccess(t4) |,
+           In  : 3 where $$ true $$
+        $$
+	    /* some In event is not matching */
+	    out_processed += 2;
+	    ++in_processed;
+	    $drop 1 from In; /* drop the number */
+            $switch to aligning;
+        $$
+
+        on Out : transfer(t2, from_, to_) selectedAccount(t4, acc) |,
+           In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) |
+           where $$ true $$
+        $$
+            vamos_assert(action == 4);
+            $yield SawTransfer(from_, to_, amnt, 0);
+            out_processed += 2;
+            in_processed += 3;
+	    $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) selectedAccount(t4, acc) |,
+           In  : 3 where $$ true $$
+        $$
+	    /* some In event is not matching */
+	    out_processed += 2;
+	    ++in_processed;
+	    $drop 1 from In; /* drop the number */
+            $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) | hole(n) where $$ true $$
+        $$
+	    ++out_processed;
+            $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) |,
+           In  : numIn(t0, action) | hole(n) where $$ true $$
+        $$
+	    ++in_processed;
+	    ++out_processed;
+	    /* some In event is not matching */
+            $switch to aligning;
+        $$
+
+        on Out : transfer(t2, f, t) |,
+           In  : numIn(t0, action) otherIn(t1) | where $$ true $$
+        $$
+	    /* some In event is not matching */
+	    ++out_processed;
+	    in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : balance(t2, acc) numOut(t3, amnt) |,
+           In  : numIn(t1, action) | where $$ true $$
+        $$
+            vamos_assert(action == 3);
+            $yield SawBalance(acc, amnt);
+            out_processed += 2;
+            ++in_processed;
+            $switch to aligning;
+        $$
+
+        on Out : balance(t2, acc) | hole(n) where $$ true $$
+        $$
+            ++out_processed;
+            $switch to aligning;
+        $$
+
+        on Out : depositTo(t2, acc) depositSuccess(t4) |,
+           In  : numIn(t1, action) numIn(t3, amnt) |
+           where $$ true $$
+        $$
+            vamos_assert(action == 1);
+	    vamos_assert(t2 == t1 + 1);
+	    vamos_assert(t3 == t2 + 1);
+            $yield SawDeposit(acc, amnt);
+            out_processed += 2;
+            in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : depositTo(t2, acc) depositFail(t4) |,
+           In  : numIn(t1, action) numIn(t3, amnt) |
+           where $$ true $$
+        $$
+            vamos_assert(action == 1);
+            out_processed += 2;
+            in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : depositTo(t2, acc) depositFail(t4) |,
+           In  : numIn(t1, action) | hole(n)
+           where $$ true $$
+        $$
+            vamos_assert(action == 1);
+            out_processed += 2;
+            in_processed += 1;
+            $switch to aligning;
+        $$
+
+        on Out : depositTo(t2, acc) depositSuccess(t4) |,
+           In  : numIn(t1, action) | hole(n)
+           where $$ true $$
+        $$
+            vamos_assert(action == 1);
+            out_processed += 2;
+            in_processed += 1;
+            $switch to aligning;
+        $$
+
+        on Out : depositTo(t2, acc) | hole(n)
+           where $$ true $$
+        $$
+            ++out_processed;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) withdrawSuccess(t4) |,
+           In  : numIn(t1, act) numIn(t3, amnt) |
+           where $$ true $$
+        $$
+            vamos_assert(act == 2);
+            $yield SawWithdraw(acc, amnt, 1);
+            out_processed += 2;
+            in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) withdrawFail(t4) |,
+           In  : numIn(t1, act) numIn(t3, amnt) |
+           where $$ true $$
+        $$
+            vamos_assert(act == 2);
+            $yield SawWithdraw(acc, amnt, 0);
+            out_processed += 2;
+            in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) withdrawSuccess(t4) |,
+           In  : numIn(t1, act) | hole(n)
+           where $$ true $$
+        $$
+            out_processed += 2;
+            in_processed += 1;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) withdrawFail(t4) |,
+           In  : numIn(t1, act) | hole(n)
+           where $$ true $$
+        $$
+            out_processed += 2;
+            in_processed += 1;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) withdrawFail(t4) |,
+           In  : numIn(t1, act) otherIn(t3) |
+           where $$ true $$
+        $$
+            vamos_assert(act == 2);
+            out_processed += 2;
+            in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) withdrawSuccess(t4) |,
+           In  : numIn(t1, act) otherIn(t3) |
+           where $$ true $$
+        $$
+            out_processed += 2;
+            in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) | hole(n)
+           where $$ true $$
+        $$
+            ++out_processed;
+            $switch to aligning;
+        $$
+
+	on In : done where $$ true $$
+	$$
+            $switch to aligning;
+	$$
+
+        on Out : done where $$ true $$
+        $$
+            $switch to aligning;
+        $$
+    }
+}
+
+
+monitor(128)
+{
+    on Reset() where $$ true $$
+    $$
+        monreset(monstate, curtimestamp++);
+    $$
+
+    on SawBalance(account, balance) where $$ true $$
+    $$
+        monbalance(monstate, account, balance, curtimestamp++);
+    $$
+
+    on SawDeposit(account, amount) where $$ true $$
+    $$
+        mondeposit(monstate, account, amount, curtimestamp++);
+    $$
+
+    on SawWithdraw(account, amount, success) where $$ true $$
+    $$
+        monwithdraw(monstate, account, amount, success, curtimestamp++);
+    $$
+
+    on SawTransfer(from_, to_, amount, success) where $$ true $$
+    $$
+        montransfer(monstate, from_, to_, amount, success, curtimestamp++);
+    $$
+}
