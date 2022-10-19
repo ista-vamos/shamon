@@ -64,7 +64,7 @@ static size_t tmpline_len;
 
 struct line {
     STRING(data);
-
+    size_t timestamp;
     shm_list_embedded list;
 };
 
@@ -165,13 +165,9 @@ typedef struct {
     size_t thread;
 } per_thread_t;
 
-#ifdef SUPPORT_MT
-static _Atomic uint64_t timestamp = 1;
-#else
-static uint64_t timestamp = 1;
-#endif
+static size_t timestamp = 0;
 
-static int parse_line(int fd, char *line) {
+static int parse_line(int fd, struct line *line_info) {
     assert(fd >= 0 && fd < 3);
 
     int               status;
@@ -181,6 +177,7 @@ static int parse_line(int fd, char *line) {
 
     int            num = (int)exprs_num[fd];
     struct buffer *shm = shmbuf[fd];
+    char *line = line_info->data;
 
     // info("[%d] parsing line (%p): '%s'\n", fd, line, line);
 
@@ -195,11 +192,6 @@ static int parse_line(int fd, char *line) {
             continue;
         }
 
-#ifdef SUPPORT_MT
-            uint64_t ts = atomic_fetch_and_add(&timestamp, 1, memory_order_seq_cst);
-#else
-            uint64_t ts = ++timestamp;
-#endif
         int   m = 1;
         void *addr;
 
@@ -220,7 +212,9 @@ static int parse_line(int fd, char *line) {
         addr = buffer_partial_push(shm, addr, ev, sizeof(*ev));
         if (timestamps) {
             assert(*o == 't');
-            addr = buffer_partial_push(shm, addr, &ts, sizeof(ts));
+            addr = buffer_partial_push(shm, addr,
+                                       &line_info->timestamp,
+                                       sizeof(line_info->timestamp));
             ++o;
         }
 
@@ -393,7 +387,7 @@ static void parser_thread(void *data) {
 
                 assert(line);
                 //info("parse line: '%s'\n", line->data);
-                if (parse_line(i, line->data) < 0) {
+                if (parse_line(i, line) < 0) {
                     warn("parse line returned error\n");
                     goto finish;
                 }
@@ -449,6 +443,7 @@ static struct line *init_new_line(int fd) {
         line = create_new_line();
     }
 
+    line->timestamp = ++timestamp;
     current_line[fd] = line;
     return line;
 }
