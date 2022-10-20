@@ -1117,10 +1117,18 @@ def check_progress(rule_set_name, tree, existing_buffers):
 
     buffer_to_src_idx = {}
     for (event_source_index, (event_source, data) )in enumerate(TypeChecker.event_sources_data.items()):
-        if event_source in existing_buffers:
-            buffer_to_src_idx[event_source] = event_source_index
+        if data["copies"] is None:
+            if event_source in existing_buffers:
+                buffer_to_src_idx[event_source] = event_source_index
+            else:
+                buffer_to_src_idx[event_source] = -1
         else:
-            buffer_to_src_idx[event_source] = -1
+            for i in range(data["copies"]):
+                event_source_name = f"{event_source}{i}"
+                if event_source_name in existing_buffers:
+                    buffer_to_src_idx[event_source_name ] = event_source_index
+                else:
+                    buffer_to_src_idx[event_source_name ] = -1
 
     for (buffer_name, desired_count) in buffers_to_peek.items():
         src_idx = buffer_to_src_idx[buffer_name]
