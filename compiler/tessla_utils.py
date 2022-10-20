@@ -156,7 +156,7 @@ def tessla_monitor_code(tree, mapping, arbiter_event_source) -> str:
     '''
 
 
-def declare_extern_functions(ast, mapping, arbiter_event_source):
+def declare_extern_functions(mapping, arbiter_event_source):
     if arbiter_event_source in mapping.keys():
         possible_events = mapping[arbiter_event_source]
     else:
@@ -164,17 +164,17 @@ def declare_extern_functions(ast, mapping, arbiter_event_source):
         print("WARNING: monitor does not define a stream type (Empty monitor generated)")
 
     if possible_events is not None:
-        answer = "extern void* moninit();"
+        answer = "extern void* moninit();\n"
         for (event_name, data) in possible_events.items():
             if event_name.lower() != "hole":
                 args = ""
-                for (arg, _) in data["args"]:
+                for (arg, datatype) in data["args"]:
                     if args != "":
                         args += ", "
-                    args += f"{arg}"
+                    args += f"{datatype} {arg}"
                 if len(args) > 0:
                     args += ", "
-                answer += f"extern void RUST_FFI_{event_name}(monstate, {args}curtimestamp++);"
+                answer += f"extern void RUST_FFI_{event_name}(void *monstate, {args}long curtimestamp);\n"
         return answer
     else:
         print("No possible events for monitor!")
@@ -185,6 +185,7 @@ def get_c_interface(components,ast, streams_to_events_map, stream_types,
 {get_imports()}
 
 {outside_main_code(components, streams_to_events_map, stream_types, ast, arbiter_event_source, existing_buffers)}
+{declare_extern_functions(streams_to_events_map, arbiter_event_source)}
 int main(int argc, char **argv) {"{"}
     setup_signals();
 
