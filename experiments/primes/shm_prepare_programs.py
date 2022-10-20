@@ -1,12 +1,11 @@
 import os
 from subprocess import run, TimeoutExpired
 
-arbiter_buffer_sizes = [1024]
+arbiter_buffer_sizes = [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
 # generate shamon programs with different buffer size
 for buffsize in arbiter_buffer_sizes:
-    for param2 in [0.05, 0.1, 0.2, 0.25, 0.4, 0.5]:
         file = open("./primes.txt.in", "r")
-        outfile = open(f"./programs/primes_{buffsize}_{param2}.txt", "w")
+        outfile = open(f"./programs/primes_{buffsize}.txt", "w")
         for line in file:
             if "@BUFSIZE" in line:
                 line = line.replace("@BUFSIZE", str(buffsize))
@@ -22,8 +21,7 @@ COMPILER_PATH = f"{CURRENT_PATH}/../../compiler/main.py"
 
 # compile shamon programs into c programs
 for buffsize in arbiter_buffer_sizes:
-    for param2 in [0.05, 0.1, 0.2, 0.25, 0.4, 0.5]:
-        run(["python3", COMPILER_PATH, f"{CURRENT_PATH}/programs/primes_{buffsize}_{param2}.txt", f"{CURRENT_PATH}/programs/monitor_{buffsize}_{param2}.c"], check=True)
+    run(["python3", COMPILER_PATH, f"{CURRENT_PATH}/programs/primes_{buffsize}.txt", f"{CURRENT_PATH}/programs/monitor_{buffsize}.c"], check=True)
 
 
 # generate oject file of intmap
@@ -31,12 +29,11 @@ run(["g++", "-c", f"{CURRENT_PATH}/../../compiler/cfiles/intmap.cpp" ], check=Tr
 
 COMPILE_SCRIPT= f"{CURRENT_PATH}/../../gen/compile_primes6.sh"
 for buffsize in arbiter_buffer_sizes:
-    for param2 in [0.05, 0.1, 0.2, 0.25, 0.4, 0.5]:
         # compile c files
-        run(["bash", COMPILE_SCRIPT, f"{CURRENT_PATH}/programs/monitor_{buffsize}_{param2}.c" ], check=True)
+        run(["bash", COMPILE_SCRIPT, f"{CURRENT_PATH}/programs/monitor_{buffsize}.c" ], check=True)
 
         # move exec to /primes/programs
-        run(["mv", "monitor", f"{CURRENT_PATH}/programs/monitor{buffsize}_{param2}" ], check=True)
+        run(["mv", "monitor", f"{CURRENT_PATH}/programs/monitor{buffsize}" ], check=True)
 
 
 # compile empty monitor

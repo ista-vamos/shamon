@@ -37,7 +37,7 @@ VAMOS_PID=$!
 ./runprimes-dr-bad.sh $1 >primes.stdout.log 2>primes.stderr.log&
 PRIMES_PID=$!
 
-$MONITOR < /tmp/tessla.in > tessla.out
+/bin/time -f '%e' -o tessla.time $MONITOR < /tmp/tessla.in > tessla.out
 
 wait $VAMOS_PID
 wait $PRIMES_PID
@@ -48,5 +48,6 @@ ERRS=$(grep "ok = false" tessla.out | wc -l)
 echo "Checked $CHECKED"
 echo "Found errors" $ERRS
 grep 'Errors generated' primes.stderr.log
+echo "Monitor time $(cat tessla.time)"
 
 rm -f /tmp/tessla.in

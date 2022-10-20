@@ -82,7 +82,8 @@ class Command:
         return self
 
     def run(self, stdin=None):
-        log(f"Command: {self} [stdin: {stdin}, stdout: {self.stdout}, stderr: {self.stderr}")
+        #log(f"Command: {self} [stdin: {stdin}, stdout: {self.stdout}, stderr: {self.stderr}")
+        log(f"Command: {self}")
         self.proc = Popen(self.cmd, stdin=stdin,
                           stdout=self.stdout, stderr=self.stderr)
         return self
@@ -96,7 +97,7 @@ class Command:
                 self.out += out
             self.err = err
         if self.parser:
-            self.parser.parse(self.out, err)
+            self.parser.parse(self.out, self.err)
         self.retval = self.proc.returncode
         return self.retval
 

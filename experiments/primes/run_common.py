@@ -22,10 +22,8 @@ csvlogf = None
 # check if the monitor is a known monitor
 # assert basename(PRIMESMONSRC) in ("mmprimes.c", "monprimes.c", "mmprimes-man.c"), PRIMESMONSRC
 
-def open_csvlog(BS, ABS, NUM, WAIT_DROP):
-    method = "gen" if PRIMESMONSRC.endswith("mmprimes.c") else "man"
-    assert method in ("gen", "man"), method
-    csv_name = f"times-{method}-{BS}-{ABS}-{NUM}-{WAIT_DROP}.csv"
+def open_csvlog(BS, ABS, NUM):
+    csv_name = f"times-{BS}-{ABS}-{NUM}.csv"
 
     global csvlogf
     csvlogf = open(csv_name, 'a')
@@ -45,18 +43,18 @@ class ParseTime:
         self.dbg = dbg
         self.withwaitstats = withwaitstats
 
-    def parse(self, out, err):
+    def parse(self, out, serr):
         if self.dbg:
             if out:
                for line in out.splitlines():
                    lprint(f"[stdout] {line}", color=GRAY, end='')
-            if err:
-                for line in err.splitlines():
+            if serr:
+                for line in serr.splitlines():
                     lprint(f"[stderr] {line}", color=GRAY, end='')
 
         foundwaited = False
         foundtime = False
-        for line in err.splitlines():
+        for line in serr.splitlines():
             if line.startswith(b'time:'):
                 parts = line.split()
                 assert len(parts) == 3, parts
@@ -78,7 +76,7 @@ class ParseTime:
             (self.withwaitstats and not foundwaited):
             log("-- ERROR while parsing stderr for time info:",
                 "-- ERROR while parsing time (see log.txt)--")
-            log(err)
+            log(serr)
             raise RuntimeError("Did not find right values")
 
     def report(self, key, msg=None):
@@ -105,24 +103,22 @@ class ParseStats:
         self.il, self.ir = None, None
         self.pl, self.pr = None, None
         self.errs = None
+        self.time = None
 
-    def parse(self, out, err):
-        if PRIMESMONSRC.endswith("mmprimes.c"):
-            return self._parse_mon_gen(out, err)
-        return self._parse_mon_man(out, err)
+    def parse(self, out, serr):
+        return self._parse_mon_man(out, serr)
 
     def report(self, key, msg=None):
-        if PRIMESMONSRC.endswith("mmprimes.c"):
-            return self._report_mon_gen(key, msg)
         return self._report_mon_man(key, msg)
 
-    def _parse_mon_man(self, out, err):
+    def _parse_mon_man(self, out, serr):
         errs = 0
         dl, dr = None, None
         pl, pr = None, None
         sl, sr = None, None
         total_left = None
         total_right = None
+        tm = None
         for line in out.splitlines():
             if line.startswith(b'ERROR'):
                 errs += 1
@@ -149,7 +145,16 @@ class ParseStats:
             lprint("Did not find right values", color=RED)
             
             raise RuntimeError("Did not find right values")
-        self.stats.append(((dl, sl, pl),(dr, sr, pr), errs))
+
+        for line in serr.splitlines():
+            if b'Wall-time' in line:
+                parts = line.split()
+                assert len(parts) == 2
+                tm = float(parts[1])
+        if tm is None:
+            raise RuntimeError("No time found in stderr")
+
+        self.stats.append(((dl, sl, pl),(dr, sr, pr), errs, tm))
         self.dl, self.dr = dl, dr
         self.sl, self.sr = sl, sr
         self.pl, self.pr = pl, pr
@@ -182,39 +187,9 @@ Right processed: {pr / N}
 Detected errors: {errs/ N}""",
                color=GREEN)
 
-        for Sl, Sr, E in self.stats:
-            csvlog.writerow([key, *Sl, *Sr, E])
-        return ((dl, sl, pl),(dr, sr, pr), errs)
-
-
-    def _parse_mon_gen(self, out, err):
-        errs = 0
-        for line in out.splitlines():
-            if line.startswith(b'ERROR'):
-                errs += 1
-            if line.startswith(b'Done!'):
-                parts = line.split()
-                assert len(parts) == 25, parts
-                dl, dr = int(parts[2]), int(parts[5])
-                sl, sr = int(parts[8]), int(parts[11])
-                il, ir = int(parts[14]), int(parts[17])
-                pl, pr = int(parts[20]), int(parts[23])
-                if dl + sl + il + pl == 0 or dl + sl + il + pl != dr + sr + ir + pr:
-                    log(out)
-                    lprint(f"left: {(dl, sl, il, pl)}, right: {(dr, sr, ir, pr)}, errs: {errs}")
-                    lprint("Did not find right values", color=RED)
-                #print((dl, sl, il, pl),(dr, sr, ir, pr), errs)
-                self.stats.append(((dl, sl, il, pl),(dr, sr, ir, pr), errs))
-                self.dl, self.dr = dl, dr
-                self.sl, self.sr = sl, sr
-                self.il, self.ir = il, ir
-                self.pl, self.pr = pl, pr
-                self.errs = errs
-                return
-
-        lprint("-- ERROR while parsing monitor output (see log.txt)--")
-        log(out)
-        raise RuntimeError("Did not find right values")
+        for Sl, Sr, E, T in self.stats:
+            csvlog.writerow([key, *Sl, *Sr, E, T])
+        return ((dl, sl, pl),(dr, sr, pr), errs, T)
 
     def _report_mon_gen(self, key, msg=None):
         assert self.stats
