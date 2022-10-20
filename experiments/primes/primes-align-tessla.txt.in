@@ -151,7 +151,7 @@ monitor
     on NumberPair(i, n, m) where $$ true $$
     $$
         fprintf(tessla_in, "%lu: primes1 = (%d, %d)\n", ++timestamp, i, n);
-        fprintf(tessla_in, "%lu: primes2 = (%d, %d)\n", timestamp, i, n);
+        fprintf(tessla_in, "%lu: primes2 = (%d, %d)\n", timestamp, i, m);
     $$
 }
 
