@@ -57,7 +57,6 @@ def get_rust_file_args(args):
             args_result +=","
             value_args += ","
 
-        print(arg, datatype)
         if datatype.strip() == "bool":
             args_result += f"{arg}: c_int"
             value_args += f"Value({arg} == 1)"
@@ -116,11 +115,12 @@ def rust_monitor_events_code(possible_events):
                 if args != "":
                     args+=", "
                 args += f"{arg}"
-
+            if len(args) > 0:
+                args+=","
             answer += f'''
-        if (received_event->head.kind == {data["enum"]}) {"{"}
+        if (received_event->head.kind == {data["index"]}) {"{"}
             {received_events_declare_args(event_name, data)}
-            RUST_FFI_{event_name}(monstate, {args}, curtimestamp++);
+            RUST_FFI_{event_name}(monstate, curtimestamp++);
         {"}"}
 
 '''
