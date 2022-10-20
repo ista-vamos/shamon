@@ -38,7 +38,8 @@ for SHM_BUFSIZE in 8; do
 
                 #for PRIMES_NUM in 10000 20000 30000 40000; do
                 for PRIMES_NUM in 40000; do
-                	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "fwd"
+                	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "forward"
+                	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "forward" "bad"
                 done
 
 		SPEC_IN="primes-align-tessla.txt.in"
@@ -54,8 +55,8 @@ for SHM_BUFSIZE in 8; do
                 #for PRIMES_NUM in 10000 20000 30000 40000; do
                 for PRIMES_NUM in 40000; do
                 	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "align"
+                	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "align" "bad"
                 done
-
 
 
 		SPEC_IN="primes-align2-tessla.txt.in"
@@ -68,7 +69,8 @@ for SHM_BUFSIZE in 8; do
 
                 # for PRIMES_NUM in 10000 20000 30000 40000; do
                 for PRIMES_NUM in 40000; do
-                	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "align2"
+                	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "alternate"
+                	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "alternate" "bad"
                 done
 
 

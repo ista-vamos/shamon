@@ -107,6 +107,7 @@ int main(int argc, char **argv)
 	struct timespec begin, end;
 	int target=10;
 	int errnum=0;
+	size_t generated_errs = 0;
 	if(argc>1)
 	{
 		if (argc > 2) {
@@ -125,12 +126,18 @@ int main(int argc, char **argv)
 
 	unsigned long current=3;
 	unsigned long count=1;
+	int curerrnum = 0;
 	if(target>0)
 	{
-		printf("#1: 2\n");
+		if (++curerrnum == errnum) {
+			printf("#1: 666\n");
+			++generated_errs;
+			curerrnum = 0;
+		} else {
+		    printf("#1: 2\n");
+		}
 	}
-	const int segmentsz = (target/(errnum + 1)) + 1;
-	int segment = segmentsz;
+
 	while(count<target)
 	{
 		intlist *curnode=&base;
@@ -152,11 +159,12 @@ int main(int argc, char **argv)
 			last->next=newnode;
 			last=newnode;
 			count++;
-			if (count == segment) {
+			if (++curerrnum == errnum) {
 				printf("#%lu: %lu\n", count, current+1);
-				segment += segmentsz;
+				++generated_errs;
+				curerrnum = 0;
 			} else {
-				printf("#%lu: %lu\n", count, current);
+			    printf("#%lu: %lu\n", count, current);
 			}
 		}
 		current++;
@@ -170,5 +178,6 @@ int main(int argc, char **argv)
         long nanoseconds = end.tv_nsec - begin.tv_nsec;
         double elapsed = seconds + nanoseconds*1e-9;
         fprintf(stderr, "time: %lf seconds.\n", elapsed);
+	fprintf(stderr, "Errors generated: %lu\n", generated_errs);
 }
 

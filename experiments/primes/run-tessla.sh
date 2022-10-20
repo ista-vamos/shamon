@@ -8,6 +8,7 @@ SHM_BUFSIZE=$1
 ARBITER_BUFSIZE=$2
 PRIMES_NUM=$3
 TYPE=$4
+BAD=$5
 
 VAMOS=$DIR/vamos-tessla
 MONITOR=$DIR/tessla-monitor
@@ -16,7 +17,11 @@ rm -f /tmp/tessla.in /dev/shm/primes*
 mkfifo /tmp/tessla.in
 
 
-./runprimes-dr.sh $PRIMES_NUM >primes.stdout.log 2>primes.stderr.log&
+if [ "$BAD" = "bad" ]; then
+	./runprimes-dr-bad.sh $PRIMES_NUM >primes.stdout.log 2>primes.stderr.log&
+else
+	./runprimes-dr.sh $PRIMES_NUM >primes.stdout.log 2>primes.stderr.log&
+fi
 PRIMES_PID=$!
 
 # vamos feeds data to /tmp/tessla.in
@@ -30,8 +35,11 @@ wait $PRIMES_PID
 
 CHECKED=$(cat tessla.out | wc -l)
 ERRS=$(grep "ok = false" tessla.out | wc -l)
+ERRS_GENERATED=$(grep 'Errors generated' primes.stderr.log | cut -d ' ' -f 3)
 
-echo "$CHECKED,$ERRS" >> tessla-$TYPE-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$PRIMES_NUM.csv
-echo "$TYPE,$SHM_BUFSIZE,$ARBITER_BUFSIZE,$PRIMES_NUM,$CHECKED,$ERRS" >> tessla-all.csv
+test -z $ERRS_GENERATED && ERRS_GENERATED=0
+
+echo "$CHECKED,$ERRS,$ERRS_GENERATED" >> tessla-$TYPE-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$PRIMES_NUM.csv
+echo "$TYPE,$SHM_BUFSIZE,$ARBITER_BUFSIZE,$PRIMES_NUM,$CHECKED,$ERRS,$ERRS_GENERATED" >> tessla-all.csv
 
 rm -f /tmp/tessla.in
