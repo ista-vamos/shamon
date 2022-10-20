@@ -1,6 +1,6 @@
 stream type Primes(pos : int)
 {
-    prime(n : int, p : int);
+    Prime(n : int, p : int);  
 }
 
 stream type NumberPairs
@@ -14,23 +14,20 @@ buffer group Ps : Primes order by pos includes P[all]
 
 globals
 $$
-    #include "SRCDIR/compiler/cfiles/intmap.h"
+    #include "./compiler/cfiles/intmap.h"
     intmap buf;
     int count = 0;
 
     int left_drops = 0;
     int right_drops = 0;
-
+    
     int left_processed = 0;
     int right_processed = 0;
 
     int compared = 0;
-
+    
     int left_holes = 0;
     int right_holes = 0;
-
-    size_t timestamp = 0;
-    FILE *tessla_in;
 
     int process(int n, int p, int pos, int opos)
     {
@@ -59,13 +56,7 @@ $$
 
 startup
 $$
-    init_intmap(&buf);
-
-    tessla_in = fopen("/tmp/tessla.in", "w");
-    if (tessla_in == NULL) {
-	fprintf(stderr, "Failed openning TeSSLa fifo\n");
-	abort();
-    }
+init_intmap(&buf);
 $$
 
 cleanup
@@ -77,14 +68,13 @@ printf("LEFT: processed %d events (%d compared, %d dropped (in %d holes), %d ski
 
 printf("RIGHT: processed %d events (%d compared, %d dropped (in %d holes), %d skipped) \n", right_processed, compared, right_drops, right_holes, right_skipped);
 
-fclose(tessla_in);
 $$
 
 arbiter : NumberPairs
 {
     rule set rs
     {
-        on P[0]: | prime(ln, lp) , P[1]: | prime(rn, rp) where $$ true $$
+        on P[0]: | Prime(ln, lp) , P[1]: | Prime(rn, rp) where $$ true $$
         $$
             if(ln == rn)
             {
@@ -115,7 +105,7 @@ arbiter : NumberPairs
 
         choose F,S from Ps where $$ true $$
         {
-            on F: prime(n, p) | where $$ count < 10 || $F.pos; <= $S.pos; $$
+            on F: Prime(n, p) | where $$ count < 10 || $F.pos; <= $S.pos; $$
             $$
                 $F.pos; = process(n, p, $F.pos;, $S.pos;);
                 if (F == EV_SOURCE_P_0) {
@@ -126,7 +116,6 @@ arbiter : NumberPairs
             $$
             on F : hole(n) | where $$ true $$
             $$
-                printf("THERE IS A HOLE");
                 if($F.pos; < $S.pos;)
                 {
                     int removed = intmap_remove_upto(&buf, $F.pos;+n);
@@ -147,16 +136,14 @@ arbiter : NumberPairs
     }
 }
 
-monitor(40000)
+monitor
 {
     on NumberPair(i, n, m) where $$ true $$
     $$
-        fprintf(tessla_in, "%lu: primes1 = (%d, %d)\n", ++timestamp, i, n);
-        fprintf(tessla_in, "%lu: primes2 = (%d, %d)\n", timestamp, i, m);
-    $$
-    on hole(n) where $$ true $$
-    $$
-        fprintf(tessla_in, "THERE IS A HOLE\n");
+        if(n!=m)
+        {
+          printf("ERROR at index %i: %i is not equal to %i\n", i, n, m);
+        }
     $$
 }
 

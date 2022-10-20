@@ -34,7 +34,7 @@ event source Out : BankOutputEvent to autodrop(10000)
 
 globals
 $$
-    #include "./compiler/cfiles/intmap.h"
+    #include "../../../compiler/cfiles/intmap.h"
     intmap balances;
     intmap upper_bounds;
     intmap lower_bounds;
@@ -409,12 +409,12 @@ monitor(10000) {
 
     on deposit(account, amount) where $$ true $$
     $$
-        fprintf(tessla_in, "%lu: deposit = (%d, %d)\n", ++timestamp, account, balance);
+        fprintf(tessla_in, "%lu: deposit = (%d, %d)\n", ++timestamp, account, amount);
     $$
 
     on monwithdraw(account, amount, success) where $$ true $$
     $$
-        fprintf(tessla_in, "%lu: monwithdraw = (%d, %d, %d)\n", ++timestamp, account, balance, success);
+        fprintf(tessla_in, "%lu: monwithdraw = (%d, %d, %d)\n", ++timestamp, account, amount, success);
     $$
 
     on montransfer(from_, to_, amount, success) where $$ true $$
@@ -425,5 +425,10 @@ monitor(10000) {
     on reset() where $$ true $$
     $$
     fprintf(tessla_in, "%lu: reset = ()\n", ++timestamp);
+    $$
+
+    on hole(n) where $$ true $$
+    $$
+    fprintf(tessla_in, "THERE IS A HOLE\n");
     $$
 }
