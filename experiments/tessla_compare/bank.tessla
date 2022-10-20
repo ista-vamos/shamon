@@ -1,0 +1,41 @@
+in deposit : Events[(Int,Int)] # (account, amount)
+in monwithdraw : Events[(Int,Int,Bool)] # (account, amount, success)
+in monbalance : Events[(Int,Int)] # (account, balance)
+in montransfer : Events[(Int,Int,Int,Bool)] # (source, target, amount, success)
+in reset : Events[()]
+
+def any = merge5(const((),deposit),const((),monwithdraw),const((),monbalance),const((),montransfer),reset)
+
+def adjdeposit = lift2(deposit,montransfer, (dep : Option[(Int,Int)], trnsfr : Option[(Int,Int,Int,Bool)]) => if isSome(dep) then dep else if isSome(trnsfr) then if (getSome(trnsfr)._4) then Some((getSome(trnsfr)._2, getSome(trnsfr)._3)) else None[(Int,Int)] else None[(Int,Int)])
+def adjwithdraw = lift2(monwithdraw,montransfer, (dep : Option[(Int,Int,Bool)], trnsfr : Option[(Int,Int,Int,Bool)]) => if isSome(dep) then dep else if isSome(trnsfr) then Some((getSome(trnsfr)._1, getSome(trnsfr)._3, getSome(trnsfr)._4)) else None[(Int,Int,Bool)])
+
+def balances : Events[Map[Int,Int]] = lift5(adjdeposit, adjwithdraw, monbalance, reset, last(default(balances,Map.empty[Int,Int]),any), (dep : Option[(Int,Int)], wdrw : Option[(Int,Int,Bool)], blnc : Option[(Int,Int)], rst : Option[()], bmp : Option[Map[Int,Int]]) =>
+  if isSome(dep) then
+    if isSome(wdrw) then
+      Some(Map.map(getSome(bmp), (acc : Int, bal : Int) => if acc == getSome(dep)._1 then (acc, bal + getSome(dep)._2) else if acc == getSome(wdrw)._1 then (acc, bal - getSome(wdrw)._2) else (acc,bal)))
+    else
+      Some(Map.map(getSome(bmp), (acc : Int, bal : Int) => if acc == getSome(dep)._1 then (acc, bal + getSome(dep)._2) else (acc,bal)))
+  else if isSome(wdrw) then
+    if getSome(wdrw)._3 then
+      Some(Map.map(getSome(bmp), (acc : Int, bal : Int) => if acc == getSome(wdrw)._1 then (acc, bal - getSome(wdrw)._2) else (acc,bal)))
+    else bmp
+  else if isSome(blnc) then
+    Some(Map.add(getSome(bmp), getSome(blnc)._1, getSome(blnc)._2))
+  else if isSome(rst) then
+    Some(Map.empty[Int,Int])
+  else bmp)
+
+# (account, seen, expected)
+def balancemismatch = lift2(monbalance, last(balances,any), (bal : Option[(Int,Int)], bmp : Option[Map[Int,Int]]) => if isSome(bal) && isSome(bmp) then if Map.getOrElse(getSome(bmp), getSome(bal)._1, getSome(bal)._2) == getSome(bal)._2 then None[(Int,Int,Int)] else Some((getSome(bal)._1, getSome(bal)._2, Map.get(getSome(bmp), getSome(bal)._1))) else None[(Int,Int,Int)])
+
+def balancehistory = lift2(balances, last(balances,any), (bmp : Option[Map[Int,Int]], lbmp : Option[Map[Int,Int]]) =>
+  if isSome(bmp) && isSome(lbmp) then
+    Some(Map.map(getSome(bmp), (acc : Int, bal : Int) => (acc, (bal, Map.getOrElse(getSome(lbmp), acc, bal)))))
+  else None[Map[Int,(Int,Int)]])
+
+def balancenegativeOpt = Map.fold(balancehistory, None[(Int,Int)], (acc : Option[(Int,Int)], k : Int, v : (Int, Int)) => if v._1 < 0 && v._2 >= 0 then Some((k,v._1)) else acc)
+def balancenegative = filter(balancenegativeOpt, isSome(balancenegativeOpt))
+
+out balancemismatch
+out balancenegative
+
