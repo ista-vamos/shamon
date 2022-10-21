@@ -3,11 +3,13 @@ CFLAGS=-g #-O3
 VLCC=python3 ../../compiler/main.py
 SHAMON_LIB=../../core/libshamon-lib.so  # for dependency
 BUFSIZE=1024
+#TESSLA_JAR=../../tessla/tessla.jar
+TESSLA_JAR=/opt/vamos/tessla/tessla-rust.jar
 
 all: monitor$(BUFSIZE) ../bank/bank ../bank/interact
 
 tesslamon/Cargo.toml: bank.tessla
-	java -jar ../../tessla/tessla.jar compile-rust -p tesslamon bank.tessla
+	java -jar $(TESSLA_JAR) compile-rust -p tesslamon bank.tessla
 
 ../bank/interact:
 	make -C ../bank interact
