@@ -4,16 +4,18 @@ set -e
 
 NUM=$1
 shift
+ARBITER_BUFSIZE=$1
+shift
 
 DIR=$(dirname $0)
 BANK_DIR="$DIR/../bank"
 
-DRIOPATH="/opt/vamos/dynamorio/"
+DRIOPATH="/home/fabian/dynamorio/"
 DRRUN="$DRIOPATH/build/bin64/drrun\
 	-root $DRIOPATH/build/\
 	-c ../../sources/drregex/libdrregex-mt.so"
 
-MONITOR=$DIR/monitor
+MONITOR=$DIR/monitor$ARBITER_BUFSIZE
 if [ $(basename "$0") == "regexbank-dump.sh" ]; then
 	MONITOR=$DIR/../../monitors/monitor-generic
 fi
@@ -24,11 +26,6 @@ rm -f /dev/shm/bank.{stdin,stdout}
 mkfifo /tmp/fifo{A,B}
 
 python3 $BANK_DIR/inputs.py $NUM > inputs.last.txt
-
-# we can start it a bit before as it is waiting for the connection
-echo "-- Starting the monitor --"
-$MONITOR Out:regex:/bank.stdout In:regex:/bank.stdin > mon.stdout &
-MON_PID=$!
 
 $DRRUN -t /bank \
 balance "\s*Current balance on Account ([0-9]+):\s*" i \
@@ -51,13 +48,21 @@ BANK_PID=$!
 echo "-- Starting interact --"
 cat /tmp/fifoB | $BANK_DIR/interact inputs.last.txt interact.log >/tmp/fifoA &
 
+echo "-- Starting the monitor --"
+/usr/bin/time $MONITOR Out:regex:/bank.stdout In:regex:/bank.stdin > mon.stdout 2>mon.stderr &
+MON_PID=$!
+
 wait $MON_PID
 
-grep -E 'balancemismatch|balancenegative' mon.stdout
-ERRSNUM=$(grep -E 'balancemismatch|balancenegative' mon.stdout | wc -l)
+echo "-- Monitor finished --"
 
-echo "Errors found: " $ERRSNUM
+#grep -E 'balancemismatch|balancenegative' mon.stdout
+#ERRSNUM=$(grep -E 'balancemismatch|balancenegative' mon.stdout | wc -l)
+
+echo "Errors found: " $(grep -E 'balancemismatch|balancenegative' mon.stdout | wc -l)
 
 rm -f /tmp/fifo{A,B}
 
 cat interact.log
+cat mon.stdout
+cat mon.stderr

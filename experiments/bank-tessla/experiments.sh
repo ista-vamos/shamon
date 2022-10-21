@@ -11,6 +11,9 @@ SHM_BUFSIZE_FILE="${SRCDIR}/shmbuf/buffer-size.h"
 
 REP=10
 
+RUNDIR="$(dirname $0)/rundata$(date +%Y%m%d-%H%M%S)"
+mkdir $RUNDIR
+
 echo "Logs of make are in /tmp/make*.txt"
 
 for SHM_BUFSIZE in 1; do
@@ -21,6 +24,5 @@ for SHM_BUFSIZE in 1; do
 	echo "make shamon"
 	make -j -C "$SRCDIR"  1>/tmp/make.stdout.txt 2>/tmp/make.stderr.txt
 
-    ./run.sh $SHM_BUFSIZE $REP
-done
+    ./run.sh $SHM_BUFSIZE $REP "$RUNDIR"
 done
