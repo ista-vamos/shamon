@@ -10,6 +10,7 @@ fn(TesslaValue<(TesslaInt, TesslaInt, TesslaInt)>, i64) -> Result<(), ()>,
 fn(TesslaOption<TesslaValue<(TesslaInt, TesslaInt)>>, i64) -> Result<(), ()>,
 fn(TesslaOption<TesslaValue<(TesslaInt, TesslaInt)>>, i64) -> Result<(), ()>,
 >'''
+
 def update_toml(output_dir: str) -> None:
     toml_file_path = f"{output_dir}/Cargo.toml"
     current_part = ""
@@ -120,7 +121,7 @@ def rust_monitor_events_code(possible_events):
             answer += f'''
         if (received_event->head.kind == {data["index"]}) {"{"}
             {received_events_declare_args(event_name, data)}
-            RUST_FFI_{event_name}(monstate, curtimestamp++);
+            RUST_FFI_{event_name}(monstate,{args} curtimestamp++);
         {"}"}
 
 '''
@@ -155,6 +156,28 @@ def tessla_monitor_code(tree, mapping, arbiter_event_source) -> str:
     '''
 
 
+def declare_extern_functions(mapping, arbiter_event_source):
+    if arbiter_event_source in mapping.keys():
+        possible_events = mapping[arbiter_event_source]
+    else:
+        possible_events = None
+        print("WARNING: monitor does not define a stream type (Empty monitor generated)")
+
+    if possible_events is not None:
+        answer = "extern void* moninit();\n"
+        for (event_name, data) in possible_events.items():
+            if event_name.lower() != "hole":
+                args = ""
+                for (arg, datatype) in data["args"]:
+                    if args != "":
+                        args += ", "
+                    args += f"{datatype} {arg}"
+                if len(args) > 0:
+                    args += ", "
+                answer += f"extern void RUST_FFI_{event_name}(void *monstate, {args}long curtimestamp);\n"
+        return answer
+    else:
+        print("No possible events for monitor!")
 
 def get_c_interface(components,ast, streams_to_events_map, stream_types,
                     arbiter_event_source, existing_buffers) -> str:
@@ -162,6 +185,7 @@ def get_c_interface(components,ast, streams_to_events_map, stream_types,
 {get_imports()}
 
 {outside_main_code(components, streams_to_events_map, stream_types, ast, arbiter_event_source, existing_buffers)}
+{declare_extern_functions(streams_to_events_map, arbiter_event_source)}
 int main(int argc, char **argv) {"{"}
     setup_signals();
 
