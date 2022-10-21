@@ -2554,7 +2554,6 @@ int main(int argc, char **argv) {
         STREAM_BankEvent_out * received_event;
         while(true) {
             received_event = fetch_arbiter_stream(monitor_buffer);
-            printf("monitor received event %d", received_event->head.kind);
             if (received_event == NULL) {
                 break;
             }
