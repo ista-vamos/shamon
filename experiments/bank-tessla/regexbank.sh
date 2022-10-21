@@ -14,6 +14,7 @@ DRIOPATH="/opt/vamos/dynamorio/"
 DRRUN="$DRIOPATH/build/bin64/drrun\
 	-root $DRIOPATH/build/\
 	-c ../../sources/drregex/libdrregex-mt.so"
+TIME=/usr/bin/time
 
 MONITOR=$DIR/monitor$ARBITER_BUFSIZE
 if [ $(basename "$0") == "regexbank-dump.sh" ]; then
@@ -49,7 +50,7 @@ echo "-- Starting interact --"
 cat /tmp/fifoB | $BANK_DIR/interact inputs.last.txt interact.log >/tmp/fifoA &
 
 echo "-- Starting the monitor --"
-/usr/bin/time $MONITOR Out:regex:/bank.stdout In:regex:/bank.stdin > mon.stdout 2>mon.stderr &
+$TIME $MONITOR Out:regex:/bank.stdout In:regex:/bank.stdin > mon.stdout 2>mon.stderr &
 MON_PID=$!
 
 wait $MON_PID
