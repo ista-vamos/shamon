@@ -44,7 +44,6 @@ $$
     int out_holes=0;
     int in_dropped=0;
     int out_dropped=0;
-    int errors=0;
 $$
 
 startup
@@ -59,7 +58,6 @@ $$
 printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
 printf("in_holes: %i, out_holes: %i\n", in_holes, out_holes);
 printf("in_dropped: %i, out_dropped: %i\n", in_dropped, out_dropped);
-printf("Errors found: %d\n", errors);
 fflush(stdout);
 destroy_intmap(&balances);
 destroy_intmap(&upper_bounds);

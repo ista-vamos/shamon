@@ -24,5 +24,5 @@ for SHM_BUFSIZE in 1; do
 	echo "make shamon"
 	make -j -C "$SRCDIR"  1>/tmp/make.stdout.txt 2>/tmp/make.stderr.txt
 
-    ./run.sh $SHM_BUFSIZE $REP "$RUNDIR"
+        ./run.sh $SHM_BUFSIZE $REP "$RUNDIR"
 done

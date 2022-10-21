@@ -50,7 +50,7 @@ echo "-- Starting interact --"
 cat /tmp/fifoB | $BANK_DIR/interact inputs.last.txt interact.log >/tmp/fifoA &
 
 echo "-- Starting the monitor --"
-$TIME $MONITOR Out:regex:/bank.stdout In:regex:/bank.stdin > mon.stdout 2>mon.stderr &
+$TIME -o mon.time $MONITOR Out:regex:/bank.stdout In:regex:/bank.stdin > mon.stdout 2>mon.stderr &
 MON_PID=$!
 
 wait $MON_PID
@@ -65,6 +65,7 @@ echo "Errors found: " $(grep -E 'balancemismatch|balancenegative' mon.stdout | w
 rm -f /tmp/fifo{A,B}
 
 cat interact.log
+cat mon.time
 #cat mon.stdout
 grep -E 'in_processed|in_holes|in_dropped' mon.stdout
 #cat mon.stderr
