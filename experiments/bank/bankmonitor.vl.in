@@ -223,8 +223,8 @@ arbiter : BankEvent
            In  : 3 where $$ true $$
         $$
 	    /* some In event is not matching */
+	    in_processed += 1;
 	    out_processed += 2;
-	    ++in_processed;
 	    $drop 1 from In; /* drop the number */
             $switch to aligning;
         $$

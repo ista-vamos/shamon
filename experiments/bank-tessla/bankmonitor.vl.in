@@ -42,6 +42,8 @@ $$
     int out_processed=0;
     int in_holes=0;
     int out_holes=0;
+    int in_dropped=0;
+    int out_dropped=0;
     int errors=0;
 $$
 
@@ -56,6 +58,7 @@ cleanup
 $$
 printf("\nin_processed: %i, out_processed: %i\n", in_processed, out_processed);
 printf("in_holes: %i, out_holes: %i\n", in_holes, out_holes);
+printf("in_dropped: %i, out_dropped: %i\n", in_dropped, out_dropped);
 printf("Errors found: %d\n", errors);
 fflush(stdout);
 destroy_intmap(&balances);
@@ -70,6 +73,7 @@ arbiter : BankEvent
         $$
             $yield reset();
             ++out_holes;
+            out_dropped += n;
             ++out_processed;
         $$
 
@@ -93,7 +97,7 @@ arbiter : BankEvent
 	   where $$ true $$
 	   $$
 	       if (tout == tin + 1) {
-		   assert(action == 3);
+		   vamos_assert(action == 3);
 	           $switch to working;
 	       } else if (tout > tin) {
                    ++in_processed;
@@ -101,7 +105,7 @@ arbiter : BankEvent
 	       } else {
 		   /* the event is incomplete, there must have been some hole,
 		      try once more */
-		   assert(in_holes > 0);
+		   vamos_assert(in_holes > 0);
                    ++out_processed;
 		   $drop 1 from Out;
 		   $switch to aligning;
@@ -113,7 +117,7 @@ arbiter : BankEvent
 	   where $$ true $$
 	   $$
 	       if (tout == tin + 1) {
-		   assert(action == 1);
+		   vamos_assert(action == 1);
 	           $switch to working;
 	       } else if (tout > tin) {
                    ++in_processed;
@@ -121,7 +125,7 @@ arbiter : BankEvent
 	       } else {
 		   /* the event is incomplete, there must have been some hole,
 		      try once more */
-		   assert(in_holes > 0);
+		   vamos_assert(in_holes > 0);
                    ++out_processed;
 		   $drop 1 from Out;
 		   $switch to aligning;
@@ -133,7 +137,7 @@ arbiter : BankEvent
 	   where $$ true $$
 	   $$
 	       if (tout == tin + 1) {
-		   assert(action == 2);
+		   vamos_assert(action == 2);
 	           $switch to working;
 	       } else if (tout > tin) {
                    ++in_processed;
@@ -141,7 +145,7 @@ arbiter : BankEvent
 	       } else {
 		   /* the event is incomplete, there must have been some hole,
 		      try once more */
-		   assert(in_holes > 0);
+		   vamos_assert(in_holes > 0);
                    ++out_processed;
 		   $drop 1 from Out;
 		   $switch to aligning;
@@ -153,7 +157,7 @@ arbiter : BankEvent
 	   where $$ true $$
 	   $$
 	       if (tout == tin + 4) {
-		   assert(action == 4);
+		   vamos_assert(action == 4);
 	           $switch to working;
 	       } else if (tout > tin + 4) {
                    ++in_processed;
@@ -161,31 +165,29 @@ arbiter : BankEvent
 	       } else {
 		   /* the event is incomplete, there must have been some hole,
 		      try once more */
-		   assert(in_holes > 0);
+		   vamos_assert(in_holes > 0);
                    ++out_processed;
 		   $drop 1 from Out;
 		   $switch to aligning;
 	       }
 	   $$
 
-        on Out : | logout(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
-        on Out : | numOut(t, n) where $$ true $$ $$ assert(0 && "Should not happen"); $$
-        on Out : | selectedAccount(t, a) where $$ true $$ $$ assert(0 && "Should not happen"); $$
-        on Out : | depositSuccess(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
-        on Out : | depositFail(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
-        on Out : | withdrawSuccess(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
-        on Out : | withdrawFail(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
-        on Out : | transferSuccess(t) where $$ true $$ $$ assert(0 && "Should not happen"); $$
+        on Out : | hole(n) where $$ true $$
+        $$
+	    $switch to aligning;
+        $$
 
 	on Out : 1, In: hole(n) | where $$ true $$
 	$$
             $yield reset();
 	    ++in_holes;
+	    in_dropped += n;
 	    ++in_processed;
 	$$
 
         on Out : 1, In  : otherIn(tin) | where $$ true $$
 	$$
+	   ++in_processed;
 	$$
 
         on Out : done, In : 1 where $$ true $$
@@ -208,7 +210,7 @@ arbiter : BankEvent
            In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) |
            where $$ true $$
         $$
-            assert(action == 4);
+            vamos_assert(action == 4);
             $yield montransfer(from_, to_, amnt, true);
             out_processed += 2;
             in_processed += 3;
@@ -219,7 +221,7 @@ arbiter : BankEvent
            In  : 3 where $$ true $$
         $$
 	    /* some In event is not matching */
-	    in_processed += 2;
+	    in_processed += 1;
 	    out_processed += 2;
 	    $drop 1 from In; /* drop the number */
             $switch to aligning;
@@ -229,7 +231,7 @@ arbiter : BankEvent
            In  : numIn(t0, action) numIn(t1, acc) numIn(t3, amnt) |
            where $$ true $$
         $$
-            assert(action == 4);
+            vamos_assert(action == 4);
             $yield montransfer(from_, to_, amnt, false);
             out_processed += 2;
             in_processed += 3;
@@ -240,8 +242,8 @@ arbiter : BankEvent
            In  : 3 where $$ true $$
         $$
 	    /* some In event is not matching */
-	    in_processed += 2;
 	    out_processed += 2;
+	    ++in_processed;
 	    $drop 1 from In; /* drop the number */
             $switch to aligning;
         $$
@@ -255,6 +257,8 @@ arbiter : BankEvent
         on Out : transfer(t2, f, t) |,
            In  : numIn(t0, action) | hole(n) where $$ true $$
         $$
+	    ++in_processed;
+	    ++out_processed;
 	    /* some In event is not matching */
             $switch to aligning;
         $$
@@ -263,13 +267,15 @@ arbiter : BankEvent
            In  : numIn(t0, action) otherIn(t1) | where $$ true $$
         $$
 	    /* some In event is not matching */
+	    ++out_processed;
+	    in_processed += 2;
             $switch to aligning;
         $$
 
         on Out : balance(t2, acc) numOut(t3, amnt) |,
            In  : numIn(t1, action) | where $$ true $$
         $$
-            assert(action == 3);
+            vamos_assert(action == 3);
             $yield monbalance(acc, amnt);
             out_processed += 2;
             ++in_processed;
@@ -286,9 +292,9 @@ arbiter : BankEvent
            In  : numIn(t1, action) numIn(t3, amnt) |
            where $$ true $$
         $$
-            assert(action == 1);
-	    assert(t2 == t1 + 1);
-	    assert(t3 == t2 + 1);
+            vamos_assert(action == 1);
+	    vamos_assert(t2 == t1 + 1);
+	    vamos_assert(t3 == t2 + 1);
             $yield deposit(acc, amnt);
             out_processed += 2;
             in_processed += 2;
@@ -299,7 +305,7 @@ arbiter : BankEvent
            In  : numIn(t1, action) numIn(t3, amnt) |
            where $$ true $$
         $$
-            assert(action == 1);
+            vamos_assert(action == 1);
             out_processed += 2;
             in_processed += 2;
             $switch to aligning;
@@ -309,7 +315,7 @@ arbiter : BankEvent
            In  : numIn(t1, action) | hole(n)
            where $$ true $$
         $$
-            assert(action == 1);
+            vamos_assert(action == 1);
             out_processed += 2;
             in_processed += 1;
             $switch to aligning;
@@ -319,7 +325,7 @@ arbiter : BankEvent
            In  : numIn(t1, action) | hole(n)
            where $$ true $$
         $$
-            assert(action == 1);
+            vamos_assert(action == 1);
             out_processed += 2;
             in_processed += 1;
             $switch to aligning;
@@ -336,7 +342,7 @@ arbiter : BankEvent
            In  : numIn(t1, act) numIn(t3, amnt) |
            where $$ true $$
         $$
-            assert(act == 2);
+            vamos_assert(act == 2);
             $yield monwithdraw(acc, amnt, true);
             out_processed += 2;
             in_processed += 2;
@@ -347,7 +353,7 @@ arbiter : BankEvent
            In  : numIn(t1, act) numIn(t3, amnt) |
            where $$ true $$
         $$
-            assert(act == 2);
+            vamos_assert(act == 2);
             $yield monwithdraw(acc, amnt, false);
             out_processed += 2;
             in_processed += 2;
@@ -369,6 +375,25 @@ arbiter : BankEvent
         $$
             out_processed += 2;
             in_processed += 1;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) withdrawFail(t4) |,
+           In  : numIn(t1, act) otherIn(t3) |
+           where $$ true $$
+        $$
+            vamos_assert(act == 2);
+            out_processed += 2;
+            in_processed += 2;
+            $switch to aligning;
+        $$
+
+        on Out : withdraw(t2, acc) withdrawSuccess(t4) |,
+           In  : numIn(t1, act) otherIn(t3) |
+           where $$ true $$
+        $$
+            out_processed += 2;
+            in_processed += 2;
             $switch to aligning;
         $$
 
