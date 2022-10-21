@@ -65,5 +65,6 @@ echo "Errors found: " $(grep -E 'balancemismatch|balancenegative' mon.stdout | w
 rm -f /tmp/fifo{A,B}
 
 cat interact.log
-cat mon.stdout
-cat mon.stderr
+#cat mon.stdout
+grep -E 'in_processed|in_holes|in_dropped' mon.stdout
+#cat mon.stderr
