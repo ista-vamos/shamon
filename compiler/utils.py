@@ -3,6 +3,12 @@ from typing import List, Tuple, Dict, Any, Set
 from parser_indices import *
 
 
+def replace_cmd_args(program, buffsize):
+    answer = []
+    for line in program:
+        answer.append(line.replace("@BUFSIZE", str(buffsize)))
+    return answer
+
 def get_components_dict(tree: Tuple, answer: Dict[str, List[Tuple]]) -> None:
     if tree[0] == "components":
         get_components_dict(tree[1], answer)
