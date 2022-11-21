@@ -153,7 +153,8 @@ class MyLexer(object):
         "last": "LAST",
         "order": "ORDER",
         "all": "ALL",
-        "add": "ADD"
+        "add": "ADD",
+        "in": "IN"
     }
 
     # Token names.

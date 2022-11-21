@@ -198,69 +198,89 @@ def p_right_arrow(p):
 def p_processor_rule_list(p):
     '''
     processor_rule_list : processor_rule ';'
-                        | processor_rule processor_rule_list
+                        | processor_rule ';' processor_rule_list
     '''
     if len(p) == 3:
         p[0] = p[PLIST_BASE_CASE]
     else:
         assert(len(p) == 4)
-        p[0] = ("processor_rule_list", p[PLIST_BASE_CASE], p[PLIST_TAIL_WITH_SEP])
+        p[0] = ("processor_rule_list", p[PLIST_BASE_CASE], p[3])
 
 
 def p_processor_rule(p):
     '''
-    processor_rule : ON name_with_args CREATES AT MOST INT ID PROCESS USING name_with_args TO connection_kind performance_match
-                    | ON name_with_args CREATES ID PROCESS USING name_with_args TO connection_kind performance_match
-                    | ON name_with_args CREATES AT MOST INT ID TO connection_kind performance_match
-                    | ON name_with_args CREATES ID TO connection_kind performance_match
-                    | ON name_with_args performance_match
+    processor_rule : ON name_with_args performance_match
+                    | ON name_with_args creates_part process_using_part processor_rule_tail performance_match
     '''
 
     on_event = p[2]
     creates_at_most = None
     process_using = None
+    include_in = None
     if len(p) == 4:
         # ON name_with_args performance_match
         stream_name = None
         connection_kind = None
         performance_match = p[3]
-    elif p[4] == "at":
-        if len(p) == 11:
-            # ON name_with_args CREATES AT MOST INT ID TO connection_kind performance_match
-            # 1        2           3     4   5   6   7  8       9                10
-            creates_at_most = p[6]
-            stream_name = p[7]
-            connection_kind = p[9]
-            performance_match = p[10]
-        else:
-            # ON name_with_args CREATES AT MOST INT ID PROCESS USING name_with_args TO connection_kind performance_match
-            # 1        2           3     4   5   6   7  8       9          10       11       12                13
-            creates_at_most = p[6]
-            stream_name = p[7]
-            process_using = p[10]
-            connection_kind = p[12]
-            performance_match = p[13]
-    elif len(p) == 11:
-        # ON name_with_args CREATES ID PROCESS USING name_with_args TO connection_kind performance_match
-        # 1        2           3    4   5        6         7         8        9               10
-        stream_name = p[4]
-        process_using = p[7]
-        connection_kind = p[9]
-        performance_match = p[10]
     else:
         assert(len(p) == 7)
-        # ON name_with_args CREATES ID TO connection_kind performance_match
-        # 1        2           3    4   5       6               7
-        stream_name = p[4]
-        connection_kind = p[6]
-        performance_match = p[7]
-    p[0] = ("perf_layer_rule", on_event, creates_at_most, stream_name, process_using, connection_kind, performance_match)
+
+        creates_part = p[3]
+        assert(creates_part[0] == "creates-part")
+        creates_at_most = creates_part[1]
+
+        process_using_part = p[4]
+        assert(process_using_part[0] == "process-using-part")
+        stream_name = process_using_part[1]
+        process_using = process_using_part[2]
+
+        include_part = p[5]
+        assert(include_part[0] == "proc-rule-tail")
+        connection_kind = include_part[1]
+        include_in = include_part[2]
+
+        performance_match = p[6]
+
+
+
+    p[0] = ("perf_layer_rule", on_event, creates_at_most, stream_name, process_using, connection_kind, performance_match, include_in)
 
     event_name, c_event_args = get_name_args_count(on_event)
     TypeChecker.assert_symbol_type(event_name, EVENT_NAME)
     TypeChecker.assert_num_args_match(p[PPERF_LAYER_EVENT][1], c_event_args)
 
     # TODO: Missing more type checking for the rest of parameters
+
+def p_creates_part(p):
+    '''
+    creates_part : CREATES AT MOST INT
+                 | CREATES
+    '''
+    if len(p) > 2:
+        p[0] = ('creates-part', p[4])
+    else:
+        p[0] = ('creates-part', None)
+
+def p_process_using_part(p):
+    '''
+    process_using_part : ID
+                       | ID PROCESS USING name_with_args
+    '''
+    process_using = None
+    if len(p) > 2:
+        process_using = p[4]
+    p[0] = ('process-using-part', p[1], process_using)
+
+def p_processor_rule_tail(p):
+    '''
+    processor_rule_tail : TO connection_kind
+                        | TO connection_kind INCLUDE IN ID
+    '''
+    conn_kind = p[2]
+    include_in = None
+    if len(p) > 3:
+        include_in = p[5]
+    p[0] = ('proc-rule-tail', conn_kind, include_in)
 
 def p_performance_match (p):
     '''
@@ -340,23 +360,37 @@ def p_event_source_decl(p):
 
 def p_event_source_tail(p):
     '''
-    event_source_tail : PROCESS USING name_with_args TO connection_kind
-                      | TO connection_kind
+    event_source_tail : PROCESS USING name_with_args ev_src_include_part
+                      | ev_src_include_part
     '''
     process_using = None
 
-    if len(p) == 3:
-        connection_kind = p[2]
+    if len(p) == 2:
+        ev_src_include_part = p[1]
     else:
+        ev_src_include_part = p[4]
         process_using = p[3]
-        connection_kind = p[5]
-    p[0] = ('ev-source-tail', process_using, connection_kind)
+    connection_kind = ev_src_include_part[1]
+    include_in = ev_src_include_part[2]
+    p[0] = ('ev-source-tail', process_using, connection_kind, include_in)
 
     # if process_using is not None:
     #     name, c_args = get_name_args_count(process_using)
     #     if name.lower() != "forward":
     #         TypeChecker.assert_symbol_type(name, STREAM_PROCESSOR_NAME)
     #         TypeChecker.assert_num_args_match(name, c_args)
+
+def p_ev_src_include_part(p):
+    '''
+    ev_src_include_part : TO connection_kind
+                        | TO connection_kind INCLUDE IN ID
+    '''
+
+    conn_kind = p[2]
+    include_in = None
+    if len(p) > 3:
+        include_in = p[5]
+    p[0] = ('ev_src_inc_part', conn_kind, include_in)
 
 def p_connection_kind(p):
     '''
@@ -402,7 +436,8 @@ def p_buff_group_def(p):
     p[0] = ('buff_group_def', buffer_group_name, stream_type, includes, arg_includes, order_by)
     TypeChecker.insert_symbol(buffer_group_name, BUFFER_GROUP_NAME)
     TypeChecker.assert_symbol_type(stream_type, STREAM_TYPE_NAME)
-    TypeChecker.assert_symbol_type(includes, EVENT_SOURCE_NAME)
+    if includes is not None:
+        TypeChecker.assert_symbol_type(includes, EVENT_SOURCE_NAME)
     TypeChecker.add_buffer_group_data(p[0])
 
 def p_int_or_all(p):
@@ -878,7 +913,7 @@ def p_expression(p):
                | CCODE_TOKEN
     '''
     if len(p) == 2:
-        p[0] = p[1]
+        p[0] = ('expr', p[1])
     else:
         raise Exception("this should not happen")
         # assert(len(p) == 4)
