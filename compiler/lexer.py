@@ -2,7 +2,7 @@ import ply.lex as lex
 
 
 class MyLexer(object):
-    literals = ['[', ']', '{', '}', '(', ')', ':', ';', '=', ',', '>', '-', '|', '$', '.']
+    literals = ['[', ']', '{', '}', '(', ')', ':', ';', '=', ',', '>', '-', '|', '$', '.', '*']
 
     # Declare the state
     states = (
@@ -148,11 +148,12 @@ class MyLexer(object):
         "startup": "STARTUP",
         "cleanup": "CLEANUP",
         "processor" : "PROCESSOR",
-        "includes": "INCLUDES",
+        "include": "INCLUDE",
         "first" : "FIRST",
         "last": "LAST",
         "order": "ORDER",
-        "all": "ALL"
+        "all": "ALL",
+        "add": "ADD"
     }
 
     # Token names.

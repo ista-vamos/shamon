@@ -107,19 +107,24 @@ def p_event_declaration(p):
     '''
     event_decl : ID '(' list_field_decl ')'
                | ID '(' ')'
+               | ID '(' list_field_decl ')' CREATES ID
+               | ID '(' ')' CREATES ID
     '''
 
     event_params_token = None
+    creates_stream = None
     params = []
-    if len(p) == 5:
+    if len(p) == 5 or len(p) == 7:
         event_params_token = p[PEVENT_PARAMS_LIST]
         get_parameters_types_field_decl(p[PEVENT_PARAMS_LIST], params)
+    if len(p) == 7:
+        creates_stream = p[6]
+    elif len(p) == 6:
+        creates_stream = p[5]
 
     # Type checker
-
-
     TypeChecker.insert_into_args_table(p[PEVENT_NAME], EVENT_NAME, params)
-    p[0] = ('event_decl', p[PEVENT_NAME], event_params_token)
+    p[0] = ('event_decl', p[PEVENT_NAME], event_params_token, creates_stream)
 
 
 def p_field_declaration_list(p):
@@ -146,8 +151,8 @@ def p_field_declaration(p):
 
 def p_stream_processor(p):
     '''
-    stream_processor : STREAM PROCESSOR name_with_args ':' name_with_args right_arrow name_with_args extends_node '{' perf_layer_rule_list '}'
-                 | STREAM PROCESSOR name_with_args ':' name_with_args right_arrow name_with_args '{' perf_layer_rule_list '}'
+    stream_processor : STREAM PROCESSOR name_with_args ':' name_with_args right_arrow name_with_args extends_node '{' processor_rule_list '}'
+                 | STREAM PROCESSOR name_with_args ':' name_with_args right_arrow name_with_args '{' processor_rule_list '}'
     '''
     name_with_args = p[3]
     input_type = p[5]
@@ -190,23 +195,23 @@ def p_right_arrow(p):
     '''
     p[0] = ('right_arrow', '->')
 
-def p_perf_layer_rule_list(p):
+def p_processor_rule_list(p):
     '''
-    perf_layer_rule_list : perf_layer_rule ';'
-                         | perf_layer_rule ';' perf_layer_rule_list
+    processor_rule_list : processor_rule ';'
+                        | processor_rule processor_rule_list
     '''
     if len(p) == 3:
         p[0] = p[PLIST_BASE_CASE]
     else:
         assert(len(p) == 4)
-        p[0] = ("perf_layer_list", p[PLIST_BASE_CASE], p[PLIST_TAIL_WITH_SEP])
+        p[0] = ("processor_rule_list", p[PLIST_BASE_CASE], p[PLIST_TAIL_WITH_SEP])
 
 
-def p_performance_layer_rule(p):
+def p_processor_rule(p):
     '''
-    perf_layer_rule : ON name_with_args CREATES AT MOST INT ID PROCESS USING name_with_args TO connection_kind performance_match
-                    | ON name_with_args CREATES AT MOST INT ID TO connection_kind performance_match
+    processor_rule : ON name_with_args CREATES AT MOST INT ID PROCESS USING name_with_args TO connection_kind performance_match
                     | ON name_with_args CREATES ID PROCESS USING name_with_args TO connection_kind performance_match
+                    | ON name_with_args CREATES AT MOST INT ID TO connection_kind performance_match
                     | ON name_with_args CREATES ID TO connection_kind performance_match
                     | ON name_with_args performance_match
     '''
@@ -373,8 +378,8 @@ def p_connection_kind(p):
 # BEGIN advanced features
 def p_buff_group_def(p):
     '''
-    buff_group_def : BUFFER GROUP ID ':' ID ORDER BY order_expr INCLUDES ID '[' int_or_all ']'
-                   | BUFFER GROUP ID ':' ID INCLUDES ID '[' int_or_all ']'
+    buff_group_def : BUFFER GROUP ID ':' ID ORDER BY order_expr INCLUDE ID '[' int_or_all ']'
+                   | BUFFER GROUP ID ':' ID INCLUDE ID '[' int_or_all ']'
                    | BUFFER GROUP ID ':' ID ORDER BY order_expr
                    | BUFFER GROUP ID ':' ID
     '''
@@ -390,7 +395,7 @@ def p_buff_group_def(p):
                 includes = p[10]
                 arg_includes = p[12]
         else:
-            assert(p[6] == "includes")
+            assert(p[6] == "include")
             includes = p[7]
             arg_includes = p[9]
 
@@ -726,6 +731,7 @@ def p_arbiter_rule_stmt(p):
                       | SWITCH TO ID
                       | DROP INT FROM event_src_ref
                       | REMOVE ID FROM event_src_ref
+                      | ADD ID FROM event_src_ref
                       | FIELD_ACCESS
     '''
 
@@ -738,7 +744,10 @@ def p_arbiter_rule_stmt(p):
         # TypeChecker.assert_symbol_type(p[PARB_RULE_STMT_YIELD_EVENT], EVENT_NAME)
         # count_expr_list = get_count_list_expr(p[PARB_RULE_STMT_YIELD_EXPRS])
         # TypeChecker.assert_num_args_match(p[PARB_RULE_STMT_YIELD_EVENT], count_expr_list)
+    elif p[1] == "add" or p[1] == "remove":
+        p[0] = (p[1], p[2], p[4])
     elif len(p) == 5:
+        assert(p[1] == "drop")
         p[0] = ("drop", p[PARB_RULE_STMT_DROP_INT], p[PARB_RULE_STMT_DROP_EV_SOURCE])
         event_source_name = p[PARB_RULE_STMT_DROP_EV_SOURCE][1]
         TypeChecker.assert_symbol_type(event_source_name, EVENT_SOURCE_NAME)
@@ -824,12 +833,11 @@ def p_extends_node(p):
 def p_name_with_args(p):
     '''
     name_with_args : ID '(' expression_list ')'
-                   | ID '(' listids ')'
+                   | ID '(' list_field_decl ')'
                    | ID
                    | ID '(' ')'
                    | FORWARD
     '''
-
     if len(p) == 2:
         p[0] = p[1]
     elif len(p) == 4:
