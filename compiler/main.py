@@ -36,9 +36,9 @@ assert (ast[0] == "main_program")
 components = dict()
 get_components_dict(ast[1], components)
 # # Type checker again
-TypeChecker.get_stream_events(components["stream_type"])
-if "stream_processor" in components.keys():
-	TypeChecker.get_stream_processors_data(components["stream_processor"])
+# TypeChecker.get_stream_events(components["stream_type"])
+# if "stream_processor" in components.keys():
+# 	TypeChecker.get_stream_processors_data(components["stream_processor"])
 # TypeChecker.check_event_sources_types(ast[PMAIN_PROGRAM_EVENT_SOURCES])
 # TypeChecker.check_arbiter(ast[PMAIN_PROGRAM_ARBITER])
 # TypeChecker.check_monitor(ast[PMAIN_PROGRAM_MONITOR])

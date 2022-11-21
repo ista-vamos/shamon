@@ -123,7 +123,7 @@ def p_event_declaration(p):
         creates_stream = p[5]
 
     # Type checker
-    TypeChecker.insert_into_args_table(p[PEVENT_NAME], EVENT_NAME, params)
+    # TypeChecker.insert_into_args_table(p[PEVENT_NAME], EVENT_NAME, params)
     p[0] = ('event_decl', p[PEVENT_NAME], event_params_token, creates_stream)
 
 
@@ -245,9 +245,9 @@ def p_processor_rule(p):
 
     p[0] = ("perf_layer_rule", on_event, creates_at_most, stream_name, process_using, connection_kind, performance_match, include_in)
 
-    event_name, c_event_args = get_name_args_count(on_event)
-    TypeChecker.assert_symbol_type(event_name, EVENT_NAME)
-    TypeChecker.assert_num_args_match(p[PPERF_LAYER_EVENT][1], c_event_args)
+    # event_name, c_event_args = get_name_args_count(on_event)
+    # TypeChecker.assert_symbol_type(event_name, EVENT_NAME)
+    # TypeChecker.assert_num_args_match(p[PPERF_LAYER_EVENT][1], c_event_args)
 
     # TODO: Missing more type checking for the rest of parameters
 
@@ -494,13 +494,19 @@ def p_arbiter_definition(p):
     '''
     arbiter_definition : ARBITER ':' ID '{' arbiter_rule_set_list '}'
                        | ARBITER ':' ID '{' '}'
+                       | ARBITER ':' ID '{' arbiter_rule_list '}'
     '''
 
     # TypeChecker.assert_symbol_type(p[ARBITER_OUTPUT_TYPE], STREAM_TYPE_NAME)
     if len(p) == 6:
         p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], None)
     else:
-        p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], p[ARBITER_RULE_SET_LIST])
+        if p[ARBITER_RULE_SET_LIST] == 'arb_rule_set_l':
+            p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], p[ARBITER_RULE_SET_LIST])
+        else:
+            arbiter_rule_set_l = ('arbiter_rule_set',  "default", p[ARBITER_RULE_SET_LIST])
+            p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], arbiter_rule_set_l)
+        
 
 
 def p_arbiter_rule_set_list(p):
@@ -537,23 +543,43 @@ def p_arbiter_rule_list(p):
 def p_arbiter_rule(p):
     '''
     arbiter_rule : ON list_buff_match_exp WHERE BEGIN_CCODE ccode_l_where_expression BEGIN_CCODE arbiter_rule_stmt_list
-                 | CHOOSE listids FROM ID WHERE BEGIN_CCODE ccode_l_where_expression '{' arbiter_rule_list '}'
-                 | CHOOSE choose_order listids FROM ID WHERE BEGIN_CCODE ccode_l_where_expression '{' arbiter_rule_list '}'
+                 | ON list_buff_match_exp BEGIN_CCODE arbiter_rule_stmt_list
+                 | CHOOSE listids arb_choose_middle_part '{' arbiter_rule_list '}'
+                 | CHOOSE choose_order listids arb_choose_middle_part '{' arbiter_rule_list '}'
     '''
-    if len(p) == 8:
-        # ON list_buff_match_exp WHERE BEGIN_CCODE ccode_l_where_expression BEGIN_CCODE arbiter_rule_stmt_list
-        # 1           2            3           4                    5         6                7
-        p[0] = ("arbiter_rule1", p[2], p[5], p[7])
-    else:
-        if len(p) == 12:
-            # CHOOSE choose_order listids FROM ID WHERE BEGIN_CCODE ccode_l_where_expression '{' arbiter_rule_list '}'
-            #    1      2            3      4   5   6          7          8                   9        10           11
-            p[0] = ("arbiter_rule2", p[2], p[3], p[5], p[8], p[10])
+    if p[1] == "on":
+        if len(p) == 5:
+            p[0] = ("arbiter_rule1", p[2], None, p[4])
         else:
-            assert(len(p) == 11)
-            # CHOOSE listids FROM ID WHERE BEGIN_CCODE ccode_l_where_expression '{' arbiter_rule_list '}'
-            #   1       2      3  4   5       6                7                 8         9           10
-            p[0] = ("arbiter_rule2", None, p[2], p[4], p[7], p[9])
+            # ON list_buff_match_exp WHERE BEGIN_CCODE ccode_l_where_expression BEGIN_CCODE arbiter_rule_stmt_list
+            # 1           2            3           4                    5         6                7
+            p[0] = ("arbiter_rule1", p[2], p[5], p[7])
+    else:
+        if len(p) == 8:
+            # CHOOSE choose_order listids arb_choose_middle_part '{' arbiter_rule_list '}'
+            #    1      2            3               4            5          6          7
+
+            middle_part = p[4]
+            p[0] = ("arbiter_rule2", p[2], p[3], middle_part[1], middle_part[2], p[6])
+        else:
+            assert(len(p) == 7)
+            # CHOOSE listids arb_choose_middle_part '{' arbiter_rule_list '}'
+            #   1       2            3               4          5          6
+            middle_part = p[3]
+            p[0] = ("arbiter_rule2", None, p[2], middle_part[1], middle_part[2], p[5])
+
+
+def p_arb_choose_middle_part(p):
+    '''
+    arb_choose_middle_part : FROM ID WHERE BEGIN_CCODE ccode_l_where_expression
+                           | FROM ID 
+    '''
+    where_expression = None
+    
+    if len(p) > 3:
+        where_expression = p[5]
+
+    p[0] = ("arb-choose-middle-part", p[2], where_expression)
 
 
 def p_ccode_l_where_expression(p):
@@ -615,9 +641,7 @@ def p_buffer_match_exp(p):
                      | ID '(' ')'
                      | CHOOSE choose_order listids FROM ID
                      | CHOOSE listids FROM ID
-                     | event_src_ref ':' NOTHING
-                     | event_src_ref ':' DONE
-                     | event_src_ref ':' INT
+                     | event_src_ref ':' list_ev_src_status
                      | event_src_ref ':' '|' list_event_calls
                      | event_src_ref ':' list_event_calls '|'
                      | event_src_ref ':' list_event_calls '|' list_event_calls
@@ -655,7 +679,7 @@ def p_buffer_match_exp(p):
         p[0] = ('buff_match_exp-choose', choose_order, args, buffer_name)
         TypeChecker.assert_symbol_type(p[4], BUFFER_GROUP_NAME)
     elif len(p) == 4:
-        TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
+        # TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1])
     elif len(p) == 5:
         # TODO: fix this check
@@ -664,6 +688,27 @@ def p_buffer_match_exp(p):
     else:
         TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1],'|',p[PBUFFER_MATCH_ARG3])
+
+
+def p_list_ev_src_status(p):
+    '''
+    list_ev_src_status : ev_src_status
+                       | ev_src_status ',' list_ev_src_status
+    '''
+
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ("l_ev_src_status", p[1], p[3])
+
+def p_ev_src_status(p):
+    '''
+    ev_src_status : NOTHING
+                  | DONE
+                  | INT
+                  | ID
+    '''
+    p[0] = ("ev-src-status", p[1])
 
 def p_event_src_ref(p):
     '''
@@ -699,7 +744,7 @@ def p_list_event_calls(p):
     '''
 
     # TODO: what is E^H
-    TypeChecker.assert_symbol_type(p[PLIST_EV_CALL_EV_NAME], EVENT_NAME)
+    # TypeChecker.assert_symbol_type(p[PLIST_EV_CALL_EV_NAME], EVENT_NAME)
     if len(p) == 4:
         # ID '(' ')'
         p[0] = ("ev_call", p[PLIST_EV_CALL_EV_NAME], None)
@@ -711,13 +756,13 @@ def p_list_event_calls(p):
             # ID '(' listids ')'
             p[0] = ("ev_call", p[PLIST_EV_CALL_EV_NAME], p[PLIST_EV_CALL_EV_PARAMS])
             list_ids_length = get_count_list_ids(p[PLIST_EV_CALL_EV_PARAMS])
-            TypeChecker.assert_num_args_match(p[PLIST_EV_CALL_EV_NAME], list_ids_length)
+            # TypeChecker.assert_num_args_match(p[PLIST_EV_CALL_EV_NAME], list_ids_length)
     else:
         assert(len(p) == 6)
         # ID '(' listids  ')' list_event_calls
         p[0] = ("list_ev_calls", p[PLIST_EV_CALL_EV_NAME], p[PLIST_EV_CALL_EV_PARAMS], p[PLIST_EV_CALL_TAIL])
         list_ids_length = get_count_list_ids(p[PLIST_EV_CALL_EV_PARAMS])
-        TypeChecker.assert_num_args_match(p[PLIST_EV_CALL_EV_NAME], list_ids_length)
+        # TypeChecker.assert_num_args_match(p[PLIST_EV_CALL_EV_NAME], list_ids_length)
 
 
 
@@ -911,6 +956,7 @@ def p_expression(p):
                | INT
                | BOOL
                | CCODE_TOKEN
+               | FIELD_ACCESS
     '''
     if len(p) == 2:
         p[0] = ('expr', p[1])
