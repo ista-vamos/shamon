@@ -49,7 +49,8 @@ reserved = {
     "order": "ORDER",
     "all": "ALL",
     "add": "ADD",
-    "in": "IN"
+    "in": "IN",
+    "fail": "FAIL"
 }
 
 # Token names.

@@ -699,14 +699,14 @@ def p_list_ev_src_status(p):
     if len(p) == 2:
         p[0] = p[1]
     else:
-        p[0] = ("l_ev_src_status", p[1], p[3])
+        p[0] = ("l-ev-src-status", p[1], p[3])
 
 def p_ev_src_status(p):
     '''
     ev_src_status : NOTHING
                   | DONE
                   | INT
-                  | ID
+                  | FAIL
     '''
     p[0] = ("ev-src-status", p[1])
 
