@@ -149,6 +149,7 @@ class MyLexer(object):
         "cleanup": "CLEANUP",
         "processor" : "PROCESSOR",
         "include": "INCLUDE",
+        "includes": "INCLUDES",
         "first" : "FIRST",
         "last": "LAST",
         "order": "ORDER",

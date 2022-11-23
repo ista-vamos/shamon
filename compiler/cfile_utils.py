@@ -65,11 +65,12 @@ def init_buffer_groups():
 
     for (buff_name, data) in TypeChecker.buffer_group_data.items():
         includes_str = ""
-        for i in range(data["arg_includes"]):
-            includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, BUFFER_{data['includes']}{i},stream_args_{data['includes']}_{i},{buff_name}_ORDER_EXP);\n"
-        answer += f'''init_buffer_group(&BG_{buff_name});
-{includes_str}        
-'''
+        if data["arg_includes"] is not None:
+            for i in range(data["arg_includes"]):
+                includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, BUFFER_{data['includes']}{i},stream_args_{data['includes']}_{i},{buff_name}_ORDER_EXP);\n"
+            answer += f'''init_buffer_group(&BG_{buff_name});
+    {includes_str}        
+    '''
     return answer
 
 
@@ -100,9 +101,9 @@ typedef struct  _{tree[1]}_ARGS  {tree[1]}_ARGS;
     return answer
 
 
-def events_declaration_structs(tree) -> str:
+def events_declaration_structs(stream_name, tree) -> str:
     if tree[0] == "event_list":
-        return events_declaration_structs(tree[PLIST_BASE_CASE]) + "\n" + events_declaration_structs(tree[PLIST_TAIL])
+        return events_declaration_structs(stream_name, tree[PLIST_BASE_CASE]) + "\n" + events_declaration_structs(stream_name, tree[PLIST_TAIL])
     else:
         assert (tree[0] == "event_decl")
         event_name = tree[PPEVENT_NAME]
@@ -118,10 +119,10 @@ def events_declaration_structs(tree) -> str:
             else:
                 struct_fields += f"\t{data['type']} {data['name']};\n"
 
-        return f'''struct _EVENT_{event_name} {"{"}
+        return f'''struct _EVENT_{stream_name}_{event_name} {"{"}
 {struct_fields}
 {"}"};
-typedef struct _EVENT_{event_name} EVENT_{event_name};'''
+typedef struct _EVENT_{stream_name}_{event_name} EVENT_{stream_name}_{event_name};'''
 
 
 def stream_type_args_structs(stream_types) -> str:
@@ -144,8 +145,11 @@ def instantiate_stream_args():
     for (stream_name, data) in TypeChecker.event_sources_data.items():
         if len(data['input_stream_args']) > 0:
             stream_type = data["input_stream_type"]
-            for i in range(data['copies']):
-                answer += f"STREAM_{stream_type}_ARGS *stream_args_{stream_name}_{i};\n"
+            if data['copies'] is not None:
+                for i in range(data['copies']):
+                    answer += f"STREAM_{stream_type}_ARGS *stream_args_{stream_name}_{i};\n"
+            else:
+                answer += f"STREAM_{stream_type}_ARGS *stream_args_{stream_name};\n"
     return answer
 
 
@@ -183,9 +187,9 @@ def stream_type_structs(stream_types) -> str:
         stream_name = tree[PPSTREAM_TYPE_NAME]
         union_events = ""
         for name in TypeChecker.stream_types_to_events[stream_name]:
-            union_events += f"EVENT_{name} {name};"
+            union_events += f"EVENT_{stream_name}_{name} {name};"
         value = f'''// event declarations for stream type {stream_name}
-{events_declaration_structs(tree[-1])}
+{events_declaration_structs(stream_name, tree[-1])}
 
 // input stream for stream type {stream_name}
 struct _STREAM_{stream_name}_in {"{"}
@@ -424,7 +428,7 @@ def build_drop_funcs_conds(tree, stream_name, mapping) -> str:
         if creates_at_most is not None:
             raise Exception("creates at most not implemented in stream processors")
         return f'''if (e->kind == {mapping[event_name]["enum"]}) {"{"}
-        {process_performance_match(tree[-1])}
+        {process_performance_match(tree[-2])}
     {"}"}
         '''
 
@@ -480,7 +484,7 @@ def declare_performance_layer_args(event_case: str, mapping_in: Dict[str, Any], 
     return answer
 
 
-def build_switch_performance_match(tree, mapping_in, mapping_out, level) -> str:
+def build_switch_performance_match(tree, input_event, mapping_in, mapping_out, level) -> str:
     if tree[0] == 'perf_match1':
         performance_action = tree[PPERF_MATCH_ACTION]
         if performance_action[0] == "perf_act_drop":
@@ -489,22 +493,32 @@ def build_switch_performance_match(tree, mapping_in, mapping_out, level) -> str:
         else:
             tabs = "\t" * level
             assert (performance_action[0] == "perf_act_forward")
+            
             event_out_name = performance_action[PPPERF_ACTION_FORWARD_EVENT]
-            return f'''
-{tabs}(outevent->head).kind = {mapping_out[performance_action[PPPERF_ACTION_FORWARD_EVENT]]["enum"]};
-{tabs}(outevent->head).id = (inevent->head).id;
-{declare_performance_layer_args(performance_action[PPPERF_ACTION_FORWARD_EVENT],
-                                mapping_in[performance_action[PPPERF_ACTION_FORWARD_EVENT]],
+            if event_out_name.lower() == "forward":
+                event_out_name = input_event
+                assign_args_code = ""
+            else:
+                assign_args_code = f'''
+{declare_performance_layer_args(event_out_name,
+                                mapping_in[event_out_name],
                                 performance_action[PPPERF_ACTION_FORWARD_EXPRS])}
-{assign_args(event_out_name, mapping_out[performance_action[PPPERF_ACTION_FORWARD_EVENT]]["args"],
-             performance_action[PPPERF_ACTION_FORWARD_EXPRS], level)}'''
+{assign_args(event_out_name, mapping_out[event_out_name]["args"],
+             performance_action[PPPERF_ACTION_FORWARD_EXPRS], level)}
+                '''
+                
+            return f'''
+{tabs}(outevent->head).kind = {mapping_out[event_out_name]["enum"]};
+{tabs}(outevent->head).id = (inevent->head).id;
+{tabs}{assign_args_code}
+            '''
     else:
         assert (tree[0] == 'perf_match2')
         return f'''
         if ({tree[PPPERF_MATCH_EXPRESSION]}) {"{"}
-            {build_switch_performance_match(tree[PPPERF_MATCH_TRUE_PART], mapping_in, mapping_out, level + 1)}
+            {build_switch_performance_match(tree[PPPERF_MATCH_TRUE_PART], input_event, mapping_in, mapping_out, level + 1)}
         {"}"} else {"{"}
-            {build_switch_performance_match(tree[PPPERF_MATCH_FALSE_PART], mapping_in, mapping_out, level + 1)}
+            {build_switch_performance_match(tree[PPPERF_MATCH_FALSE_PART], input_event, mapping_in, mapping_out, level + 1)}
         {"}"}'''
 
 
@@ -519,7 +533,7 @@ def get_stream_switch_cases(ast, mapping_in, mapping_out, level) -> str:
         event_name, _ = get_name_with_args(ast[PPPERF_LAYER_EVENT])
         return f'''
 {tabs}case {mapping_in[event_name]["enum"]}:
-{build_switch_performance_match(ast[-1], mapping_in, mapping_out, level=level + 1)}
+{build_switch_performance_match(ast[-2], event_name, mapping_in, mapping_out, level=level + 1)}
 {tabs_plus1}break;'''
 
 
@@ -850,6 +864,10 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
         if event_source_ref[2] is not None:
             event_source_name += f"{event_source_ref[2]}"
         return f"\tshm_arbiter_buffer_drop(BUFFER_{event_source_name}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
+    if tree[0] == "remove":
+        buffer_group = tree[2][1];
+        return f"bg_remove({buffer_group}, {tree[1]});"
+
     assert (tree[0] == "field_access")
     target_stream, index, field = tree[1], tree[2], tree[3]
     stream_name = target_stream
@@ -982,6 +1000,8 @@ def monitor_code(tree, mapping, arbiter_event_source) -> str:
 
 
 def process_where_condition(tree):
+    if tree is None:
+        return "true"
     if tree[0] == "l_where_expr":
         return process_where_condition(tree[1]) + process_where_condition(tree[2])
     else:
@@ -1567,7 +1587,6 @@ shm_event * get_event_at_index(char* e1, size_t i1, char* e2, size_t i2, size_t 
 //arbiter outevent
 STREAM_{arbiter_event_source}_out *arbiter_outevent;
 {declare_rule_sets(ast[2])}
-
 {print_event_name(stream_types, streams_to_events_map)}
 {get_event_at_head()}
 {print_buffers_state()}
@@ -1593,7 +1612,6 @@ static void setup_signals() {{
 	perror("failed setting SIGINT handler");
     }}
 }}
-
     '''
 
 

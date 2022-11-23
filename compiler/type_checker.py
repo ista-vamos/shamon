@@ -62,6 +62,8 @@ class TypeChecker:
             else:
                 names = []
             get_events_names(ast[-1], names)
+            for name in names:
+                TypeChecker.insert_symbol(f"{stream_name}_{name}", EVENT_NAME)
             assert(stream_name not in TypeChecker.stream_types_to_events.keys())
             TypeChecker.stream_types_to_events[stream_name] = set(names)
 
@@ -141,45 +143,17 @@ class TypeChecker:
             if not TypeChecker.is_event_in_stream(output_type, output_event):
                 raise Exception(f"Event {output_event} does not happen in stream {output_type}.")
 
-
-    @staticmethod
-    def check_perf_layer_list(ast, input_type, output_type):
-        if ast[0] == "perf_layer_list":
-            TypeChecker.check_perf_layer_list(ast[PLIST_BASE_CASE], input_type, output_type)
-            TypeChecker.check_perf_layer_list(ast[PLIST_TAIL], input_type, output_type)
-        else:
-            assert(ast[0] == "perf_layer_rule")
-            if not TypeChecker.is_event_in_stream(input_type, ast[PPPERF_LAYER_EVENT]):
-                raise Exception(f"event {ast[PPPERF_LAYER_EVENT]} does not happen in stream {input_type}.")
-            # we already check right number of arguments at parser.py in p_performance_layer_rule
-
-            # check output types
-            TypeChecker.check_performance_match(ast[PPPERF_LAYER_PERF_MATCH], output_type)
-
-    @staticmethod
-    def check_event_sources_types(ast):
-        if ast[0] == "event_sources":
-            TypeChecker.check_event_sources_types(ast[PLIST_BASE_CASE])
-            TypeChecker.check_event_sources_types(ast[PLIST_TAIL])
-        else:
-            assert(ast[0] == "event_source")
-            event_source = ast[PPEVENT_SOURCE_NAME]
-            input_type = ast[PPEVENT_SOURCE_INPUT_TYPE]
-            output_type = ast[PPEVENT_SOURCE_OUTPUT_TYPE]
-            TypeChecker.event_sources_types[event_source] = (input_type, output_type)
-            TypeChecker.check_perf_layer_list(ast[PPEVENT_SOURCE_PERF_LAYER_LIST],
-                                              input_type, output_type)
-
     @staticmethod
     def check_list_buff_exprs(ast):
-        if ast[0] == "l_buff_match_exp":
-            TypeChecker.check_list_buff_exprs(ast[PLIST_BASE_CASE])
-            TypeChecker.check_list_buff_exprs(ast[PLIST_TAIL])
-        else:
-            assert(ast[0] == "buff_match_exp")
-            event_source = ast[PPBUFFER_MATCH_EV_NAME]
-            for i in range(1, len(ast)):
-                TypeChecker.check_event_calls(ast[i], event_source)
+        if ast is not None:
+            if ast[0] == "l_buff_match_exp":
+                TypeChecker.check_list_buff_exprs(ast[PLIST_BASE_CASE])
+                TypeChecker.check_list_buff_exprs(ast[PLIST_TAIL])
+            else:
+                assert(ast[0] == "buff_match_exp")
+                event_source = ast[PPBUFFER_MATCH_EV_NAME]
+                for i in range(1, len(ast)):
+                    TypeChecker.check_event_calls(ast[i], event_source)
 
     @staticmethod
     def is_event_in_event_source(event_source, event, is_input=True):
@@ -220,15 +194,13 @@ class TypeChecker:
                     TypeChecker.assert_symbol_type(ast[i][PPARB_RULE_STMT_SWITCH_ARB_RULE], ARBITER_RULE_SET )
 
 
-
-
     @staticmethod
     def check_arbiter_rule_list(ast, output_type):
         if ast[0] == "arb_rule_list":
             TypeChecker.check_arbiter_rule_list(ast[PLIST_BASE_CASE], output_type)
             TypeChecker.check_arbiter_rule_list(ast[PLIST_TAIL], output_type)
         else:
-            assert(ast[0] == "arbiter_rule")
+            assert("arbiter_rule" in ast[0])
             TypeChecker.check_list_buff_exprs(ast[PPARB_RULE_LIST_BUFF_EXPR])
             TypeChecker.check_arb_rule_stmt_list(ast[PPARB_RULE_STMT_LIST], output_type)
 
@@ -280,17 +252,20 @@ class TypeChecker:
                 perf_layer_rule_list = tree[5]
             else:
                 mother_stream, mother_args = get_name_with_args(extends_node[1])
-                assert(mother_stream in TypeChecker.stream_processors_data.keys())
                 binded_mother_args = {}
                 binded_mother_args[mother_stream] = {}
-                raw_args = TypeChecker.args_table[mother_stream]
-                assert(len(raw_args) == len(mother_args))
-                for (raw_arg, mother_arg) in zip(raw_args, mother_args):
-                    binded_mother_args[mother_stream]['raw_arg'] = mother_arg
+                if mother_stream.lower() != "forward":
+                    assert(mother_stream in TypeChecker.stream_processors_data.keys())
+                    raw_args = TypeChecker.args_table[mother_stream]
+                    assert(len(raw_args) == len(mother_args))
+                    for (raw_arg, mother_arg) in zip(raw_args, mother_args):
+                        binded_mother_args[mother_stream]['raw_arg'] = mother_arg
 
-                binded_mother_args.update(TypeChecker.stream_processors_data[mother_stream]['mother_args'])
+                    binded_mother_args.update(TypeChecker.stream_processors_data[mother_stream]['mother_args'])
 
-                perf_layer_rule_list = ("perf_layer_list", TypeChecker.stream_processors_data[mother_stream]["perf_layer_rule_list"], tree[5])
+                    perf_layer_rule_list = ("perf_layer_list", TypeChecker.stream_processors_data[mother_stream]["perf_layer_rule_list"], tree[5])
+                else:
+                    perf_layer_rule_list = tree[5]
 
             TypeChecker.stream_processors_data[stream_processor_name] = {
                 'input_type': input_type,
@@ -315,22 +290,34 @@ class TypeChecker:
         stream_type_name, stream_args = get_name_with_args(name_arg_input_type)
 
         # processing tail
-
+        assert(event_src_tail[0] == "ev-source-tail")
         connection_kind = event_src_tail[2]
         if event_src_tail[1] == None:
             processor_name = "forward"
+            output_type = stream_type_name
             processor_args = []
         else:
             processor_name, processor_args = get_name_with_args(event_src_tail[1])
+            if processor_name.lower() == "forward":
+                processor_name = "forward"
+                output_type = stream_type_name
+                processor_args = []
+            else:
+                output_type = TypeChecker.stream_processors_data[processor_name]["output_type"]
+
+        # process include in part
+        include_in = event_src_tail[3]
 
         data = {
             'copies': copies,
             'args': args,
             'input_stream_type': stream_type_name,
             'input_stream_args': stream_args,
+            'output_stream_type': output_type,
             'processor_name' : processor_name,
             'processor_args' : processor_args,
-            'connection_kind': connection_kind
+            'connection_kind': connection_kind,
+            'include_in': include_in
         }
         assert(name not in TypeChecker.event_sources_data.keys())
         TypeChecker.event_sources_data[name] = data

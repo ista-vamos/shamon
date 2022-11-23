@@ -35,13 +35,24 @@ ast = parse_program(file)
 assert (ast[0] == "main_program")
 components = dict()
 get_components_dict(ast[1], components)
-# # Type checker again
-# TypeChecker.get_stream_events(components["stream_type"])
-# if "stream_processor" in components.keys():
-# 	TypeChecker.get_stream_processors_data(components["stream_processor"])
-# TypeChecker.check_event_sources_types(ast[PMAIN_PROGRAM_EVENT_SOURCES])
-# TypeChecker.check_arbiter(ast[PMAIN_PROGRAM_ARBITER])
-# TypeChecker.check_monitor(ast[PMAIN_PROGRAM_MONITOR])
+
+
+if "stream_processor" in components.keys():
+	TypeChecker.get_stream_processors_data(components["stream_processor"])
+for event_source in components["event_source"]:
+	TypeChecker.insert_event_source_data(event_source)
+TypeChecker.get_stream_events(components["stream_type"])
+
+if "buff_group_def" in components.keys():
+	for buff_group in components["buff_group_def"]:
+		TypeChecker.add_buffer_group_data(buff_group)
+
+if "match_fun_def" in components.keys():
+	for match_fun in components["match_fun_def"]:
+		TypeChecker.add_match_fun_data(match_fun)
+
+# TypeChecker.check_arbiter(ast[-2])
+# TypeChecker.check_monitor(ast[-1])
 #
 # Produce C file
 
@@ -55,7 +66,7 @@ existing_buffers = get_existing_buffers(TypeChecker)
 TypeChecker.arbiter_output_type = arbiter_event_source
 
 if args.out is None:
-	print("provide the path of the file where the c program must be written.")
+	print("provide the path of the file where the C program must be written.")
 	exit(1)
 output_path = args.out
 
