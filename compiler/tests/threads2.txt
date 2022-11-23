@@ -196,7 +196,7 @@ arbiter : GlobalEvent
                 leastts=min(leastts, ts);
             }
         $$
-        on T : | hole(n)
+        on T : | hole(n, mints, maxts)
         $$
             if(mints==nextts)
             {

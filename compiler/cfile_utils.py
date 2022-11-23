@@ -62,13 +62,13 @@ buffer_group BG_{buff_name};
 
 def init_buffer_groups():
     answer = ""
-
+    print(TypeChecker.buffer_group_data)
     for (buff_name, data) in TypeChecker.buffer_group_data.items():
         includes_str = ""
         if data["arg_includes"] is not None:
             for i in range(data["arg_includes"]):
                 includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, BUFFER_{data['includes']}{i},stream_args_{data['includes']}_{i},{buff_name}_ORDER_EXP);\n"
-            answer += f'''init_buffer_group(&BG_{buff_name});
+        answer += f'''init_buffer_group(&BG_{buff_name});
     {includes_str}        
     '''
     return answer
@@ -529,11 +529,63 @@ def get_stream_switch_cases(ast, mapping_in, mapping_out, level) -> str:
     else:
         tabs = "\t" * level
         tabs_plus1 = "\t" * (level + 1)
+        creates_code = ""
+        buffer_kind = ast[5]
+        event_name, event_args = get_name_with_args(ast[PPPERF_LAYER_EVENT])
+        if buffer_kind[1] != 'autodrop':
+            raise Exception("implement of non-autodrop buffer missing!!")
+        buff_size = buffer_kind[2]
+
+        buffer_group = ast[7]
+        
+        if ast[4] is not None:
+            stream_processor_name, args_stream_processor = get_name_with_args(ast[4])
+            if buffer_group is None:
+                raise Exception("Error: trying to create event source without specifying buffer group")
+            if len(TypeChecker.stream_types_to_events[ast[3]]) == 0:
+                stream_args_code = f"{tabs_plus1}bg_insert(&BG_{buffer_group}, ev_source_temp, temp_buffer,NULL,{buffer_group}_ORDER_EXP);"
+            else:
+                stream_type = ast[3]
+                init_stream_args_code = ""
+                original_sp_args = TypeChecker.stream_processors_data[stream_processor_name]['output_args']
+                stream_type_args = TypeChecker.args_table[stream_type]
+                for (event_arg, original_arg) in zip(event_args, stream_type_args):
+                    if type(event_arg) == str:
+                        init_stream_args_code += f"{original_arg['type']} {event_arg} = outevent->cases.{event_name}.{original_arg['name']}\n"
+                    else:
+                        assert(event_arg[0] == "expr")
+                        init_stream_args_code += f"{original_arg['type']} {event_arg[1]} = outevent->cases.{event_name}.{original_arg['name']}\n"
+                for (original_arg, new_arg) in zip(TypeChecker.args_table[stream_processor_name], args_stream_processor):
+                    if type(new_arg) == str:
+                       init_stream_args_code += f"{original_arg[2][1]} {original_arg[1]} = {new_arg};\n"
+                    else:
+                        assert(new_arg[0] == 'expr')
+                        init_stream_args_code += f"{original_arg[2][1]} {original_arg[1]} = {new_arg[1]};\n"
+                for (arg, sp_arg) in zip(stream_type_args, original_sp_args):
+                    if type(sp_arg) == str:
+                        init_stream_args_code += f"stream_args_temp->{stream_processor_name}_{arg['name']} = {sp_arg} \n"
+                    else:
+                        assert(sp_arg[0] == "expr")
+                        init_stream_args_code += f"stream_args_temp->{arg['name']} = {sp_arg[1]} \n"
+                
+                stream_args_code = f'''
+STREAM_{stream_type}_ARGS * stream_args_temp = malloc(sizeof(STREAM_{stream_type}_ARGS));
+{init_stream_args_code}
+{tabs_plus1}bg_insert(&BG_{buffer_group}, ev_source_temp, temp_buffer,stream_args_temp,{buffer_group}_ORDER_EXP);
+
+'''
+            creates_code = f'''
+{tabs_plus1}shm_stream *ev_source_temp = shm_stream_create_substream(stream, (inevent->head).id);
+{tabs_plus1}shm_arbiter_buffer *temp_buffer = shm_arbiter_buffer_create(ev_source_temp,  sizeof(STREAM_{ast[3]}_out), {buff_size});
+{stream_args_code}
+'''
         assert (ast[0] == 'perf_layer_rule')
-        event_name, _ = get_name_with_args(ast[PPPERF_LAYER_EVENT])
+        
         return f'''
 {tabs}case {mapping_in[event_name]["enum"]}:
 {build_switch_performance_match(ast[-2], event_name, mapping_in, mapping_out, level=level + 1)}
+{creates_code}
+{tabs_plus1}shm_arbiter_buffer_write_finish(buffer);
 {tabs_plus1}break;'''
 
 
@@ -555,13 +607,13 @@ def event_sources_thread_funcs(event_sources, mapping) -> str:
                         switch ((inevent->head).kind) {"{"}
             {get_stream_switch_cases(perf_layer_list, mapping[stream_in_name], mapping[stream_out_name], level=3)}
                         default:
-                            printf("Default case executed in thread for event source {stream_name}. Exiting thread...");
-                            return 1;
+                            memcpy(outevent, inevent, sizeof(STREAM_{stream_out_name}_out));   
+                            shm_arbiter_buffer_write_finish(buffer);
                     {"}"}
                         '''
         else:
             stream_out_name = stream_in_name
-            perf_layer_code = f"memcpy(outevent, inevent, sizeof(STREAM_{stream_out_name}_out));"
+            perf_layer_code = f"memcpy(outevent, inevent, sizeof(STREAM_{stream_out_name}_out));\nshm_arbiter_buffer_write_finish(buffer);"
         answer+= f'''int PERF_LAYER_{stream_name} (void *data) {"{"}
     shm_arbiter_buffer *buffer = (shm_arbiter_buffer *)data;
     shm_stream *stream = shm_arbiter_buffer_stream(buffer);   
@@ -582,7 +634,7 @@ def event_sources_thread_funcs(event_sources, mapping) -> str:
         outevent = shm_arbiter_buffer_write_ptr(buffer);
 
         {perf_layer_code}
-        shm_arbiter_buffer_write_finish(buffer);
+        
         shm_stream_consume(stream, 1);
     {"}"}  
     atomic_fetch_add(&count_event_streams, -1);   
