@@ -43,11 +43,15 @@ reserved = {
     "startup": "STARTUP",
     "cleanup": "CLEANUP",
     "processor" : "PROCESSOR",
-    "includes" : "INCLUDES",
+    "include" : "INCLUDE",
+    "includes": "INCLUDES",
     "first": "FIRST",
     "last": "LAST",
     "order": "ORDER",
-    "all": "ALL"
+    "all": "ALL",
+    "add": "ADD",
+    "in": "IN",
+    "fail": "FAIL"
 }
 
 # Token names.

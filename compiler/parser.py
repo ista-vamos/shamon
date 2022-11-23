@@ -107,19 +107,24 @@ def p_event_declaration(p):
     '''
     event_decl : ID '(' list_field_decl ')'
                | ID '(' ')'
+               | ID '(' list_field_decl ')' CREATES ID
+               | ID '(' ')' CREATES ID
     '''
 
     event_params_token = None
+    creates_stream = None
     params = []
-    if len(p) == 5:
+    if len(p) == 5 or len(p) == 7:
         event_params_token = p[PEVENT_PARAMS_LIST]
         get_parameters_types_field_decl(p[PEVENT_PARAMS_LIST], params)
+    if len(p) == 7:
+        creates_stream = p[6]
+    elif len(p) == 6:
+        creates_stream = p[5]
 
     # Type checker
-
-
-    TypeChecker.insert_into_args_table(p[PEVENT_NAME], EVENT_NAME, params)
-    p[0] = ('event_decl', p[PEVENT_NAME], event_params_token)
+    # TypeChecker.insert_into_args_table(p[PEVENT_NAME], EVENT_NAME, params)
+    p[0] = ('event_decl', p[PEVENT_NAME], event_params_token, creates_stream)
 
 
 def p_field_declaration_list(p):
@@ -146,8 +151,8 @@ def p_field_declaration(p):
 
 def p_stream_processor(p):
     '''
-    stream_processor : STREAM PROCESSOR name_with_args ':' name_with_args right_arrow name_with_args extends_node '{' perf_layer_rule_list '}'
-                 | STREAM PROCESSOR name_with_args ':' name_with_args right_arrow name_with_args '{' perf_layer_rule_list '}'
+    stream_processor : STREAM PROCESSOR name_with_args ':' name_with_args right_arrow name_with_args extends_node '{' processor_rule_list '}'
+                 | STREAM PROCESSOR name_with_args ':' name_with_args right_arrow name_with_args '{' processor_rule_list '}'
     '''
     name_with_args = p[3]
     input_type = p[5]
@@ -190,72 +195,92 @@ def p_right_arrow(p):
     '''
     p[0] = ('right_arrow', '->')
 
-def p_perf_layer_rule_list(p):
+def p_processor_rule_list(p):
     '''
-    perf_layer_rule_list : perf_layer_rule ';'
-                         | perf_layer_rule ';' perf_layer_rule_list
+    processor_rule_list : processor_rule ';'
+                        | processor_rule ';' processor_rule_list
     '''
     if len(p) == 3:
         p[0] = p[PLIST_BASE_CASE]
     else:
         assert(len(p) == 4)
-        p[0] = ("perf_layer_list", p[PLIST_BASE_CASE], p[PLIST_TAIL_WITH_SEP])
+        p[0] = ("processor_rule_list", p[PLIST_BASE_CASE], p[3])
 
 
-def p_performance_layer_rule(p):
+def p_processor_rule(p):
     '''
-    perf_layer_rule : ON name_with_args CREATES AT MOST INT ID PROCESS USING name_with_args TO connection_kind performance_match
-                    | ON name_with_args CREATES AT MOST INT ID TO connection_kind performance_match
-                    | ON name_with_args CREATES ID PROCESS USING name_with_args TO connection_kind performance_match
-                    | ON name_with_args CREATES ID TO connection_kind performance_match
-                    | ON name_with_args performance_match
+    processor_rule : ON name_with_args performance_match
+                    | ON name_with_args creates_part process_using_part processor_rule_tail performance_match
     '''
 
     on_event = p[2]
     creates_at_most = None
     process_using = None
+    include_in = None
     if len(p) == 4:
         # ON name_with_args performance_match
         stream_name = None
         connection_kind = None
         performance_match = p[3]
-    elif p[4] == "at":
-        if len(p) == 11:
-            # ON name_with_args CREATES AT MOST INT ID TO connection_kind performance_match
-            # 1        2           3     4   5   6   7  8       9                10
-            creates_at_most = p[6]
-            stream_name = p[7]
-            connection_kind = p[9]
-            performance_match = p[10]
-        else:
-            # ON name_with_args CREATES AT MOST INT ID PROCESS USING name_with_args TO connection_kind performance_match
-            # 1        2           3     4   5   6   7  8       9          10       11       12                13
-            creates_at_most = p[6]
-            stream_name = p[7]
-            process_using = p[10]
-            connection_kind = p[12]
-            performance_match = p[13]
-    elif len(p) == 11:
-        # ON name_with_args CREATES ID PROCESS USING name_with_args TO connection_kind performance_match
-        # 1        2           3    4   5        6         7         8        9               10
-        stream_name = p[4]
-        process_using = p[7]
-        connection_kind = p[9]
-        performance_match = p[10]
     else:
         assert(len(p) == 7)
-        # ON name_with_args CREATES ID TO connection_kind performance_match
-        # 1        2           3    4   5       6               7
-        stream_name = p[4]
-        connection_kind = p[6]
-        performance_match = p[7]
-    p[0] = ("perf_layer_rule", on_event, creates_at_most, stream_name, process_using, connection_kind, performance_match)
 
-    event_name, c_event_args = get_name_args_count(on_event)
-    TypeChecker.assert_symbol_type(event_name, EVENT_NAME)
-    TypeChecker.assert_num_args_match(p[PPERF_LAYER_EVENT][1], c_event_args)
+        creates_part = p[3]
+        assert(creates_part[0] == "creates-part")
+        creates_at_most = creates_part[1]
+
+        process_using_part = p[4]
+        assert(process_using_part[0] == "process-using-part")
+        stream_name = process_using_part[1]
+        process_using = process_using_part[2]
+
+        include_part = p[5]
+        assert(include_part[0] == "proc-rule-tail")
+        connection_kind = include_part[1]
+        include_in = include_part[2]
+
+        performance_match = p[6]
+
+
+
+    p[0] = ("perf_layer_rule", on_event, creates_at_most, stream_name, process_using, connection_kind, performance_match, include_in)
+
+    # event_name, c_event_args = get_name_args_count(on_event)
+    # TypeChecker.assert_symbol_type(event_name, EVENT_NAME)
+    # TypeChecker.assert_num_args_match(p[PPERF_LAYER_EVENT][1], c_event_args)
 
     # TODO: Missing more type checking for the rest of parameters
+
+def p_creates_part(p):
+    '''
+    creates_part : CREATES AT MOST INT
+                 | CREATES
+    '''
+    if len(p) > 2:
+        p[0] = ('creates-part', p[4])
+    else:
+        p[0] = ('creates-part', None)
+
+def p_process_using_part(p):
+    '''
+    process_using_part : ID
+                       | ID PROCESS USING name_with_args
+    '''
+    process_using = None
+    if len(p) > 2:
+        process_using = p[4]
+    p[0] = ('process-using-part', p[1], process_using)
+
+def p_processor_rule_tail(p):
+    '''
+    processor_rule_tail : TO connection_kind
+                        | TO connection_kind INCLUDE IN ID
+    '''
+    conn_kind = p[2]
+    include_in = None
+    if len(p) > 3:
+        include_in = p[5]
+    p[0] = ('proc-rule-tail', conn_kind, include_in)
 
 def p_performance_match (p):
     '''
@@ -335,23 +360,37 @@ def p_event_source_decl(p):
 
 def p_event_source_tail(p):
     '''
-    event_source_tail : PROCESS USING name_with_args TO connection_kind
-                      | TO connection_kind
+    event_source_tail : PROCESS USING name_with_args ev_src_include_part
+                      | ev_src_include_part
     '''
     process_using = None
 
-    if len(p) == 3:
-        connection_kind = p[2]
+    if len(p) == 2:
+        ev_src_include_part = p[1]
     else:
+        ev_src_include_part = p[4]
         process_using = p[3]
-        connection_kind = p[5]
-    p[0] = ('ev-source-tail', process_using, connection_kind)
+    connection_kind = ev_src_include_part[1]
+    include_in = ev_src_include_part[2]
+    p[0] = ('ev-source-tail', process_using, connection_kind, include_in)
 
     # if process_using is not None:
     #     name, c_args = get_name_args_count(process_using)
     #     if name.lower() != "forward":
     #         TypeChecker.assert_symbol_type(name, STREAM_PROCESSOR_NAME)
     #         TypeChecker.assert_num_args_match(name, c_args)
+
+def p_ev_src_include_part(p):
+    '''
+    ev_src_include_part : TO connection_kind
+                        | TO connection_kind INCLUDE IN ID
+    '''
+
+    conn_kind = p[2]
+    include_in = None
+    if len(p) > 3:
+        include_in = p[5]
+    p[0] = ('ev_src_inc_part', conn_kind, include_in)
 
 def p_connection_kind(p):
     '''
@@ -373,8 +412,8 @@ def p_connection_kind(p):
 # BEGIN advanced features
 def p_buff_group_def(p):
     '''
-    buff_group_def : BUFFER GROUP ID ':' ID ORDER BY order_expr INCLUDES ID '[' int_or_all ']'
-                   | BUFFER GROUP ID ':' ID INCLUDES ID '[' int_or_all ']'
+    buff_group_def : BUFFER GROUP ID ':' ID ORDER BY order_expr INCLUDE ID '[' int_or_all ']'
+                   | BUFFER GROUP ID ':' ID INCLUDE ID '[' int_or_all ']'
                    | BUFFER GROUP ID ':' ID ORDER BY order_expr
                    | BUFFER GROUP ID ':' ID
     '''
@@ -390,14 +429,15 @@ def p_buff_group_def(p):
                 includes = p[10]
                 arg_includes = p[12]
         else:
-            assert(p[6] == "includes")
+            assert(p[6] == "include")
             includes = p[7]
             arg_includes = p[9]
 
     p[0] = ('buff_group_def', buffer_group_name, stream_type, includes, arg_includes, order_by)
     TypeChecker.insert_symbol(buffer_group_name, BUFFER_GROUP_NAME)
     TypeChecker.assert_symbol_type(stream_type, STREAM_TYPE_NAME)
-    TypeChecker.assert_symbol_type(includes, EVENT_SOURCE_NAME)
+    if includes is not None:
+        TypeChecker.assert_symbol_type(includes, EVENT_SOURCE_NAME)
     TypeChecker.add_buffer_group_data(p[0])
 
 def p_int_or_all(p):
@@ -454,13 +494,19 @@ def p_arbiter_definition(p):
     '''
     arbiter_definition : ARBITER ':' ID '{' arbiter_rule_set_list '}'
                        | ARBITER ':' ID '{' '}'
+                       | ARBITER ':' ID '{' arbiter_rule_list '}'
     '''
 
     # TypeChecker.assert_symbol_type(p[ARBITER_OUTPUT_TYPE], STREAM_TYPE_NAME)
     if len(p) == 6:
         p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], None)
     else:
-        p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], p[ARBITER_RULE_SET_LIST])
+        if p[ARBITER_RULE_SET_LIST] == 'arb_rule_set_l':
+            p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], p[ARBITER_RULE_SET_LIST])
+        else:
+            arbiter_rule_set_l = ('arbiter_rule_set',  "default", p[ARBITER_RULE_SET_LIST])
+            p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], arbiter_rule_set_l)
+        
 
 
 def p_arbiter_rule_set_list(p):
@@ -497,23 +543,43 @@ def p_arbiter_rule_list(p):
 def p_arbiter_rule(p):
     '''
     arbiter_rule : ON list_buff_match_exp WHERE BEGIN_CCODE ccode_l_where_expression BEGIN_CCODE arbiter_rule_stmt_list
-                 | CHOOSE listids FROM ID WHERE BEGIN_CCODE ccode_l_where_expression '{' arbiter_rule_list '}'
-                 | CHOOSE choose_order listids FROM ID WHERE BEGIN_CCODE ccode_l_where_expression '{' arbiter_rule_list '}'
+                 | ON list_buff_match_exp BEGIN_CCODE arbiter_rule_stmt_list
+                 | CHOOSE listids arb_choose_middle_part '{' arbiter_rule_list '}'
+                 | CHOOSE choose_order listids arb_choose_middle_part '{' arbiter_rule_list '}'
     '''
-    if len(p) == 8:
-        # ON list_buff_match_exp WHERE BEGIN_CCODE ccode_l_where_expression BEGIN_CCODE arbiter_rule_stmt_list
-        # 1           2            3           4                    5         6                7
-        p[0] = ("arbiter_rule1", p[2], p[5], p[7])
-    else:
-        if len(p) == 12:
-            # CHOOSE choose_order listids FROM ID WHERE BEGIN_CCODE ccode_l_where_expression '{' arbiter_rule_list '}'
-            #    1      2            3      4   5   6          7          8                   9        10           11
-            p[0] = ("arbiter_rule2", p[2], p[3], p[5], p[8], p[10])
+    if p[1] == "on":
+        if len(p) == 5:
+            p[0] = ("arbiter_rule1", p[2], None, p[4])
         else:
-            assert(len(p) == 11)
-            # CHOOSE listids FROM ID WHERE BEGIN_CCODE ccode_l_where_expression '{' arbiter_rule_list '}'
-            #   1       2      3  4   5       6                7                 8         9           10
-            p[0] = ("arbiter_rule2", None, p[2], p[4], p[7], p[9])
+            # ON list_buff_match_exp WHERE BEGIN_CCODE ccode_l_where_expression BEGIN_CCODE arbiter_rule_stmt_list
+            # 1           2            3           4                    5         6                7
+            p[0] = ("arbiter_rule1", p[2], p[5], p[7])
+    else:
+        if len(p) == 8:
+            # CHOOSE choose_order listids arb_choose_middle_part '{' arbiter_rule_list '}'
+            #    1      2            3               4            5          6          7
+
+            middle_part = p[4]
+            p[0] = ("arbiter_rule2", p[2], p[3], middle_part[1], middle_part[2], p[6])
+        else:
+            assert(len(p) == 7)
+            # CHOOSE listids arb_choose_middle_part '{' arbiter_rule_list '}'
+            #   1       2            3               4          5          6
+            middle_part = p[3]
+            p[0] = ("arbiter_rule2", None, p[2], middle_part[1], middle_part[2], p[5])
+
+
+def p_arb_choose_middle_part(p):
+    '''
+    arb_choose_middle_part : FROM ID WHERE BEGIN_CCODE ccode_l_where_expression
+                           | FROM ID 
+    '''
+    where_expression = None
+    
+    if len(p) > 3:
+        where_expression = p[5]
+
+    p[0] = ("arb-choose-middle-part", p[2], where_expression)
 
 
 def p_ccode_l_where_expression(p):
@@ -575,9 +641,7 @@ def p_buffer_match_exp(p):
                      | ID '(' ')'
                      | CHOOSE choose_order listids FROM ID
                      | CHOOSE listids FROM ID
-                     | event_src_ref ':' NOTHING
-                     | event_src_ref ':' DONE
-                     | event_src_ref ':' INT
+                     | event_src_ref ':' list_ev_src_status
                      | event_src_ref ':' '|' list_event_calls
                      | event_src_ref ':' list_event_calls '|'
                      | event_src_ref ':' list_event_calls '|' list_event_calls
@@ -615,7 +679,7 @@ def p_buffer_match_exp(p):
         p[0] = ('buff_match_exp-choose', choose_order, args, buffer_name)
         TypeChecker.assert_symbol_type(p[4], BUFFER_GROUP_NAME)
     elif len(p) == 4:
-        TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
+        # TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1])
     elif len(p) == 5:
         # TODO: fix this check
@@ -624,6 +688,27 @@ def p_buffer_match_exp(p):
     else:
         TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1],'|',p[PBUFFER_MATCH_ARG3])
+
+
+def p_list_ev_src_status(p):
+    '''
+    list_ev_src_status : ev_src_status
+                       | ev_src_status ',' list_ev_src_status
+    '''
+
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = ("l-ev-src-status", p[1], p[3])
+
+def p_ev_src_status(p):
+    '''
+    ev_src_status : NOTHING
+                  | DONE
+                  | INT
+                  | FAIL
+    '''
+    p[0] = ("ev-src-status", p[1])
 
 def p_event_src_ref(p):
     '''
@@ -659,7 +744,7 @@ def p_list_event_calls(p):
     '''
 
     # TODO: what is E^H
-    TypeChecker.assert_symbol_type(p[PLIST_EV_CALL_EV_NAME], EVENT_NAME)
+    # TypeChecker.assert_symbol_type(p[PLIST_EV_CALL_EV_NAME], EVENT_NAME)
     if len(p) == 4:
         # ID '(' ')'
         p[0] = ("ev_call", p[PLIST_EV_CALL_EV_NAME], None)
@@ -671,13 +756,13 @@ def p_list_event_calls(p):
             # ID '(' listids ')'
             p[0] = ("ev_call", p[PLIST_EV_CALL_EV_NAME], p[PLIST_EV_CALL_EV_PARAMS])
             list_ids_length = get_count_list_ids(p[PLIST_EV_CALL_EV_PARAMS])
-            TypeChecker.assert_num_args_match(p[PLIST_EV_CALL_EV_NAME], list_ids_length)
+            # TypeChecker.assert_num_args_match(p[PLIST_EV_CALL_EV_NAME], list_ids_length)
     else:
         assert(len(p) == 6)
         # ID '(' listids  ')' list_event_calls
         p[0] = ("list_ev_calls", p[PLIST_EV_CALL_EV_NAME], p[PLIST_EV_CALL_EV_PARAMS], p[PLIST_EV_CALL_TAIL])
         list_ids_length = get_count_list_ids(p[PLIST_EV_CALL_EV_PARAMS])
-        TypeChecker.assert_num_args_match(p[PLIST_EV_CALL_EV_NAME], list_ids_length)
+        # TypeChecker.assert_num_args_match(p[PLIST_EV_CALL_EV_NAME], list_ids_length)
 
 
 
@@ -726,6 +811,7 @@ def p_arbiter_rule_stmt(p):
                       | SWITCH TO ID
                       | DROP INT FROM event_src_ref
                       | REMOVE ID FROM event_src_ref
+                      | ADD ID FROM event_src_ref
                       | FIELD_ACCESS
     '''
 
@@ -738,7 +824,10 @@ def p_arbiter_rule_stmt(p):
         # TypeChecker.assert_symbol_type(p[PARB_RULE_STMT_YIELD_EVENT], EVENT_NAME)
         # count_expr_list = get_count_list_expr(p[PARB_RULE_STMT_YIELD_EXPRS])
         # TypeChecker.assert_num_args_match(p[PARB_RULE_STMT_YIELD_EVENT], count_expr_list)
+    elif p[1] == "add" or p[1] == "remove":
+        p[0] = (p[1], p[2], p[4])
     elif len(p) == 5:
+        assert(p[1] == "drop")
         p[0] = ("drop", p[PARB_RULE_STMT_DROP_INT], p[PARB_RULE_STMT_DROP_EV_SOURCE])
         event_source_name = p[PARB_RULE_STMT_DROP_EV_SOURCE][1]
         TypeChecker.assert_symbol_type(event_source_name, EVENT_SOURCE_NAME)
@@ -824,12 +913,11 @@ def p_extends_node(p):
 def p_name_with_args(p):
     '''
     name_with_args : ID '(' expression_list ')'
-                   | ID '(' listids ')'
+                   | ID '(' list_field_decl ')'
                    | ID
                    | ID '(' ')'
                    | FORWARD
     '''
-
     if len(p) == 2:
         p[0] = p[1]
     elif len(p) == 4:
@@ -868,9 +956,10 @@ def p_expression(p):
                | INT
                | BOOL
                | CCODE_TOKEN
+               | FIELD_ACCESS
     '''
     if len(p) == 2:
-        p[0] = p[1]
+        p[0] = ('expr', p[1])
     else:
         raise Exception("this should not happen")
         # assert(len(p) == 4)

@@ -3,6 +3,12 @@ from typing import List, Tuple, Dict, Any, Set
 from parser_indices import *
 
 
+def replace_cmd_args(program, buffsize):
+    answer = []
+    for line in program:
+        answer.append(line.replace("@BUFSIZE", str(buffsize)))
+    return answer
+
 def get_components_dict(tree: Tuple, answer: Dict[str, List[Tuple]]) -> None:
     if tree[0] == "components":
         get_components_dict(tree[1], answer)
@@ -146,7 +152,7 @@ def get_stream_to_events_mapping(stream_types: List[Tuple], stream_processors) -
         mapping_events = {}
         for (index, data) in enumerate(events_data):
             data.update({'index': index+2, 'enum' : f"{stream_type.upper()}_{data['name'].upper()}"})
-            mapping_events[data['name']] = data
+            mapping_events[f"{data['name']}"] = data
         mapping_events['hole'] = {'index': 1, 'args':[('n', 'int')], 'enum': f'{stream_type.upper()}_HOLE'}
         mapping[stream_type] = mapping_events
 
@@ -423,6 +429,14 @@ def insert_in_result(buffer_name: str, count: int, result: Dict[str, int], exist
         else:
             result[buffer_name] = count
 
+def get_stream_status(tree, result):
+    if tree[0] == "l-ev-src-status":
+        get_stream_status(tree[1], result)
+        get_stream_status(tree[2], result)
+    else:
+        assert(tree[0] == "ev-src-status")
+        result.append(tree[1])
+
 def local_get_buffer_peeks(local_tree: Tuple, type_checker: Any, result: Dict[str, int], existing_buffers: Set[str]) \
         -> None:
     if local_tree[0] ==  "l_buff_match_exp":
@@ -436,25 +450,25 @@ def local_get_buffer_peeks(local_tree: Tuple, type_checker: Any, result: Dict[st
         else:
             assert(local_tree[0] == "buff_match_exp")
             if len(local_tree) == 3:
-                if local_tree[-1] == "done":
-                    # event_src_ref ':' DONE
-                    pass
-                elif local_tree[-1] == "nothing":
-                    # event_src_ref ':' NOTHING
-                    event_src_ref = local_tree[1]
-                    event_src_name = event_src_ref[1]
-                    if event_src_ref[2] is not None:
+                all_status = []
+                get_stream_status(local_tree[-1], all_status)
+                event_src_ref = local_tree[1]
+                event_src_name = event_src_ref[1]
+                if event_src_ref[2] is not None:
                         event_src_name += str(event_src_ref[2])
-
-                    insert_in_result(event_src_name, 0, result, existing_buffers)
-                else:
-                    # event_src_ref ':' INT
-                    event_src_ref = local_tree[1]
-                    event_src_name = event_src_ref[1]
-                    if event_src_ref[2] is not None:
-                        event_src_name += str(event_src_ref[2])
-
-                    insert_in_result(event_src_name, local_tree[-1], result, existing_buffers)
+                for status in all_status:
+                    if status == "done":
+                        # event_src_ref ':' DONE
+                        pass
+                    elif status == "fail":
+                        # event_src_ref ':' FAIL
+                        pass
+                    elif status == "nothing":
+                        # event_src_ref ':' NOTHING
+                        insert_in_result(event_src_name, 0, result, existing_buffers)
+                    else:
+                        # event_src_ref ':' INT
+                        insert_in_result(event_src_name, local_tree[-1], result, existing_buffers)
             else:
                 # assert(len(local_tree) == 4)
                 event_src_ref = local_tree[1]
