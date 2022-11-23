@@ -173,16 +173,12 @@ def p_stream_processor(p):
         #   1        2           3         4          5            6           7              8       9           10
         extends_node = p[8]
         perf_layer_rule_list = p[10]
-
-
     p[0] = ("stream_processor", name_with_args, input_type, output_type, extends_node, perf_layer_rule_list)
     stream_proc_name, args_stream_proc = get_name_with_args(name_with_args)
     TypeChecker.insert_into_args_table(stream_proc_name, STREAM_PROCESSOR_NAME, args_stream_proc)
 
     input_stream_name, c_args_input = get_name_args_count(input_type)
     output_stream_name, c_args_output = get_name_args_count(output_type)
-
-
     # TypeChecker.check_args_are_primitive(input_stream_name)
     # TypeChecker.check_args_are_primitive(output_stream_name)
 
@@ -336,7 +332,7 @@ def p_event_source(p):
     stream, c_stream_args = get_name_args_count(stream)
     TypeChecker.assert_num_args_match(stream, c_stream_args)
     # TODO: check type of stream type?
-    TypeChecker.insert_event_source_data(p[0])
+    
 
 
 
@@ -412,8 +408,8 @@ def p_connection_kind(p):
 # BEGIN advanced features
 def p_buff_group_def(p):
     '''
-    buff_group_def : BUFFER GROUP ID ':' ID ORDER BY order_expr INCLUDE ID '[' int_or_all ']'
-                   | BUFFER GROUP ID ':' ID INCLUDE ID '[' int_or_all ']'
+    buff_group_def : BUFFER GROUP ID ':' ID ORDER BY order_expr INCLUDES ID '[' int_or_all ']'
+                   | BUFFER GROUP ID ':' ID INCLUDES ID '[' int_or_all ']'
                    | BUFFER GROUP ID ':' ID ORDER BY order_expr
                    | BUFFER GROUP ID ':' ID
     '''
@@ -434,11 +430,11 @@ def p_buff_group_def(p):
             arg_includes = p[9]
 
     p[0] = ('buff_group_def', buffer_group_name, stream_type, includes, arg_includes, order_by)
-    TypeChecker.insert_symbol(buffer_group_name, BUFFER_GROUP_NAME)
-    TypeChecker.assert_symbol_type(stream_type, STREAM_TYPE_NAME)
-    if includes is not None:
-        TypeChecker.assert_symbol_type(includes, EVENT_SOURCE_NAME)
-    TypeChecker.add_buffer_group_data(p[0])
+    # TypeChecker.insert_symbol(buffer_group_name, BUFFER_GROUP_NAME)
+    # TypeChecker.assert_symbol_type(stream_type, STREAM_TYPE_NAME)
+    # if includes is not None:
+    #     TypeChecker.assert_symbol_type(includes, EVENT_SOURCE_NAME)
+    # TypeChecker.add_buffer_group_data(p[0])
 
 def p_int_or_all(p):
     '''
@@ -473,19 +469,19 @@ def p_match_fun_def(p):
         buffer_match_expr = p[10]
     p[0] = ('match_fun_def', match_fun_name, arg1, arg2, buffer_match_expr)
 
-    TypeChecker.add_match_fun_data(p[0])
+    # TypeChecker.add_match_fun_data(p[0])
     if arg2 is not None:
         ids = []
         get_list_ids(arg2, ids)
-        TypeChecker.insert_into_args_table(match_fun_name, MATCH_FUN_NAME, ids)
-    else:
-        TypeChecker.insert_symbol(match_fun_name, MATCH_FUN_NAME)
+        # TypeChecker.insert_into_args_table(match_fun_name, MATCH_FUN_NAME, ids)
+    # else:
+        # TypeChecker.insert_symbol(match_fun_name, MATCH_FUN_NAME)
     if arg1 is not None:
         ids = []
         get_list_ids(arg1, ids)
         # TypeChecker.logical_copies[match_fun_name] = ids # TODO: maybe this should be in a diff. data structure
-        for id in ids:
-            TypeChecker.insert_symbol(id, EVENT_SOURCE_NAME)
+        # for id in ids:
+        #     TypeChecker.insert_symbol(id, EVENT_SOURCE_NAME)
 
 # END advanced features
 
@@ -501,7 +497,7 @@ def p_arbiter_definition(p):
     if len(p) == 6:
         p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], None)
     else:
-        if p[ARBITER_RULE_SET_LIST] == 'arb_rule_set_l':
+        if p[ARBITER_RULE_SET_LIST][0] == 'arb_rule_set_l' or p[ARBITER_RULE_SET_LIST][0] == 'arbiter_rule_set':
             p[0] = ("arbiter_def", p[ARBITER_OUTPUT_TYPE], p[ARBITER_RULE_SET_LIST])
         else:
             arbiter_rule_set_l = ('arbiter_rule_set',  "default", p[ARBITER_RULE_SET_LIST])
@@ -648,7 +644,7 @@ def p_buffer_match_exp(p):
     '''
 
     if p[2] == "[":
-        TypeChecker.assert_symbol_type(p[1], MATCH_FUN_NAME)
+        # TypeChecker.assert_symbol_type(p[1], MATCH_FUN_NAME)
         arg1 = None
         arg2 = None
         if len(p) == 7:
@@ -677,7 +673,7 @@ def p_buffer_match_exp(p):
             args = p[2]
             buffer_name = p[4]
         p[0] = ('buff_match_exp-choose', choose_order, args, buffer_name)
-        TypeChecker.assert_symbol_type(p[4], BUFFER_GROUP_NAME)
+        # TypeChecker.assert_symbol_type(p[4], BUFFER_GROUP_NAME)
     elif len(p) == 4:
         # TypeChecker.assert_symbol_type(p[1][1], EVENT_SOURCE_NAME)
         p[0] = ("buff_match_exp", p[PBUFFER_MATCH_EV_NAME], p[PBUFFER_MATCH_ARG1])
@@ -891,9 +887,9 @@ def p_monitor_rule(p):
         listids = p[4]
         expression = p[8]
         code = p[10]
-    TypeChecker.assert_symbol_type(p[PMONITOR_RULE_EV_NAME], EVENT_NAME)
-    if listids:
-        TypeChecker.assert_num_args_match(p[PMONITOR_RULE_EV_NAME], get_count_list_ids(p[PMONITOR_RULE_EV_ARGS]))
+    # TypeChecker.assert_symbol_type(p[PMONITOR_RULE_EV_NAME], EVENT_NAME)
+    # if listids:
+        # TypeChecker.assert_num_args_match(p[PMONITOR_RULE_EV_NAME], get_count_list_ids(p[PMONITOR_RULE_EV_ARGS]))
     p[0] = ("monitor_rule", p[2], listids, expression, code)
 
 # END monitor Specification
