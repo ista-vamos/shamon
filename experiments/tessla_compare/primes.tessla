@@ -1,0 +1,17 @@
+in primes1: Events[(Int, Int)]
+in primes2: Events[(Int, Int)]
+in holes1: Events[Int]
+in holes2: Events[Int]
+
+def dropped1 = merge(if resetCount(primes1, holes1) < last(holes1, primes1)
+                     then 0 else sum(holes1), 0)
+def dropped2 = merge(if resetCount(primes2, holes2) < last(holes2, primes2)
+                     then 0 else sum(holes2), 0)
+def pos1 = merge(count(primes1), 0) + dropped1
+def pos2 = merge(count(primes2), 0) + dropped2
+
+def positions_same = unitIf(pos1 == pos2)
+def p1 = on(positions_same, primes1)
+def p2 = on(positions_same, primes2)
+out p1 == p2 as ok
+

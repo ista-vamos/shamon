@@ -29,12 +29,12 @@ stream type BankEvent
     reset();
 }
 
-event source In : BankInputEvent to autodrop(1024)
-event source Out : BankOutputEvent to autodrop(1024)
+event source In : BankInputEvent to autodrop(10000)
+event source Out : BankOutputEvent to autodrop(10000)
 
 globals
 $$
-    #include "./compiler/cfiles/intmap.h"
+    #include "../../../compiler/cfiles/intmap.h"
     intmap balances;
     intmap upper_bounds;
     intmap lower_bounds;
@@ -43,6 +43,8 @@ $$
     int in_holes=0;
     int out_holes=0;
     int errors=0;
+    size_t timestamp = 0;
+    FILE *tessla_in;
 $$
 
 startup
@@ -50,6 +52,11 @@ $$
 init_intmap(&balances);
 init_intmap(&upper_bounds);
 init_intmap(&lower_bounds);
+tessla_in = fopen("/tmp/tessla.in", "w");
+    if (tessla_in == NULL) {
+    fprintf(stderr, "Failed openning TeSSLa fifo\n");
+    abort();
+}
 $$
 
 cleanup
@@ -61,6 +68,7 @@ fflush(stdout);
 destroy_intmap(&balances);
 destroy_intmap(&upper_bounds);
 destroy_intmap(&lower_bounds);
+fclose(tessla_in);
 $$
 
 arbiter : BankEvent
@@ -393,4 +401,34 @@ arbiter : BankEvent
 }
 
 
-monitor(128) {}
+monitor(10000) {
+    on monbalance(account, balance) where $$ true $$
+    $$
+        fprintf(tessla_in, "%lu: monbalance = (%d, %d)\n", ++timestamp, account, balance);
+    $$
+
+    on deposit(account, amount) where $$ true $$
+    $$
+        fprintf(tessla_in, "%lu: deposit = (%d, %d)\n", ++timestamp, account, amount);
+    $$
+
+    on monwithdraw(account, amount, success) where $$ true $$
+    $$
+        fprintf(tessla_in, "%lu: monwithdraw = (%d, %d, %d)\n", ++timestamp, account, amount, success);
+    $$
+
+    on montransfer(from_, to_, amount, success) where $$ true $$
+    $$
+        fprintf(tessla_in, "%lu: montransfer = (%d, %d, %d, %d)\n", ++timestamp, from_, to_, amount, success);
+    $$
+
+    on reset() where $$ true $$
+    $$
+    fprintf(tessla_in, "%lu: reset = ()\n", ++timestamp);
+    $$
+
+    on hole(n) where $$ true $$
+    $$
+    fprintf(tessla_in, "THERE IS A HOLE\n");
+    $$
+}

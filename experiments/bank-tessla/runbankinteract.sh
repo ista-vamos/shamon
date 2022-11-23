@@ -10,11 +10,10 @@ shift
 DIR=$(dirname $0)
 BANK_DIR="$DIR/../bank"
 
-DRIOPATH="/opt/vamos/dynamorio/"
+DRIOPATH="/home/fabian/dynamorio/"
 DRRUN="$DRIOPATH/build/bin64/drrun\
 	-root $DRIOPATH/build/\
 	-c ../../sources/drregex/libdrregex-mt.so"
-TIME=/usr/bin/time
 
 MONITOR=$DIR/monitor$ARBITER_BUFSIZE
 if [ $(basename "$0") == "regexbank-dump.sh" ]; then
@@ -27,6 +26,7 @@ rm -f /dev/shm/bank.{stdin,stdout}
 mkfifo /tmp/fifo{A,B}
 
 python3 $BANK_DIR/inputs.py $NUM > inputs.last.txt
+
 
 $DRRUN -t /bank \
 balance "\s*Current balance on Account ([0-9]+):\s*" i \
@@ -48,24 +48,3 @@ BANK_PID=$!
 
 echo "-- Starting interact --"
 cat /tmp/fifoB | $BANK_DIR/interact inputs.last.txt interact.log >/tmp/fifoA &
-
-echo "-- Starting the monitor --"
-$TIME -o mon.time $MONITOR Out:regex:/bank.stdout In:regex:/bank.stdin > mon.stdout 2>mon.stderr &
-MON_PID=$!
-
-wait $MON_PID
-
-echo "-- Monitor finished --"
-
-#grep -E 'balancemismatch|balancenegative' mon.stdout
-#ERRSNUM=$(grep -E 'balancemismatch|balancenegative' mon.stdout | wc -l)
-
-echo "Errors found: " $(grep -E 'balancemismatch|balancenegative' mon.stdout | wc -l)
-
-rm -f /tmp/fifo{A,B}
-
-cat interact.log
-cat mon.time
-#cat mon.stdout
-grep -E 'in_processed|in_holes|in_dropped' mon.stdout
-#cat mon.stderr
