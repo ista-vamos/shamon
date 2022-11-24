@@ -11,6 +11,7 @@ def replace_cmd_args(program, buffsize):
 
 def get_components_dict(tree: Tuple, answer: Dict[str, List[Tuple]]) -> None:
     if tree[0] == "components":
+        
         get_components_dict(tree[1], answer)
         get_components_dict(tree[2], answer)
     else:

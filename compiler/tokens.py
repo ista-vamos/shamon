@@ -51,7 +51,9 @@ reserved = {
     "all": "ALL",
     "add": "ADD",
     "in": "IN",
-    "fail": "FAIL"
+    "count": "COUNT",
+    "max": "MAX",
+    "min": "MIN"
 }
 
 # Token names.
