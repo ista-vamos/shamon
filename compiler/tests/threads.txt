@@ -23,7 +23,7 @@ stream processor TEProcessor(threadid : int) : ThreadEvent(threadid, 0) -> Threa
 }
 
 buffer group Threads : ThreadEvent order by nextts
-event source Program : ThreadEvent(0,0) process using TEProcessor(0) to autodrop(@BUFSIZE) include in Threads
+event source Program : ThreadEvent process using TEProcessor(0) to autodrop(@BUFSIZE) include in Threads
 
 stream type GlobalEvent
 {

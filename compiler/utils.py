@@ -2,6 +2,81 @@
 from typing import List, Tuple, Dict, Any, Set
 from parser_indices import *
 
+def parse_list_events_agg_func(tree, result):
+    if tree[0] == '*':
+        result.append(tree[0])
+    elif tree[0] == 'l-events-hole':
+        type1 = parse_list_events_agg_func(tree[1], result)
+        type2 = parse_list_events_agg_func(tree[2], result)
+        if type1 != type2:
+            raise Exception("All parameters of aggregations functions must be of one type")
+        return type1
+    else:
+        assert(tree[0] == 'event_hole')
+        if tree[1][0] == 'field_access':
+            result.append(tree[1])
+            return False
+        else:
+            assert(type(tree[1]) == str)
+            result.append(tree[1])
+            return True
+
+def build_custom_hole(tree, result):
+    if tree[0] == 'l-hole-attributes':
+        build_custom_hole(tree[1], result)
+        build_custom_hole(tree[2], result)
+    else:
+        assert(tree[0] == 'hole-attribute')
+        attribute = tree[1]
+        agg_func = tree[2]
+        agg_func_name = agg_func[1]
+        agg_func_params = []
+        parse_list_events_agg_func(agg_func[2], agg_func_params)
+        result.append({
+            'attribute': attribute,
+            'agg_func_name': agg_func_name,
+            'agg_func_params': agg_func_params
+        })
+ 
+def get_processor_rules(tree, result):
+    if tree[0] == "perf_layer_list":
+        part1_result = get_processor_rules(tree[1], result)
+        part2_result = get_processor_rules(tree[2], result)
+        if part1_result is not None:
+            return part1_result
+        if part2_result is not None:
+            return part2_result
+        return None
+    else:
+        if tree[0] == "perf_layer_rule":
+            event, event_args = get_name_with_args(tree[1])
+            stream_type = tree[3]
+            process_using, process_using_args = get_name_with_args(tree[4])
+            connection_kind = {
+                'type': tree[5][1],
+                'size': tree[5][2]
+            }
+            if tree[5][1] != "autodrop":
+                print(f"connection kind {tree[5][1]} is not implemented")
+
+            performance_match = tree[6]
+            buff_group = tree[7]
+            result.append({
+                'event': event,
+                'event_args': event_args,
+                'stream_type': stream_type,
+                'process_using': process_using,
+                'process_using_args': process_using_args,
+                'connection_kind': connection_kind,
+                'performance_match': performance_match,
+                'buff_group': buff_group
+            })
+            return None
+        else:
+            assert(tree[0] == "custom_hole")
+            custom_hole = []
+            build_custom_hole(tree[1], custom_hole)
+            return custom_hole
 
 def replace_cmd_args(program, buffsize):
     answer = []
@@ -21,7 +96,7 @@ def get_components_dict(tree: Tuple, answer: Dict[str, List[Tuple]]) -> None:
 
         answer[name].append(tree)
 
-def get_name_with_args(tree: Tuple) -> (Tuple, List[str]):
+def get_name_with_args(tree: Tuple):
     if tree[0] == "name-with-args":
         args = []
         if tree[2] is None:
@@ -34,7 +109,7 @@ def get_name_with_args(tree: Tuple) -> (Tuple, List[str]):
     else:
         return tree, []
 
-def get_name_args_count(tree: Tuple) -> (Tuple, int):
+def get_name_args_count(tree: Tuple):
     if tree[0] == "name-with-args":
         args = []
         if tree[2] is None:
@@ -121,24 +196,19 @@ def get_event_args(tree: Tuple, event_args: List[Tuple[str, str]]) -> None:
         get_event_args(tree[PLIST_TAIL], event_args)
     else:
         assert(tree[0] == "field_decl")
-        event_args.append((tree[PPFIELD_NAME], tree[PPFIELD_TYPE][PTYPE_DATA]))
+        event_args.append({"name": tree[PPFIELD_NAME], "type": tree[PPFIELD_TYPE][PTYPE_DATA]})
 
 
-def get_events_data(tree: Tuple, events_data: List[Dict[str, str]]) -> None:
+def get_events_data(tree: Tuple, events_data: Dict[str, Dict[str, str]]) -> None:
     if tree[0] == "event_list":
         get_events_data(tree[PLIST_BASE_CASE], events_data)
         get_events_data(tree[PLIST_TAIL], events_data)
     else:
         assert (tree[0] == "event_decl")
-        event_args: List[Tuple[str, str]] = [] # list consists of a tuple (name_arg, type_arg)
+        event_args: List[Dict[str, str]] = [] # list consists of a tuple (name_arg, type_arg)
         if tree[PPEVENT_PARAMS_LIST]:
             get_event_args(tree[PPEVENT_PARAMS_LIST], event_args)
-
-        data = {
-            "name": tree[PPEVENT_NAME],
-            "args": event_args
-        }
-        events_data.append(data)
+        events_data[tree[PPEVENT_NAME]] = event_args
 
 
 def get_stream_to_events_mapping(stream_types: List[Tuple], stream_processors) -> Dict[str, Any]:
@@ -146,15 +216,20 @@ def get_stream_to_events_mapping(stream_types: List[Tuple], stream_processors) -
     for tree in stream_types:
         assert(tree[0] == "stream_type")
         assert(len(tree) == 5)
-        events_data = []
+        events_data = dict()
         get_events_data(tree[-1], events_data)
         stream_type = tree[PPSTREAM_TYPE_NAME]
         assert(stream_type not in mapping.keys())
         mapping_events = {}
-        for (index, data) in enumerate(events_data):
-            data.update({'index': index+2, 'enum' : f"{stream_type.upper()}_{data['name'].upper()}"})
-            mapping_events[f"{data['name']}"] = data
-        mapping_events['hole'] = {'index': 1, 'args':[('n', 'int')], 'enum': f'{stream_type.upper()}_HOLE'}
+        for (index, (event_name, args)) in enumerate(events_data.items()):
+            data = {
+                'args': args
+            }
+            data.update({'index': index+2, 'enum' : f"{stream_type.upper()}_{event_name.upper()}"})
+            mapping_events[f"{event_name}"] = data
+
+        # TODO: fill with special holes data
+        mapping_events['hole'] = {'index': 1, 'args':[{'name': 'n', 'type': 'int'}], 'enum': f'{stream_type.upper()}_HOLE'}
         mapping[stream_type] = mapping_events
 
     for (processor, data) in stream_processors.items():
@@ -185,23 +260,25 @@ def get_stream_types(event_sources: Tuple) -> Dict[str, Any]:
 
 
 def get_parameters_types_field_decl(tree: Tuple, params: List[Dict[str, Tuple]]) -> None:
-    assert (len(tree) == 3)
-    if tree[0] == 'list_field_decl':
-        get_parameters_types_field_decl(tree[PLIST_BASE_CASE], params)
-        get_parameters_types_field_decl(tree[PLIST_TAIL], params)
-    else:
-        assert (tree[0] == 'field_decl')
-        params.append({"name": tree[1], "type": tree[PPFIELD_TYPE][1], "is_primitive" : is_type_primitive(tree[PPFIELD_TYPE])})
+    if tree is not None:
+        assert (len(tree) == 3)
+        if tree[0] == 'list_field_decl':
+            get_parameters_types_field_decl(tree[PLIST_BASE_CASE], params)
+            get_parameters_types_field_decl(tree[PLIST_TAIL], params)
+        else:
+            assert (tree[0] == 'field_decl')
+            params.append({"name": tree[1], "type": tree[PPFIELD_TYPE][1], "is_primitive" : is_type_primitive(tree[PPFIELD_TYPE])})
 
 
 def get_parameters_names_field_decl(tree: Tuple, params: List[str]) -> None:
-    assert (len(tree) == 3)
-    if tree[0] == 'list_field_decl':
-        get_parameters_names_field_decl(tree[PLIST_BASE_CASE], params)
-        get_parameters_names_field_decl(tree[PLIST_TAIL], params)
-    else:
-        assert (tree[0] == 'field_decl')
-        params.append(tree[PPFIELD_NAME])
+    if tree is not None:
+        assert (len(tree) == 3)
+        if tree[0] == 'list_field_decl':
+            get_parameters_names_field_decl(tree[PLIST_BASE_CASE], params)
+            get_parameters_names_field_decl(tree[PLIST_TAIL], params)
+        else:
+            assert (tree[0] == 'field_decl')
+            params.append(tree[PPFIELD_NAME])
 
 def get_event_src_name(tree: Tuple) -> str:
     assert(tree[0] == "event-decl")
@@ -310,7 +387,7 @@ def get_parameters_names(tree: Tuple, stream_name: str, mapping: Dict[str, Dict]
         get_list_ids(tree[PPLIST_EV_CALL_EV_PARAMS], ids)
         assert (len(ids) == len(mapping[tree[PPLIST_EV_CALL_EV_NAME]]['args']))
         for (arg_bind, arg) in zip(mapping[tree[PPLIST_EV_CALL_EV_NAME]]['args'], ids):
-            binded_args[arg] = (stream_name, tree[PPLIST_EV_CALL_EV_NAME], arg_bind[0], arg_bind[1], index, stream_index)
+            binded_args[arg] = (stream_name, tree[PPLIST_EV_CALL_EV_NAME], arg_bind['name'], arg_bind['type'], index, stream_index)
 
 
 

@@ -196,7 +196,6 @@ def p_processor_rule_list(p):
     processor_rule_list : custom_hole
                         | processor_rule
                         | processor_rule ';'
-                        | processor_rule ';' custom_hole
                         | processor_rule ';' processor_rule_list
     '''
     if len(p) < 4:
@@ -204,7 +203,7 @@ def p_processor_rule_list(p):
         p[0] = p[1]
     else:
         assert(len(p) == 4)
-        p[0] = ("processor_rule_list", p[PLIST_BASE_CASE], p[3])
+        p[0] = ("perf_layer_list", p[PLIST_BASE_CASE], p[3])
 
 def p_custom_hole(p):
     '''
@@ -213,7 +212,6 @@ def p_custom_hole(p):
 
     if p[1].lower() != 'hole':
         raise Exception("custom hole should be named hole")
-
     p[0] = ('custom_hole', p[3])
 
 def p_list_hole_attributes(p):
@@ -224,7 +222,7 @@ def p_list_hole_attributes(p):
     if len(p) == 3:
         p[0] = p[1]
     else:
-        p[1] = ('l-hole-attributes', p[1], p[3])
+        p[0] = ('l-hole-attributes', p[1], p[3])
 
 def p_hole_attribute(p):
     '''
@@ -250,17 +248,23 @@ def p_agg_func_params(p):
 
 def p_list_events_hole(p):
     '''
-    list_events_hole : ID
-                     | FIELD_ACCESS
-                     | ID ',' list_events_hole
-                     | FIELD_ACCESS ',' list_events_hole
+    list_events_hole : event_hole
+                     | event_hole ',' list_events_hole
     '''
 
     if len(p) == 2:
-        p[0] = ('event-hole', p[1])
+        p[0] = p[1]
     else:
         assert(len(p) == 4)
-        p[0] = ('l-events-hole', p[1], p[2])
+        p[0] = ('l-events-hole', p[1], p[3])
+
+def p_event_hole(p):
+    '''
+    event_hole : ID
+               | FIELD_ACCESS
+    '''
+
+    p[0] = ('event_hole', p[1])
 
 def p_processor_rule(p):
     '''
@@ -389,7 +393,7 @@ def p_event_source(p):
 
     p[0] = ('event_source', is_dynamic, event_src_declaration, stream, event_src_tail)
     stream, c_stream_args = get_name_args_count(stream)
-    TypeChecker.assert_num_args_match(stream, c_stream_args)
+    # TypeChecker.assert_num_args_match(stream, c_stream_args)
     # TODO: check type of stream type?
     
 
@@ -998,7 +1002,7 @@ def p_expression_list(p):
     '''
 
     if len(p) == 2:
-        p[0] = ("expr",p[PLIST_BASE_CASE])
+        p[0] = p[PLIST_BASE_CASE]
     else:
         assert(len(p) == 4)
         p[0] = ("expr_list", p[PLIST_BASE_CASE], p[PLIST_TAIL_WITH_SEP])

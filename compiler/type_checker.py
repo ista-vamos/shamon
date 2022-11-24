@@ -39,6 +39,7 @@ class TypeChecker:
     match_fun_data: Dict[str, Dict[str, Any]] = dict()
     match_expr_funcs: List[Any] = []
     monitor_buffer_size: int = 4
+    stream_types_data: Dict[str, Dict[str, Any]] = dict()
 
     @staticmethod
     def clean_checker():
@@ -99,12 +100,35 @@ class TypeChecker:
         return symbol in TypeChecker.args_table.keys()
 
     @staticmethod
-    def insert_into_args_table(symbol: str, symbol_type: str, args_: List[str]) -> None:
+    def insert_into_args_table(symbol: str, symbol_type: str, args_: Dict[str, str]) -> None:
         TypeChecker.insert_symbol(symbol,  symbol_type)
         assert(TypeChecker.symbol_exists(symbol))
 
         assert(not TypeChecker.is_symbol_in_args_table(symbol))
         TypeChecker.args_table[symbol] = args_
+
+    @staticmethod
+    def get_stream_types_data(stream_types):
+        for stream_type in stream_types:
+            stream_name = stream_type[1]
+
+            stream_args_names = []
+            get_parameters_names_field_decl(stream_type[2], stream_args_names)
+            stream_args_types = []
+            get_parameters_types_field_decl(stream_type[2], stream_args_types)
+            extends_node = stream_type[3]
+            if extends_node is not None:
+                raise Exception("missing implementation to extend stream types")
+            event_list = stream_type[4]
+            events = dict()
+            get_events_data(event_list, events)
+            for (event, args) in events.items():
+                TypeChecker.insert_into_args_table(f"EVENT_{stream_name}_{event}", EVENT_NAME, args)
+            TypeChecker.stream_types_data[stream_name] = {
+                'args': stream_args_names,
+                'arg_types': stream_args_types,
+                'events': events
+            }
 
     @staticmethod
     def assert_num_args_match(symbol, expected_n):
@@ -243,37 +267,22 @@ class TypeChecker:
 
         for tree in stream_processors:
             assert(tree[0] == "stream_processor")
-            stream_processor_name, _ = get_name_with_args(tree[1])
+            stream_processor_name, args = get_name_with_args(tree[1])
             input_type, input_args = get_name_with_args(tree[2])
             output_type, output_args = get_name_with_args(tree[3])
             extends_node = tree[4]
-            if extends_node is None:
-                binded_mother_args = {}
-                perf_layer_rule_list = tree[5]
-            else:
-                mother_stream, mother_args = get_name_with_args(extends_node[1])
-                binded_mother_args = {}
-                binded_mother_args[mother_stream] = {}
-                if mother_stream.lower() != "forward":
-                    assert(mother_stream in TypeChecker.stream_processors_data.keys())
-                    raw_args = TypeChecker.args_table[mother_stream]
-                    assert(len(raw_args) == len(mother_args))
-                    for (raw_arg, mother_arg) in zip(raw_args, mother_args):
-                        binded_mother_args[mother_stream]['raw_arg'] = mother_arg
-
-                    binded_mother_args.update(TypeChecker.stream_processors_data[mother_stream]['mother_args'])
-
-                    perf_layer_rule_list = ("perf_layer_list", TypeChecker.stream_processors_data[mother_stream]["perf_layer_rule_list"], tree[5])
-                else:
-                    perf_layer_rule_list = tree[5]
+            processor_rules = []
+            special_hole = get_processor_rules(tree[5], processor_rules)
 
             TypeChecker.stream_processors_data[stream_processor_name] = {
+                'args': args,
                 'input_type': input_type,
                 'input_args': input_args,
                 'output_type': output_type,
                 'output_args': output_args,
-                'mother_args': binded_mother_args,
-                'perf_layer_rule_list': perf_layer_rule_list
+                'extends_node': extends_node,
+                'perf_layer_rule_list': processor_rules,
+                'special_hole': special_hole
             }
 
     @staticmethod
