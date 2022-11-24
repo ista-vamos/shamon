@@ -193,15 +193,74 @@ def p_right_arrow(p):
 
 def p_processor_rule_list(p):
     '''
-    processor_rule_list : processor_rule ';'
+    processor_rule_list : custom_hole
+                        | processor_rule
+                        | processor_rule ';'
+                        | processor_rule ';' custom_hole
                         | processor_rule ';' processor_rule_list
     '''
-    if len(p) == 3:
-        p[0] = p[PLIST_BASE_CASE]
+    if len(p) < 4:
+        assert(len(p) > 1)
+        p[0] = p[1]
     else:
         assert(len(p) == 4)
         p[0] = ("processor_rule_list", p[PLIST_BASE_CASE], p[3])
 
+def p_custom_hole(p):
+    '''
+    custom_hole : ID '{' list_hole_attributes '}'
+    '''
+
+    if p[1].lower() != 'hole':
+        raise Exception("custom hole should be named hole")
+
+    p[0] = ('custom_hole', p[3])
+
+def p_list_hole_attributes(p):
+    '''
+    list_hole_attributes : hole_attribute ';'
+                         | hole_attribute ';' list_hole_attributes
+    '''
+    if len(p) == 3:
+        p[0] = p[1]
+    else:
+        p[1] = ('l-hole-attributes', p[1], p[3])
+
+def p_hole_attribute(p):
+    '''
+    hole_attribute : ID "=" agg_func
+    '''
+
+    p[0] = ('hole-attribute', p[1], p[3])
+
+def p_aggfunc(p):
+    '''
+    agg_func : COUNT '(' agg_func_params ')'
+             | MIN '(' agg_func_params ')'
+             | MAX '(' agg_func_params ')'
+    '''
+    p[0] = ('agg_func', p[1], p[3])
+
+def p_agg_func_params(p):
+    '''
+    agg_func_params : '*'
+                    | list_events_hole
+    '''
+    p[0] = p[1]
+
+def p_list_events_hole(p):
+    '''
+    list_events_hole : ID
+                     | FIELD_ACCESS
+                     | ID ',' list_events_hole
+                     | FIELD_ACCESS ',' list_events_hole
+    '''
+
+    if len(p) == 2:
+        p[0] = ('event-hole', p[1])
+    else:
+        assert(len(p) == 4)
+        p[0] = ('l-events-hole', p[1], p[2])
 
 def p_processor_rule(p):
     '''
@@ -702,7 +761,6 @@ def p_ev_src_status(p):
     ev_src_status : NOTHING
                   | DONE
                   | INT
-                  | FAIL
     '''
     p[0] = ("ev-src-status", p[1])
 

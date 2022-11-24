@@ -51,24 +51,30 @@ bool {buff_name}_ORDER_EXP (void *args1, void *args2) {"{"}
 
 
 def declare_buffer_groups():
+    ''' This function declare bugger groups and mutex locks
+    '''
     answer = ""
 
     for (buff_name, data) in TypeChecker.buffer_group_data.items():
         answer += f'''
 buffer_group BG_{buff_name};
+pthread_mutex_t LOCK_{buff_name};
         '''
     return answer
 
 
 def init_buffer_groups():
     answer = ""
-    print(TypeChecker.buffer_group_data)
     for (buff_name, data) in TypeChecker.buffer_group_data.items():
         includes_str = ""
         if data["arg_includes"] is not None:
             for i in range(data["arg_includes"]):
                 includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, BUFFER_{data['includes']}{i},stream_args_{data['includes']}_{i},{buff_name}_ORDER_EXP);\n"
         answer += f'''init_buffer_group(&BG_{buff_name});
+        if (pthread_mutex_init(&LOCK_{buff_name}, NULL) != 0) {"{"}
+        printf("\n mutex init has failed for {buff_name} lock\n");
+        return 1;
+    {"}"}
     {includes_str}        
     '''
     return answer
@@ -543,7 +549,7 @@ def get_stream_switch_cases(ast, mapping_in, mapping_out, level) -> str:
             if buffer_group is None:
                 raise Exception("Error: trying to create event source without specifying buffer group")
             if len(TypeChecker.stream_types_to_events[ast[3]]) == 0:
-                stream_args_code = f"{tabs_plus1}bg_insert(&BG_{buffer_group}, ev_source_temp, temp_buffer,NULL,{buffer_group}_ORDER_EXP);"
+                stream_args_code = f"pthread_mutex_lock(&LOCK_{buffer_group});\n{tabs_plus1}bg_insert(&BG_{buffer_group}, ev_source_temp, temp_buffer,NULL,{buffer_group}_ORDER_EXP);pthread_mutex_unlock(&LOCK_{buffer_group});\n"
             else:
                 stream_type = ast[3]
                 init_stream_args_code = ""
@@ -571,13 +577,17 @@ def get_stream_switch_cases(ast, mapping_in, mapping_out, level) -> str:
                 stream_args_code = f'''
 STREAM_{stream_type}_ARGS * stream_args_temp = malloc(sizeof(STREAM_{stream_type}_ARGS));
 {init_stream_args_code}
+pthread_mutex_lock(&LOCK_{buffer_group});
 {tabs_plus1}bg_insert(&BG_{buffer_group}, ev_source_temp, temp_buffer,stream_args_temp,{buffer_group}_ORDER_EXP);
-
+pthread_mutex_unlock(&LOCK_{buffer_group});
 '''
             creates_code = f'''
 {tabs_plus1}shm_stream *ev_source_temp = shm_stream_create_substream(stream, (inevent->head).id);
 {tabs_plus1}shm_arbiter_buffer *temp_buffer = shm_arbiter_buffer_create(ev_source_temp,  sizeof(STREAM_{ast[3]}_out), {buff_size});
+shm_stream_register_all_events(ev_source_temp);
 {stream_args_code}
+thrd_t temp_thread;
+thrd_create(temp_thread, PERF_LAYER_TEProcessor, temp_buffer);
 '''
         assert (ast[0] == 'perf_layer_rule')
         
@@ -813,7 +823,9 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         stream_type = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
 
         answer = f'''
+            pthread_mutex_lock(&LOCK_{buffer_name});
             bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
+            pthread_mutex_unlock(&LOCK_{buffer_name});
             {choose_statement}
         '''
         permutation_streams_code = ""
@@ -903,7 +915,7 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
         return f"\tshm_arbiter_buffer_drop(BUFFER_{event_source_name}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
     if tree[0] == "remove":
         buffer_group = tree[2][1];
-        return f"bg_remove({buffer_group}, {tree[1]});"
+        return f"pthread_mutex_lock(&LOCK_{buffer_group});\nbg_remove({buffer_group}, {tree[1]});\npthread_mutex_unlock(&LOCK_{buffer_group});"
 
     assert (tree[0] == "field_access")
     target_stream, index, field = tree[1], tree[2], tree[3]
@@ -1246,6 +1258,7 @@ def destroy_all():
     # destroy buffer groups
     for buffer_group in TypeChecker.buffer_group_data.keys():
         answer += f"\tdestroy_buffer_group(&BG_{buffer_group});\n"
+        answer += f"\tpthread_mutex_destroy(&LOCK_{buffer_group});\n"
 
     # destroy event sources
     for (event_source, data) in TypeChecker.event_sources_data.items():
