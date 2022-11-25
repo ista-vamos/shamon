@@ -17,7 +17,7 @@
 #include "utils.h"
 #include "vector.h"
 
-#define CHECK_IDS
+//#define CHECK_IDS
 #define CHECK_IDS_ABORT
 
 static inline void dump_args(shm_stream *stream, shm_event_generic *ev, const char *signature) {
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef DUMP_STATS
     size_t total_events_num =
-        shm_get_dropped_kind() + 1; /* ids up to 'dropped' are reserved */
+        shm_get_last_special_kind() + 1; /* ids up to 'dropped' are reserved */
 #endif
     for (int i = 1; i < argc; ++i) {
         fprintf(stderr, "Connecting stream '%s' ...\n", argv[i]);
@@ -142,10 +142,10 @@ int main(int argc, char *argv[]) {
     shm_kind kind;
     size_t n = 0, drp = 0, drpn = 0;
     size_t id;
-    size_t stream_id;
     shm_stream *stream;
 
 #ifdef CHECK_IDS
+    size_t stream_id;
     size_t next_id[argc];
     for (int i = 1; i < argc; ++i)
         next_id[i] = 1;
@@ -170,7 +170,9 @@ int main(int argc, char *argv[]) {
 
             id = shm_event_id(ev);
             kind = shm_event_kind(ev);
+#ifdef CHECK_IDS
             stream_id = shm_stream_id(stream);
+#endif
 #ifdef DUMP_STATS
             assert(kind < total_events_num && "OOB access");
             assert(stream_id < (size_t)argc && "OOB access");
@@ -180,8 +182,7 @@ int main(int argc, char *argv[]) {
             rec = shm_stream_get_event_record(stream, kind);
             rec = rec ? rec : &unknown_rec;
             printf("%*s%s: ", ind, "", shm_stream_get_name(stream));
-            printf("\033[0;35m%s(\033[0;34mid: %lu, kind: %lu\033[0m",
-		   rec->name, id, kind);
+            printf("\033[0;35m%s(\033[0;34mid: %lu, kind: %lu\033[0m", rec->name, id, kind);
 
 #ifdef CHECK_IDS
             if (id != next_id[stream_id]) {
@@ -194,16 +195,22 @@ int main(int argc, char *argv[]) {
             }
 #endif
 
-            if (shm_event_is_dropped(ev)) {
+            if (shm_event_is_hole(ev)) {
+                printf("%*shole\n", ind, "");
+                /*
                 printf("%*s'dropped(%lu)'\n", ind, "", ((shm_event_dropped *)ev)->n);
                 drpn += ((shm_event_dropped *)ev)->n;
+                */
 #ifdef DUMP_STATS
                 assert(stream_id < (size_t)argc && "OOB access");
                 dropped_sum_count[stream_id] += ((shm_event_dropped *)ev)->n;
                 ++dropped_count[stream_id];
 #endif
 #ifdef CHECK_IDS
+#error "Not implemented"
+                /*
                 next_id[stream_id] += ((shm_event_dropped *)ev)->n;
+                */
 #endif
                 ++drp;
                 continue;

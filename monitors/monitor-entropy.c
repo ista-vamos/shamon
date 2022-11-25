@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
     size_t m = 0;
     while (shamon_is_ready(shamon)) {
         while ((ev = shamon_get_next_ev(shamon))) {
-            if (shm_event_is_dropped(ev)) {
+            if (shm_event_is_hole(ev)) {
                 // printf("Dropped %lu events\n", ((shm_event_dropped*)ev)->n);
                 continue;
             }

@@ -71,8 +71,8 @@ int main(int argc, char *argv[]) {
     shm_stream_dump_events(fstream);
 
     // shm_kind kind;
-    size_t n = 0, drp = 0, drpn = 0;
-    size_t id, next_id = 1;
+    // size_t id, next_id = 1;
+    size_t n = 0, drp = 0;//, drpn = 0;
     shm_stream *stream;
     struct event_record *rec;
     struct event_record unknown_rec = {
@@ -86,22 +86,27 @@ int main(int argc, char *argv[]) {
         while ((ev = shamon_get_next_ev(shmn, &stream))) {
             ++n;
 
+            /*
             id = shm_event_id(ev);
             if (id != next_id) {
                 printf("Wrong ID: %lu, should be %lu\n", id, next_id);
-                next_id = id; /* reset */
+                next_id = id; // reset
             }
+            */
 
             // kind = shm_event_kind(ev);
-            if (shm_event_is_dropped(ev)) {
+            if (shm_event_is_hole(ev)) {
+                printf("Event 'HOLE'\n");
+                /*
                 printf("Event 'dropped(%lu)'\n", ((shm_event_dropped *)ev)->n);
                 drpn += ((shm_event_dropped *)ev)->n;
                 next_id += ((shm_event_dropped *)ev)->n;
+                */
                 ++drp;
                 continue;
             }
 
-            ++next_id;
+            // ++next_id;
 
             shm_kind kind = shm_event_kind(ev);
             rec = shm_stream_get_event_record(stream, kind);
@@ -124,9 +129,12 @@ int main(int argc, char *argv[]) {
              */
         }
     }
+    /*
     printf("Processed %lu events, %lu dropped events (sum of args: %lu)... "
            "totally came: %lu\n",
            n, drp, drpn, n + drpn - drp);
+           */
+    printf("Processed %lu events, %lu hole events\n", n, drp);
 
     shamon_destroy(shmn);
 }

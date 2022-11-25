@@ -71,32 +71,36 @@ int main(int argc, char *argv[]) {
     shm_stream_dump_events(fstream);
 
     // shm_kind kind;
-    size_t n = 0, drp = 0, drpn = 0;
-    size_t id, next_id = 1;
+    // size_t id, next_id = 1;
+    size_t n = 0, drp = 0;//, drpn = 0;
     shm_stream *stream;
     struct event_record *rec;
     while (shamon_is_ready(shmn)) {
         while ((ev = shamon_get_next_ev(shmn, &stream))) {
             ++n;
 
+            /*
             id = shm_event_id(ev);
             if (id != next_id) {
                 printf("Wrong ID: %lu, should be %lu\n", id, next_id);
-                next_id = id; /* reset */
+                next_id = id; // reset
             }
+            */
 
             // kind = shm_event_kind(ev);
-            if (shm_event_is_dropped(ev)) {
-                // printf("Event 'dropped(%lu)'\n",
-                // ((shm_event_dropped*)ev)->n);
+            if (shm_event_is_hole(ev)) {
+                printf("Event 'HOLE'\n");
+                /* printf("Event 'dropped(%lu)'\n",
+                ((shm_event_dropped*)ev)->n);
                 drpn += ((shm_event_dropped *)ev)->n;
                 next_id += ((shm_event_dropped *)ev)->n;
+                */
                 ++drp;
                 continue;
             }
 
-            ++next_id;
             /*
+            ++next_id;
             if (last_id > 0) {
                 if (last_id + 1 != id) {
                     fprintf(stderr, "Inconsistent IDs, %lu + 1 != %lu\n",
@@ -119,9 +123,12 @@ int main(int argc, char *argv[]) {
             printf("}\n");
         }
     }
+    /*
     printf("Processed %lu events, %lu dropped events (sum of args: %lu)... "
            "totally came: %lu\n",
            n, drp, drpn, n + drpn - drp);
+    */
+    printf("Processed %lu events, %lu hole events\n", n, drp);
 
     shamon_destroy(shmn);
 }

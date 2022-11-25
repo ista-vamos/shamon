@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
 
-            if (shm_event_is_dropped(ev)) {
+            if (shm_event_is_hole(ev)) {
                 printf("Dropped %lu events\n", ((shm_event_dropped *)ev)->n);
             } else {
                 shm_event_fd_in *fd_ev = (shm_event_fd_in *)ev;

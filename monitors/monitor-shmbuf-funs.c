@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
             ++n;
 
             kind = shm_event_kind(ev);
-            if (shm_event_is_dropped(ev)) {
+            if (shm_event_is_hole(ev)) {
                 printf("Event 'dropped(%lu)'\n", ((shm_event_dropped *)ev)->n);
                 last_arg = 0;
                 continue;
@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
                    shm_event_id(ev), shm_stream_get_name(stream));
             printf("Event kind %lu ('%s')\n", kind, shm_event_kind_name(kind));
             printf("Event size %lu\n", shm_event_size(ev));
-            if (shm_event_is_dropped(ev)) {
+            if (shm_event_is_hole(ev)) {
                 printf("Event 'dropped(%lu)')\n", ((shm_event_dropped*)ev)->n);
                 continue;
             }

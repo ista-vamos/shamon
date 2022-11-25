@@ -47,7 +47,7 @@
  *            summary_event_type summary;
  *            size_t element_size = shm_arbiter_buffer_elem_size(buffer);
  *            for (size_t i = 0; i < size1; ++i) {
- *               if (shm_event_is_dropped((shm_event*)data1) {
+ *               if (shm_event_is_hole((shm_event*)data1) {
  *                   ... update summary ...
  *               } else {
  *                   right_event_type *ev = (right_event_type*)data1;
@@ -128,8 +128,8 @@ size_t shm_event_size(shm_event *event);
 shm_kind shm_event_kind(shm_event *event);
 size_t shm_event_size_for_kind(shm_kind kind);
 
-bool shm_event_is_dropped(shm_event *);
-shm_kind shm_get_dropped_kind(void);
+bool shm_event_is_hole(shm_event *);
+shm_kind shm_get_hole_kind(void);
 
 /************************************************************************
  * STREAMS
