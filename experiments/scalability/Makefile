@@ -26,7 +26,7 @@ source: source.o
 	$(CC) source.o -o source $(SOURCE_LIBS)
 
 monitor.c: monitor.txt
-	python3 $(MON_COMPILER_PY) monitor.txt monitor.c
+	python3 $(MON_COMPILER_PY) monitor.txt -o monitor.c
 	-clang-format -i monitor.c
 
 monitor: monitor.c
