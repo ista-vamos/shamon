@@ -613,6 +613,7 @@ def p_arbiter_rule(p):
             # ON list_buff_match_exp WHERE BEGIN_CCODE ccode_l_where_expression BEGIN_CCODE arbiter_rule_stmt_list
             # 1           2            3           4                    5         6                7
             p[0] = ("arbiter_rule1", p[2], p[5], p[7])
+        choose_count = None
     else:
         if len(p) == 8:
             # CHOOSE choose_order listids arb_choose_middle_part '{' arbiter_rule_list '}'
@@ -620,12 +621,17 @@ def p_arbiter_rule(p):
 
             middle_part = p[4]
             p[0] = ("arbiter_rule2", p[2], p[3], middle_part[1], middle_part[2], p[6])
+            choose_count = p[2][2]
         else:
             assert(len(p) == 7)
             # CHOOSE listids arb_choose_middle_part '{' arbiter_rule_list '}'
             #   1       2            3               4          5          6
             middle_part = p[3]
             p[0] = ("arbiter_rule2", None, p[2], middle_part[1], middle_part[2], p[5])
+            choose_count = get_count_list_ids(p[2])
+
+    if choose_count is not None:
+        TypeChecker.max_choose_size = max(TypeChecker.max_choose_size, choose_count)
 
 
 def p_arb_choose_middle_part(p):

@@ -298,17 +298,6 @@ def declare_event_sources_flags(ast):
         answer += f"bool is_{name}_done;\n"
     return answer
 
-
-def get_count_events_sources():
-    total_count = 0
-    for (event_source, data) in TypeChecker.event_sources_data.items():
-        if data['copies']:
-            total_count += data['copies']
-        else:
-            total_count += 1
-    return total_count
-
-
 def stream_type_from_ev_source(event_source):
     stream_type = event_source[3]
     if isinstance(stream_type, tuple):
@@ -1738,7 +1727,7 @@ def get_c_program(components, ast, streams_to_events_map, stream_types, arbiter_
 int main(int argc, char **argv) {"{"}
     setup_signals();
 
-	chosen_streams = (dll_node *) malloc({get_count_events_sources()}); // the maximum size this can have is the total number of event sources
+	chosen_streams = (dll_node *) malloc({TypeChecker.max_choose_size}); // the maximum size this can have is the total number of event sources
 	arbiter_counter = malloc(sizeof(int));
 	*arbiter_counter = 10;
 	{get_pure_c_code(components, 'startup')}
