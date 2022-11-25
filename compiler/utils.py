@@ -78,13 +78,13 @@ def get_events_to_hole_update_data(data, all_events):
 
 def get_processor_rules(tree, result):
     if tree[0] == "perf_layer_list":
-        part1_result = get_processor_rules(tree[1], result)
-        part2_result = get_processor_rules(tree[2], result)
+        (name1, part1_result) = get_processor_rules(tree[1], result)
+        (name2, part2_result) = get_processor_rules(tree[2], result)
         if part1_result is not None:
-            return part1_result
+            return name1, part1_result
         if part2_result is not None:
-            return part2_result
-        return None
+            return name2, part2_result
+        return None, None
     else:
         if tree[0] == "perf_layer_rule":
             event, event_args = get_name_with_args(tree[1])
@@ -109,12 +109,12 @@ def get_processor_rules(tree, result):
                 'performance_match': performance_match,
                 'buff_group': buff_group
             })
-            return None
+            return None, None
         else:
             assert(tree[0] == "custom_hole")
             custom_hole = []
-            build_custom_hole(tree[1], custom_hole)
-            return custom_hole
+            build_custom_hole(tree[2], custom_hole)
+            return tree[1], custom_hole
 
 def replace_cmd_args(program, buffsize):
     answer = []
@@ -249,7 +249,7 @@ def get_events_data(tree: Tuple, events_data: Dict[str, Dict[str, str]]) -> None
         events_data[tree[PPEVENT_NAME]] = event_args
 
 
-def get_stream_to_events_mapping(stream_types: List[Tuple], stream_processors) -> Dict[str, Any]:
+def get_stream_to_events_mapping(stream_types: List[Tuple], stream_processors_object) -> Dict[str, Any]:
     mapping = dict()
     for tree in stream_types:
         assert(tree[0] == "stream_type")
@@ -259,19 +259,27 @@ def get_stream_to_events_mapping(stream_types: List[Tuple], stream_processors) -
         stream_type = tree[PPSTREAM_TYPE_NAME]
         assert(stream_type not in mapping.keys())
         mapping_events = {}
+        current_index = 2
         for (index, (event_name, args)) in enumerate(events_data.items()):
             data = {
                 'args': args
             }
             data.update({'index': index+2, 'enum' : f"{stream_type.upper()}_{event_name.upper()}"})
+            current_index = index+2
             mapping_events[f"{event_name}"] = data
 
-        # TODO: fill with special holes data
         mapping_events['hole'] = {'index': 1, 'args':[{'name': 'n', 'type': 'int'}], 'enum': f'{stream_type.upper()}_HOLE'}
+        for (_, data) in stream_processors_object.items():
+            if data["special_hole"] is not None:
+                current_index+=1
+                args_hole = []
+                for attr in data["special_hole"]:
+                    args_hole.append({'name': attr["attribute"], 'type': attr["type"]})
+                mapping_events[data['hole_name']] = {'index': current_index, 'args':args_hole, 'enum': f'{data["hole_name"]}_HOLE'}
         mapping[stream_type] = mapping_events
 
-    for (processor, data) in stream_processors.items():
-        mapping[processor] = mapping[data["input_type"]]
+
+        
     return mapping
 
 def get_stream_types(event_sources: Tuple) -> Dict[str, Any]:
@@ -423,7 +431,6 @@ def get_parameters_names(tree: Tuple, stream_name: str, mapping: Dict[str, Dict]
         assert(tree[0] == 'ev_call')
         ids = []
         get_list_ids(tree[PPLIST_EV_CALL_EV_PARAMS], ids)
-        assert (len(ids) == len(mapping[tree[PPLIST_EV_CALL_EV_NAME]]['args']))
         for (arg_bind, arg) in zip(mapping[tree[PPLIST_EV_CALL_EV_NAME]]['args'], ids):
             binded_args[arg] = (stream_name, tree[PPLIST_EV_CALL_EV_NAME], arg_bind['name'], arg_bind['type'], index, stream_index)
 

@@ -14,6 +14,12 @@ stream type ThreadEvent(threadid: int, nextts: uint64_t)
 stream processor TEProcessor(threadid : int) : ThreadEvent(threadid, 0) -> ThreadEvent(threadid, 0) extends FORWARD
 {
     on fork(ts, ntid) creates ThreadEvent process using TEProcessor(ntid) to autodrop(@BUFSIZE) include in Threads forward;
+    hole
+    {
+        n = COUNT(*);
+        firstts = MIN({read.timestamp, write.timestamp, atomicread.timestamp, atomicwrite.timestamp, lock.timestamp, unlock.timestamp, alloc.timestamp, free.timestamp, fork.timestamp, join.timestamp});
+        lastts = MAX({read.timestamp, write.timestamp, atomicread.timestamp, atomicwrite.timestamp, lock.timestamp, unlock.timestamp, alloc.timestamp, free.timestamp, fork.timestamp, join.timestamp});
+    }
 }
 
 buffer group Threads : ThreadEvent order by nextts
