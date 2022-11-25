@@ -27,17 +27,55 @@ def build_custom_hole(tree, result):
         build_custom_hole(tree[2], result)
     else:
         assert(tree[0] == 'hole-attribute')
-        attribute = tree[1]
-        agg_func = tree[2]
+        attribute_type = tree[1]
+        attribute = tree[2]
+        agg_func = tree[3]
         agg_func_name = agg_func[1]
         agg_func_params = []
         parse_list_events_agg_func(agg_func[2], agg_func_params)
         result.append({
+            'type': attribute_type,
             'attribute': attribute,
             'agg_func_name': agg_func_name,
             'agg_func_params': agg_func_params
         })
  
+def get_events_to_hole_update_data(data, all_events):
+    answer = dict()
+    for event in all_events:
+        answer[event] = []
+    for attribute_data in data:
+        agg_func = attribute_data["agg_func_name"]
+        attribute = attribute_data["attribute"]
+        agg_func_params = attribute_data['agg_func_params']
+        if len(agg_func_params) == 0:
+            raise Exception("Cannot call aggregation functions without parameters")
+
+        if len(agg_func_params) == 1 and agg_func_params[0] == "*":
+            assert(agg_func.lower() == "count")
+            for event in all_events:
+                answer[event].append({
+                    'agg_func': "count",
+                    'hole_attr': attribute,
+                    "ev_attr": None
+                })
+        else:
+            for param in agg_func_params:
+                assert(param[0] == 'field_access')
+                assert(param[2] is None)
+                event = param[1]
+                if event not in answer.keys():
+                    raise Exception("This is weird, all events should be in dictionary answer")
+
+                answer[event].append({
+                    'agg_func': agg_func,
+                    'hole_attr': attribute,
+                    "ev_attr": param[3]
+                })
+    return answer
+
+
+
 def get_processor_rules(tree, result):
     if tree[0] == "perf_layer_list":
         part1_result = get_processor_rules(tree[1], result)

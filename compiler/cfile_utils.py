@@ -629,7 +629,7 @@ def declare_perf_layer_funcs(mapping) -> str:
         sleep_ns(10);
     {"}"}
     while(true) {"{"}
-        inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_forward);
+        inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_forward, &init_hole, &update_hole);
 
         if (inevent == NULL) {"{"}
             // no more events
@@ -668,7 +668,7 @@ def declare_perf_layer_funcs(mapping) -> str:
         sleep_ns(10);
     {"}"}
     while(true) {"{"}
-        inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_{stream_processor});
+        inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_{stream_processor}, &init_hole_{stream_processor}, &update_hole_{stream_processor});
 
         if (inevent == NULL) {"{"}
             // no more events
@@ -1506,7 +1506,7 @@ def special_hole_structs():
             # TODO: set correctly data types of fields
             fields = ""
             for data_arg in data['special_hole']:
-                fields += f"\tdouble {data_arg['attribute']};\n" 
+                fields += f"\t{data_arg['type']} {data_arg['attribute']};\n" 
             return f'''
 struct _EVENT_{stream_processor}_hole
 {"{"}
@@ -1515,19 +1515,84 @@ struct _EVENT_{stream_processor}_hole
 typedef struct _EVENT_{stream_processor}_hole EVENT_{stream_processor}_hole;
 '''
 
-def generate_special_hole_functions():
+def get_special_holes_init_code():
     answer = ""
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
+        data_hole = data['special_hole']
+        init_attributes = ""
+        for attr_data in data_hole:
+            if  attr_data['agg_func_name'].upper() == 'COUNT':
+                value = 0
+            elif attr_data['agg_func_name'].upper() == 'MIN':
+                if attr_data['type'] == 'int':
+                    value = "INT_MAX"
+                elif attr_data['type'] == 'uint64_t':
+                    value = "ULLONG_MAX"
+                else:
+                    raise Exception(f"We dont cover this data {attr_data['type']} for agg function {attr_data['agg_func_name']}.")
+            elif attr_data['agg_func_name'].upper() == 'MAX':
+                if attr_data['type'] == 'int':
+                    value = "INT_MIN"
+                elif attr_data['type'] == 'uint64_t':
+                    value = "0"
+                else:
+                    raise Exception(f"We dont cover this data {attr_data['type']} for agg function {attr_data['agg_func_name']}.")
+            else:
+                raise Exception(f"Unknown aggregation function {attr_data['agg_func_name']}.")
+
+            init_attributes += f"\th->{attr_data['attribute']} = {value};\n"
         answer += f'''
 void init_hole_{stream_processor}(EVENT_{stream_processor}_hole *h) {"{"}
-  h->n = 0;
-{"}"}        
-'''
-        answer += f'''
-void update_hole_{stream_processor}(EVENT_{stream_processor}_hole *h, shm_event *ev) {"{"}
-    h->n++;
+  {init_attributes}
 {"}"}
 '''
+    return answer
+
+def get_special_holes_update_code(mapping):
+    
+    answer = ""
+    for (stream_processor, data) in TypeChecker.stream_processors_data.items():
+        stream_type = data['input_type']
+        data_events = mapping[stream_type]
+        all_events = list(TypeChecker.stream_types_data[stream_type]["events"].keys())
+        event_to_holes_data = get_events_to_hole_update_data(data['special_hole'], all_events)
+        update_attributes_code = ""
+        for event in all_events:
+            event_code = ""
+            event_hole_data_ = event_to_holes_data[event]
+            for event_hole_data in event_hole_data_:
+                if event_hole_data["ev_attr"] is None:
+                    assert(event_hole_data["agg_func"] == "count")
+                    event_code += f"\t\t\th->{event_hole_data['hole_attr']}++;\n"
+                else:
+                    if event_hole_data["agg_func"] == "count":
+                        event_code += f"\t\t\th->{event_hole_data['hole_attr']}+=(STREAM_{stream_type}_in * ev)->cases.{event_hole_data['ev_attr']};\n"
+                    elif event_hole_data["agg_func"] == "MAX":
+                        event_code += f"\t\t\th->{event_hole_data['hole_attr']} = max(h->{event_hole_data['hole_attr']},(STREAM_{stream_type}_in * ev)->cases.{event_hole_data['ev_attr']});\n"
+                    elif event_hole_data["agg_func"] == "MIN":
+                        event_code += f"\t\t\th->{event_hole_data['hole_attr']} = min(h->{event_hole_data['hole_attr']},(STREAM_{stream_type}_in * ev)->cases.{event_hole_data['ev_attr']});\n"
+                    else:
+                        raise Exception("Not implmented")
+                update_attributes_code += f'''
+        case {data_events[event]["enum"]}:
+{event_code}
+            break;'''
+        answer += f'''
+void update_hole_{stream_processor}(EVENT_{stream_processor}_hole *h, shm_event *ev) {"{"}
+    switch ((inevent->head).kind) {"{"}
+{update_attributes_code}
+    {"}"}
+{"}"}
+'''
+    return answer
+
+def generate_special_hole_functions(streams_to_events_map):
+    
+    answer = f"{get_special_holes_init_code()}\n"
+    answer += f"{get_special_holes_update_code(streams_to_events_map)}\n"
+              
+    return answer
+    
     
 def outside_main_code(components, streams_to_events_map, stream_types, ast, arbiter_event_source, existing_buffers):
     return f'''
@@ -1545,7 +1610,7 @@ void update_hole(EVENT_hole *h, shm_event *ev) {"{"}
 {"}"}
 
 {special_hole_structs()}
-{generate_special_hole_functions()}
+{generate_special_hole_functions(streams_to_events_map)}
 {stream_type_structs(components["stream_type"])}
 {stream_type_args_structs(components["stream_type"])}
 {events_enum_kinds(components["event_source"], streams_to_events_map)}
