@@ -32,6 +32,7 @@ class TypeChecker:
     stream_events_are_primitive: Dict[str, bool] = dict() # maps 'stream type' declaration to the events that are declared inside
     event_sources_types: Dict[str, Tuple[str, str]] = dict() # ev_source_name -> (input type, output type)
     stream_types_to_events: Dict[str, Set[str]] = dict() # maps a stream name to the name of events that can happen
+    max_choose_size: int = 0
     arbiter_output_type: Optional[str] = None
     event_sources_data: Dict[str, Dict[str, Any]] = dict()
     stream_processors_data: Dict[str, Dict[str, Any]] = dict()
