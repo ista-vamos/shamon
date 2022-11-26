@@ -149,7 +149,14 @@ def stream_type_args_structs(stream_types) -> str:
 def instantiate_stream_args():
     answer = ""
     for (stream_name, data) in TypeChecker.event_sources_data.items():
-        if len(data['input_stream_args']) > 0:
+        has_args = len(data['input_stream_args']) > 0
+        processor_name = data['processor_name']
+
+        if processor_name is not None and processor_name.lower() != 'forward':
+            if has_args:
+                print(f"ignoring declared args of {stream_name}, using stream processor args")
+            has_args = len(TypeChecker.stream_processors_data[processor_name]['args'])
+        if has_args:
             stream_type = data["input_stream_type"]
             if data['copies'] is not None:
                 for i in range(data['copies']):
@@ -236,8 +243,9 @@ def stream_type_structs(stream_types) -> str:
         hole_name = data['hole_name']
         if hole_name is not None:
             special_holes += f"EVENT_{hole_name}_hole {hole_name};"
-    union_events = ""
+    
     for stream_name in TypeChecker.stream_types_to_events.keys():
+        union_events = ""
         for name in TypeChecker.stream_types_to_events[stream_name]:
             union_events += f"EVENT_{stream_name}_{name} {name};"
 
@@ -469,7 +477,7 @@ def instantiate_args(stream_name, event_name, new_arg_names):
     for (original_arg, new_arg) in zip(original_args, new_arg_names):
         original_name = original_arg["name"]
         arg_type = original_arg["type"]
-        declared_args += f"{arg_type} {new_arg} = ((STREAM_{stream_name}_in *)e)->cases.{event_name}.{original_name};\n"
+        declared_args += f"{arg_type} {new_arg} = ((STREAM_{stream_name}_in *)inevent)->cases.{event_name}.{original_name};\n"
     return declared_args
 
 
@@ -477,7 +485,7 @@ def build_drop_funcs_conds(rules, stream_name, mapping) -> str:
     for rule in rules:
         # TODO: missing implementation of creates at most
         event = rule["event"]
-        return f'''if (e->kind == {mapping[event]["enum"]}) {"{"}
+        return f'''if (inevent->kind == {mapping[event]["enum"]}) {"{"}
 {instantiate_args(stream_name, event, rule["event_args"])}
         {process_performance_match(rule["performance_match"])}
     {"}"}
@@ -493,7 +501,7 @@ def build_should_keep_funcs(mapping) -> str:
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
         performance_layer_rule_list = data["perf_layer_rule_list"]
         stream_type = data["input_type"]
-        answer += f'''bool SHOULD_KEEP_{stream_processor}(shm_stream * s, shm_event * e) {"{"}
+        answer += f'''bool SHOULD_KEEP_{stream_processor}(shm_stream * s, shm_event * inevent) {"{"}
 {build_drop_funcs_conds(performance_layer_rule_list, stream_type, mapping[stream_type])}
 return false;
 {"}"}
@@ -658,12 +666,12 @@ def declare_perf_layer_funcs(mapping) -> str:
         stream_out_name = data["output_type"]
         perf_layer_list = data["perf_layer_rule_list"]
         if data["special_hole"] is None:
-            out_name = stream_out_name
+            hole_name = ""
         else:
-            out_name = stream_processor
+            hole_name = f"_{data['hole_name']}"
         perf_layer_code = f'''
                     switch ((inevent->head).kind) {"{"}
-        {get_stream_switch_cases(perf_layer_list, mapping[stream_in_name], mapping[stream_out_name], out_name, level=3)}
+        {get_stream_switch_cases(perf_layer_list, mapping[stream_in_name], mapping[stream_out_name], stream_out_name, level=3)}
                     default:
                         memcpy(outevent, inevent, sizeof(STREAM_{stream_in_name}_in));   
                         shm_arbiter_buffer_write_finish(buffer);
@@ -680,7 +688,7 @@ def declare_perf_layer_funcs(mapping) -> str:
         sleep_ns(10);
     {"}"}
     while(true) {"{"}
-        inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_{stream_processor}, &init_hole_{stream_processor}, &update_hole_{stream_processor});
+        inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_{stream_processor}, &init_hole{hole_name}, &update_hole{hole_name});
 
         if (inevent == NULL) {"{"}
             // no more events
@@ -801,18 +809,24 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                 stream_name = context[stream_name]
         if len(tree) == 3:
             if not is_scan:
-                if tree[PPBUFFER_MATCH_ARG1] == "nothing":
+                if tree[PPBUFFER_MATCH_ARG1][1] == "nothing":
                     return f'''if (check_at_least_n_events(count_{stream_name}, 0)) {"{"}
                     {inner_code}
                     {"}"}'''
-                elif tree[PPBUFFER_MATCH_ARG1] == "done":
-                    return f'''if (count_{stream_name} == 0 && is_stream_done(EV_SOURCE_{stream_name})) {"{"}
-                        {inner_code}
-                    {"}"}
-                    '''
+                elif tree[PPBUFFER_MATCH_ARG1][1] == "done":
+                    if stream_name not in TypeChecker.event_sources_data.keys():
+                        return f'''if (count_{stream_name} == 0 && is_stream_done({stream_name})) {"{"}
+                            {inner_code}
+                        {"}"}
+                        '''
+                    else:
+                        return f'''if (count_{stream_name} == 0 && is_stream_done(EV_SOURCE_{stream_name})) {"{"}
+                            {inner_code}
+                        {"}"}
+                        '''
                 else:
                     # check if there are n events
-                    return f'''if (check_at_least_n_events(count_{stream_name}, {tree[PPBUFFER_MATCH_ARG1]})) {"{"}
+                    return f'''if (check_at_least_n_events(count_{stream_name}, {tree[PPBUFFER_MATCH_ARG1][1]})) {"{"}
                         {inner_code}
                     {"}"}'''
             return []
@@ -951,7 +965,14 @@ def construct_arb_rule_outevent(mapping, output_ev_source, output_event, raw_arg
     arbiter_outevent->head.id = (*arbiter_counter)++;
     '''
     for (arg, outarg) in zip(local_args, mapping[output_ev_source][output_event]["args"]):
-        answer += f"((STREAM_{output_ev_source}_out *) arbiter_outevent)->cases.{output_event}.{outarg['name']} = {arg};\n"
+        if arg[0] == 'field_access':
+            field = arg[3]
+            object_name = f"stream_args_{arg[1]}"
+            if arg[2] is not None:
+                object_name+= f"_{arg[2]}"
+            answer += f"((STREAM_{output_ev_source}_out *) arbiter_outevent)->cases.{output_event}.{outarg['name']} = {object_name}->{field};\n"
+        else:
+            answer += f"((STREAM_{output_ev_source}_out *) arbiter_outevent)->cases.{output_event}.{outarg['name']} = {arg};\n"
     return answer
 
 
@@ -976,7 +997,7 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
         return f"\tshm_arbiter_buffer_drop(BUFFER_{event_source_name}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
     if tree[0] == "remove":
         buffer_group = tree[2][1];
-        return f"pthread_mutex_lock(&LOCK_{buffer_group});\nbg_remove({buffer_group}, {tree[1]});\npthread_mutex_unlock(&LOCK_{buffer_group});"
+        return f"pthread_mutex_lock(&LOCK_{buffer_group});\nbg_remove(&BG_{buffer_group}, {tree[1]});\npthread_mutex_unlock(&LOCK_{buffer_group});"
 
     assert (tree[0] == "field_access")
     target_stream, index, field = tree[1], tree[2], tree[3]
