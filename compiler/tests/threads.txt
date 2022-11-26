@@ -44,7 +44,7 @@ stream type GlobalEvent
 globals
 $$
     uint64_t nextts=0;
-    uint64_t leastts=MAXUINT64;
+    uint64_t leastts=ULLONG_MAX;
     int seenNone=0;
 $$
 
@@ -57,9 +57,9 @@ arbiter : GlobalEvent
             if(ts==nextts)
             {
                 $yield read(T.threadid, ts, addr);
-                drop 1 from T;
+                $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -72,9 +72,9 @@ arbiter : GlobalEvent
             if(ts==nextts)
             {
                 $yield write(T.threadid, ts, addr);
-                drop 1 from T;
+                $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -87,9 +87,9 @@ arbiter : GlobalEvent
             if(ts==nextts)
             {
                 $yield atomicread(T.threadid, ts, addr,mode);
-                drop 1 from T;
+                $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -102,9 +102,9 @@ arbiter : GlobalEvent
             if(ts==nextts)
             {
                 $yield atomicwrite(T.threadid, ts, addr,mode);
-                drop 1 from T;
+                $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -117,9 +117,9 @@ arbiter : GlobalEvent
             if(ts==nextts)
             {
                 $yield lock(T.threadid, ts, addr);
-                drop 1 from T;
+                $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -132,9 +132,9 @@ arbiter : GlobalEvent
             if(ts==nextts)
             {
                 $yield unlock(T.threadid, ts, addr);
-                drop 1 from T;
+                $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -147,9 +147,9 @@ arbiter : GlobalEvent
             if(ts==nextts)
             {
                 $yield alloc(T.threadid, ts, addr, size);
-                drop 1 from T;
+                $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -162,9 +162,9 @@ arbiter : GlobalEvent
             if(ts==nextts)
             {
                 $yield free(T.threadid, ts, addr);
-                drop 1 from T;
+                $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -177,9 +177,9 @@ arbiter : GlobalEvent
             if(ts==nextts)
             {
                 $yield fork(T.threadid, ts, tid);
-                drop 1 from T;
+                $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -192,9 +192,9 @@ arbiter : GlobalEvent
             if(ts==nextts)
             {
                 $yield join(T.threadid, ts, tid);
-                drop 1 from T;
+                $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -214,9 +214,9 @@ arbiter : GlobalEvent
             else if(maxts==nextts)
             {
                 $yield skipend(T.threadid, maxts);
-                drop 1 from T;
+                $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
