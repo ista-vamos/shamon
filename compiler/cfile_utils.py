@@ -230,16 +230,19 @@ def initialize_stream_args():
 
 def stream_type_structs(stream_types) -> str:
     answer = ""
-    for (stream_processor, data) in TypeChecker.stream_processors_data.items():
-        stream_name = data["output_type"]
-
-        union_events = ""
+    # union_events += f"EVENT_{hole_name}_hole {hole_name};"
+    special_holes = ""
+    for (_, data) in TypeChecker.stream_processors_data.items():
+        hole_name = data['hole_name']
+        if hole_name is not None:
+            special_holes += f"EVENT_{hole_name}_hole {hole_name};"
+    union_events = ""
+    for stream_name in TypeChecker.stream_types_to_events.keys():
         for name in TypeChecker.stream_types_to_events[stream_name]:
             union_events += f"EVENT_{stream_name}_{name} {name};"
-        if data['special_hole'] is not None:
-            hole_name = data['hole_name']
-            union_events += f"EVENT_{hole_name}_hole {hole_name};"
-        value = f'''// event declarations for stream type {stream_name}
+
+        union_events += special_holes
+        answer += f'''// event declarations for stream type {stream_name}
 {events_declaration_structs(stream_name, TypeChecker.stream_types_data[stream_name]["raw_events_list"])}
 
 // input stream for stream type {stream_name}
@@ -251,7 +254,7 @@ struct _STREAM_{stream_name}_in {"{"}
 {"}"};
 typedef struct _STREAM_{stream_name}_in STREAM_{stream_name}_in;
 
-// output stream for stream processor forward
+// output stream for stream processor {stream_name}
 struct _STREAM_{stream_name}_out {"{"}
     shm_event head;
     union {"{"}
@@ -261,7 +264,6 @@ struct _STREAM_{stream_name}_out {"{"}
 {"}"};
 typedef struct _STREAM_{stream_name}_out STREAM_{stream_name}_out;
         '''
-        answer += value
     return answer
 
 
