@@ -467,7 +467,7 @@ def instantiate_args(stream_name, event_name, new_arg_names):
     for (original_arg, new_arg) in zip(original_args, new_arg_names):
         original_name = original_arg["name"]
         arg_type = original_arg["type"]
-        declared_args += f"(STREAM_{stream_name}_in *){arg_type} {new_arg} = e->cases.{event_name}.{original_name};\n"
+        declared_args += f"{arg_type} {new_arg} = ((STREAM_{stream_name}_in *)e)->cases.{event_name}.{original_name};\n"
     return declared_args
 
 
@@ -592,7 +592,7 @@ case {mapping_in[event_name]["enum"]}:
                 init_stream_args_code += f"{original_arg[2][1]} {original_arg[1]} = {new_arg};\n"
 
             for (arg, sp_arg) in zip(stream_type_args, original_sp_args):
-                init_stream_args_code += f"stream_args_temp->{stream_processor_name}_{arg['name']} = {sp_arg} \n"
+                init_stream_args_code += f"stream_args_temp->{arg['name']} = {sp_arg}; \n"
 
             stream_args_code = f'''
 STREAM_{stream_type}_ARGS * stream_args_temp = malloc(sizeof(STREAM_{stream_type}_ARGS));
@@ -1508,6 +1508,7 @@ def get_imports():
 #include <signal.h>
 #include <stdio.h>
 #include <stdatomic.h>
+#include <limits.h>
     '''
 
 def special_hole_structs():
@@ -1530,6 +1531,7 @@ def get_special_holes_init_code():
     answer = ""
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
         data_hole = data['special_hole']
+        hole_name = data['hole_name']
         init_attributes = ""
         for attr_data in data_hole:
             if  attr_data['agg_func_name'].upper() == 'COUNT':
@@ -1553,7 +1555,7 @@ def get_special_holes_init_code():
 
             init_attributes += f"\th->{attr_data['attribute']} = {value};\n"
         answer += f'''
-void init_hole_{stream_processor}(EVENT_{stream_processor}_hole *h) {"{"}
+void init_hole_{hole_name}(EVENT_{hole_name}_hole *h) {"{"}
   {init_attributes}
 {"}"}
 '''
@@ -1565,6 +1567,7 @@ def get_special_holes_update_code(mapping):
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
         stream_type = data['input_type']
         data_events = mapping[stream_type]
+        hole_name = data['hole_name']
         all_events = list(TypeChecker.stream_types_data[stream_type]["events"].keys())
         event_to_holes_data = get_events_to_hole_update_data(data['special_hole'], all_events)
         update_attributes_code = ""
@@ -1577,11 +1580,11 @@ def get_special_holes_update_code(mapping):
                     event_code += f"\t\t\th->{event_hole_data['hole_attr']}++;\n"
                 else:
                     if event_hole_data["agg_func"] == "count":
-                        event_code += f"\t\t\th->{event_hole_data['hole_attr']}+=(STREAM_{stream_type}_in * ev)->cases.{event_hole_data['ev_attr']};\n"
+                        event_code += f"\t\t\th->{event_hole_data['hole_attr']}+=((STREAM_{stream_type}_in *) ev)->cases.{event}.{event_hole_data['ev_attr']};\n"
                     elif event_hole_data["agg_func"] == "MAX":
-                        event_code += f"\t\t\th->{event_hole_data['hole_attr']} = max(h->{event_hole_data['hole_attr']},(STREAM_{stream_type}_in * ev)->cases.{event_hole_data['ev_attr']});\n"
+                        event_code += f"\t\t\th->{event_hole_data['hole_attr']} = max(h->{event_hole_data['hole_attr']},((STREAM_{stream_type}_in *) ev)->cases.{event}.{event_hole_data['ev_attr']});\n"
                     elif event_hole_data["agg_func"] == "MIN":
-                        event_code += f"\t\t\th->{event_hole_data['hole_attr']} = min(h->{event_hole_data['hole_attr']},(STREAM_{stream_type}_in * ev)->cases.{event_hole_data['ev_attr']});\n"
+                        event_code += f"\t\t\th->{event_hole_data['hole_attr']} = min(h->{event_hole_data['hole_attr']},((STREAM_{stream_type}_in *) ev)->cases.{event}.{event_hole_data['ev_attr']});\n"
                     else:
                         raise Exception("Not implmented")
             update_attributes_code += f'''
@@ -1589,8 +1592,8 @@ def get_special_holes_update_code(mapping):
 {event_code}
             break;'''
         answer += f'''
-void update_hole_{stream_processor}(EVENT_{stream_processor}_hole *h, shm_event *ev) {"{"}
-    switch ((inevent->head).kind) {"{"}
+void update_hole_{hole_name}(EVENT_{hole_name}_hole *h, shm_event *ev) {"{"}
+    switch (((STREAM_{stream_type}_in *)ev)->head.kind) {"{"}
 {update_attributes_code}
     {"}"}
 {"}"}
