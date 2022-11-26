@@ -427,13 +427,17 @@ def activate_threads() -> str:
     answer = ""
     for (event_source, data) in TypeChecker.event_sources_data.items():
         processor_name = data["processor_name"]
+        if processor_name.lower() == 'forward':
+            tail_perf_layer = f"_{data['input_stream_type']}"
+        else:
+            tail_perf_layer = ""
         copies = data["copies"]
         if copies:
             for i in range(copies):
                 name = f"{event_source}_{i}"
-                answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{processor_name},BUFFER_{event_source}{i});\n"
+                answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{processor_name}{tail_perf_layer},BUFFER_{event_source}{i});\n"
         else:
-            answer += f"\tthrd_create(&THREAD_{event_source}, PERF_LAYER_{processor_name},BUFFER_{event_source});\n"
+            answer += f"\tthrd_create(&THREAD_{event_source}, PERF_LAYER_{processor_name}{tail_perf_layer},BUFFER_{event_source});\n"
 
     return answer
 
@@ -617,7 +621,7 @@ pthread_mutex_unlock(&LOCK_{buffer_group});
             shm_stream_register_all_events(ev_source_temp);
             {stream_args_code}
             thrd_t temp_thread;
-            thrd_create(temp_thread, PERF_LAYER_TEProcessor, temp_buffer);
+            thrd_create(temp_thread, PERF_LAYER_{stream_processor_name}, temp_buffer);
             '''        
             answer+=f'''
                 case {mapping_in[event_name]["enum"]}:
@@ -1535,6 +1539,7 @@ def get_imports():
     '''
 
 def special_hole_structs():
+    answer = ""
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
         if data['special_hole'] is not None:
             # TODO: set correctly data types of fields
@@ -1542,13 +1547,14 @@ def special_hole_structs():
             fields = ""
             for data_arg in data['special_hole']:
                 fields += f"\t{data_arg['type']} {data_arg['attribute']};\n" 
-            return f'''
+            answer+= f'''
 struct _EVENT_{hole_name}_hole
 {"{"}
 {fields}
 {"}"};
 typedef struct _EVENT_{hole_name}_hole EVENT_{hole_name}_hole;
 '''
+    return answer
 
 def get_special_holes_init_code():
     answer = ""
