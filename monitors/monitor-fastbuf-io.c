@@ -20,8 +20,8 @@ bool is_file(const char *path)
 */
 
 int main(int argc, char *argv[]) {
-    shm_event *ev = NULL;
-    shamon *shmn = shamon_create(NULL, NULL);
+    shm_event *ev   = NULL;
+    shamon    *shmn = shamon_create(NULL, NULL);
 
     if (argc == 1) {
         fprintf(stderr, "USAGE: prog file1 file2 ...\n");

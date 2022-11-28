@@ -12,7 +12,8 @@
 #include "stream-regex.h"
 #include "utils.h"
 
-static inline void dump_args(shm_stream *stream, shm_event_regex *ev, const char *signature) {
+static inline void dump_args(shm_stream *stream, shm_event_regex *ev,
+                             const char *signature) {
     unsigned char *p = ev->args;
     for (const char *o = signature; *o; ++o) {
         if (o != signature)
@@ -58,8 +59,8 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    shm_event *ev = NULL;
-    shamon *shmn = shamon_create(NULL, NULL);
+    shm_event *ev   = NULL;
+    shamon    *shmn = shamon_create(NULL, NULL);
     assert(shmn);
 
     shm_stream *fstream = create_stream(argc, argv, 1, "regex-stream");
@@ -72,8 +73,8 @@ int main(int argc, char *argv[]) {
 
     // shm_kind kind;
     // size_t id, next_id = 1;
-    size_t n = 0, drp = 0;//, drpn = 0;
-    shm_stream *stream;
+    size_t               n = 0, drp = 0; //, drpn = 0;
+    shm_stream          *stream;
     struct event_record *rec;
     while (shamon_is_ready(shmn)) {
         while ((ev = shamon_get_next_ev(shmn, &stream))) {
@@ -111,7 +112,7 @@ int main(int argc, char *argv[]) {
             last_id = id;
             */
             shm_kind kind = shm_event_kind(ev);
-            rec = shm_stream_get_event_record(stream, kind);
+            rec           = shm_stream_get_event_record(stream, kind);
             printf("Event kind %lu ('%s')\n", kind, rec->name);
             puts("--------------------");
             printf("\033[0;34mEvent id %lu\033[0m\n", shm_event_id(ev));

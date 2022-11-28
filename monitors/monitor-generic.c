@@ -1,14 +1,15 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <signal.h>
 
 #include "arbiter.h"
 #include "event.h"
+#include "monitors-utils.h"
 #include "shamon.h"
 #include "signatures.h"
 #include "source.h"
@@ -16,25 +17,23 @@
 #include "stream.h"
 #include "streams.h"
 #include "utils.h"
-#include "monitors-utils.h"
 #include "vector.h"
 
 //#define CHECK_IDS
 #define CHECK_IDS_ABORT
 
-static inline void dump_args(shm_stream *stream, shm_event_generic *ev, const char *signature) {
+static inline void dump_args(shm_stream *stream, shm_event_generic *ev,
+                             const char *signature) {
     unsigned char *p = ev->args;
     for (const char *o = signature; *o; ++o) {
         if (o != signature)
             printf(", ");
         if (*o == 'S' || *o == 'L' || *o == 'M') {
-	    const char *str = shm_stream_get_str(stream, (*(uint64_t *)p));
-	    const size_t len = strlen(str);
+            const char  *str = shm_stream_get_str(stream, (*(uint64_t *)p));
+            const size_t len = strlen(str);
             printf("S[%lu, %lu]('%.*s%s)", (*(uint64_t *)p) >> 32,
-                   (*(uint64_t *)p) & 0xffffffff,
-                   len > 6 ? 6 : (int)len,
-		   str,
-		   len > 6 ? "...'" : "'");
+                   (*(uint64_t *)p) & 0xffffffff, len > 6 ? 6 : (int)len, str,
+                   len > 6 ? "...'" : "'");
             p += sizeof(uint64_t);
             continue;
         }
@@ -44,7 +43,7 @@ static inline void dump_args(shm_stream *stream, shm_event_generic *ev, const ch
             printf("%f", *((float *)p));
         } else if (*o == 'd') {
             printf("%lf", *((double *)p));
-	} else if (*o == 't') {
+        } else if (*o == 't') {
             printf("\033[31m%lu\033[0m", *((uint64_t *)p));
         } else {
             switch (size) {
@@ -80,19 +79,19 @@ static void sig_fatal(int sig) {
 
 static void setup_signals() {
     if (signal(SIGINT, sig_fatal) == SIG_ERR) {
-	perror("failed setting SIGINT handler");
+        perror("failed setting SIGINT handler");
     }
 
     if (signal(SIGABRT, sig_fatal) == SIG_ERR) {
-	perror("failed setting SIGINT handler");
+        perror("failed setting SIGINT handler");
     }
 
     if (signal(SIGIOT, sig_fatal) == SIG_ERR) {
-	perror("failed setting SIGINT handler");
+        perror("failed setting SIGINT handler");
     }
 
     if (signal(SIGSEGV, sig_fatal) == SIG_ERR) {
-	perror("failed setting SIGINT handler");
+        perror("failed setting SIGINT handler");
     }
 }
 
@@ -104,7 +103,7 @@ int main(int argc, char *argv[]) {
     }
 
     shm_event *ev = NULL;
-    shmn = shamon_create(NULL, NULL);
+    shmn          = shamon_create(NULL, NULL);
     assert(shmn);
 
     setup_signals();
@@ -139,9 +138,9 @@ int main(int argc, char *argv[]) {
     memset(dropped_sum_count, 0, argc * sizeof(uint64_t));
 #endif
 
-    shm_kind kind;
-    size_t n = 0, drp = 0, drpn = 0;
-    size_t id;
+    shm_kind    kind;
+    size_t      n = 0, drp = 0, drpn = 0;
+    size_t      id;
     shm_stream *stream;
 
 #ifdef CHECK_IDS
@@ -150,15 +149,11 @@ int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; ++i)
         next_id[i] = 1;
 #endif
-    size_t spinned = 0;
-    size_t old_n;
+    size_t               spinned = 0;
+    size_t               old_n;
     struct event_record *rec;
-    struct event_record unknown_rec = {
-        .size = 0,
-        .name = "unknown",
-        .signature = "",
-        .kind = 0
-    };
+    struct event_record  unknown_rec = {
+         .size = 0, .name = "unknown", .signature = "", .kind = 0};
 
     while (__run && shamon_is_ready(shmn)) {
         old_n = n;
@@ -166,9 +161,9 @@ int main(int argc, char *argv[]) {
         while ((ev = shamon_get_next_ev(shmn, &stream))) {
             ++n;
 
-	    int ind = 5*shm_stream_id(stream);
+            int ind = 5 * shm_stream_id(stream);
 
-            id = shm_event_id(ev);
+            id   = shm_event_id(ev);
             kind = shm_event_kind(ev);
 #ifdef CHECK_IDS
             stream_id = shm_stream_id(stream);
@@ -182,12 +177,13 @@ int main(int argc, char *argv[]) {
             rec = shm_stream_get_event_record(stream, kind);
             rec = rec ? rec : &unknown_rec;
             printf("%*s%s: ", ind, "", shm_stream_get_name(stream));
-            printf("\033[0;35m%s(\033[0;34mid: %lu, kind: %lu\033[0m", rec->name, id, kind);
+            printf("\033[0;35m%s(\033[0;34mid: %lu, kind: %lu\033[0m",
+                   rec->name, id, kind);
 
 #ifdef CHECK_IDS
             if (id != next_id[stream_id]) {
-                printf("%*s\033[0;31mWrong ID: %lu, should be %lu\033[0m\n", ind, "", id,
-                       next_id[stream_id]);
+                printf("%*s\033[0;31mWrong ID: %lu, should be %lu\033[0m\n",
+                       ind, "", id, next_id[stream_id]);
 #ifdef CHECK_IDS_ABORT
                 abort();
 #endif
@@ -198,8 +194,8 @@ int main(int argc, char *argv[]) {
             if (shm_event_is_hole(ev)) {
                 printf("%*shole\n", ind, "");
                 /*
-                printf("%*s'dropped(%lu)'\n", ind, "", ((shm_event_dropped *)ev)->n);
-                drpn += ((shm_event_dropped *)ev)->n;
+                printf("%*s'dropped(%lu)'\n", ind, "", ((shm_event_dropped
+                *)ev)->n); drpn += ((shm_event_dropped *)ev)->n;
                 */
 #ifdef DUMP_STATS
                 assert(stream_id < (size_t)argc && "OOB access");
@@ -219,10 +215,11 @@ int main(int argc, char *argv[]) {
 #ifdef CHECK_IDS
             ++next_id[stream_id];
 #endif
-	    if (*rec->signature) {
+            if (*rec->signature) {
                 printf(", ");
-                dump_args(stream, (shm_event_generic *)ev, (const char *)rec->signature);
-	    }
+                dump_args(stream, (shm_event_generic *)ev,
+                          (const char *)rec->signature);
+            }
             printf(")\n");
         }
 
@@ -249,14 +246,14 @@ int main(int argc, char *argv[]) {
            n, drp, drpn, n + drpn - drp);
 
 #ifdef DUMP_STATS
-    size_t streams_num;
-    size_t evs_num;
-    size_t totally_came = 0;
-    shm_stream **streams = shamon_get_streams(shmn, &streams_num);
-    shm_vector *buffers = shamon_get_buffers(shmn);
+    size_t       streams_num;
+    size_t       evs_num;
+    size_t       totally_came = 0;
+    shm_stream **streams      = shamon_get_streams(shmn, &streams_num);
+    shm_vector  *buffers      = shamon_get_buffers(shmn);
     for (size_t i = 0; i < streams_num; ++i) {
         shm_stream *stream = streams[i];
-        stream_id = shm_stream_id(stream);
+        stream_id          = shm_stream_id(stream);
         assert(stream_id < (size_t)argc && "OOB access");
 
         printf("-- Stream '%s':\n", shm_stream_get_name(stream));

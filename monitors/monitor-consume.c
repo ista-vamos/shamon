@@ -14,8 +14,9 @@
 #include "stream.h"
 #include "utils.h"
 
-shm_stream *shm_stream_create_from_argv(const char *name, int argc, char *argv[]);
-#define SLEEP_NS_INIT (50)
+shm_stream *shm_stream_create_from_argv(const char *name, int argc,
+                                        char *argv[]);
+#define SLEEP_NS_INIT      (50)
 #define SLEEP_THRESHOLD_NS (10000000)
 
 shm_stream *create_stream(int argc, char *argv[], int arg_i,
@@ -23,17 +24,17 @@ shm_stream *create_stream(int argc, char *argv[], int arg_i,
 
 static int buffer_manager_thrd(void *data) {
     shm_arbiter_buffer *buffer = (shm_arbiter_buffer *)data;
-    shm_stream *stream = shm_arbiter_buffer_stream(buffer);
+    shm_stream         *stream = shm_arbiter_buffer_stream(buffer);
 
     // wait for buffer->active
     while (!shm_arbiter_buffer_active(buffer))
         _mm_pause();
 
     printf("Running fetch & autodrop for stream %s\n",
-	    shm_stream_get_name(stream));
+           shm_stream_get_name(stream));
 
     const size_t ev_size = shm_stream_event_size(stream);
-    void *ev, *out;
+    void        *ev, *out;
     while (1) {
         ev = stream_fetch(stream, buffer);
         if (!ev) {
@@ -49,8 +50,8 @@ static int buffer_manager_thrd(void *data) {
 
     // TODO: we should check if the stream is finished and remove it
     // in that case
-    printf("BMM for stream %lu (%s) exits\n",
-	   shm_stream_id(stream), shm_stream_get_name(stream));
+    printf("BMM for stream %lu (%s) exits\n", shm_stream_id(stream),
+           shm_stream_get_name(stream));
     thrd_exit(EXIT_SUCCESS);
 }
 

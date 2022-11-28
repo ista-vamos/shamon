@@ -9,7 +9,7 @@
 #include "stream-fds.h"
 #include "utils.h"
 
-size_t n = 0;
+size_t n        = 0;
 size_t bytes[8] = {0};
 
 static void update_bytes(unsigned char b) {
@@ -30,11 +30,11 @@ static void print_bytes_rat() {
 
 int main(int argc, char *argv[]) {
     puts("Started monitor-io");
-    shm_event *ev = NULL;
-    shamon *shamon = shamon_create(NULL, NULL);
+    shm_event *ev     = NULL;
+    shamon    *shamon = shamon_create(NULL, NULL);
 
     shm_stream_fds *fdsstream = NULL;
-    int fd = open("/dev/random", O_RDONLY);
+    int             fd        = open("/dev/random", O_RDONLY);
     if (fd == -1) {
         perror("open failed");
         return 1;
