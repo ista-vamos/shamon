@@ -47,10 +47,10 @@ int main(int argc, char *argv[]) {
     }
 
     const char *shmkey = argv[1];
-    char *exprs[exprs_num];
-    char *signatures[exprs_num];
-    char *names[exprs_num];
-    regex_t re[exprs_num];
+    char       *exprs[exprs_num];
+    char       *signatures[exprs_num];
+    char       *names[exprs_num];
+    regex_t     re[exprs_num];
 
     int arg_i = 2;
     for (int i = 0; i < (int)exprs_num; ++i) {
@@ -85,17 +85,17 @@ int main(int argc, char *argv[]) {
 
     regmatch_t matches[MAXMATCH + 1];
 
-    int status;
-    ssize_t len;
-    size_t line_len;
-    char *line = NULL;
-    char *tmpline = NULL;
-    size_t tmpline_len = 0;
+    int               status;
+    ssize_t           len;
+    size_t            line_len;
+    char             *line        = NULL;
+    char             *tmpline     = NULL;
+    size_t            tmpline_len = 0;
     signature_operand op;
 
     struct event ev;
     memset(&ev, 0, sizeof(ev));
-    size_t num;
+    size_t               num;
     struct event_record *events = buffer_get_avail_events(shm, &num);
     assert(num == exprs_num && "Information in shared memory does not fit");
 
@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             printf("{");
-            int m = 1;
+            int   m = 1;
             void *addr;
             while (!(addr = buffer_start_push(shm))) {
                 ++waiting_for_buffer;
@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
             /* push the base info about event */
             ++ev.base.id;
             ev.base.kind = events[i].kind;
-            addr = buffer_partial_push(shm, addr, &ev, sizeof(ev));
+            addr         = buffer_partial_push(shm, addr, &ev, sizeof(ev));
 
             /* push the arguments of the event */
             for (const char *o = signatures[i]; *o && m <= MAXMATCH; ++o, ++m) {

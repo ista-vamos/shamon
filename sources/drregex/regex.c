@@ -41,8 +41,8 @@
 #define MAXMATCH 20
 
 typedef struct {
-    int fd;
-    void *buf;
+    int    fd;
+    void  *buf;
     size_t size;
     size_t thread;
 } per_thread_t;
@@ -57,15 +57,15 @@ static struct buffer *shm;
  writers
  * (multiple threads), so we must make sure they are seuqntialized somehow
    (until we have the implementation for multiple-writers) */
-static size_t waiting_for_buffer = 0;
-static _Atomic(bool) _write_lock = false;
+static size_t        waiting_for_buffer = 0;
+static _Atomic(bool) _write_lock        = false;
 
 static struct event_record *events;
-static size_t events_num;
+static size_t               events_num;
 
 static inline void write_lock() {
     _Atomic bool *l = &_write_lock;
-    bool unlocked;
+    bool          unlocked;
     do {
         unlocked = false;
     } while (atomic_compare_exchange_weak(l, &unlocked, true));
@@ -83,8 +83,8 @@ static int write_sysnum, read_sysnum;
 #undef bool
 #define bool char
 
-static int get_write_sysnum(void);
-static int get_read_sysnum(void);
+static int  get_write_sysnum(void);
+static int  get_read_sysnum(void);
 static void event_exit(void);
 static bool event_filter_syscall(void *drcontext, int sysnum);
 static bool event_pre_syscall(void *drcontext, int sysnum);
@@ -99,15 +99,15 @@ static void usage_and_exit(int ret) {
     exit(ret);
 }
 
-static char **signatures;
-static regex_t *re;
-static size_t exprs_num;
+static char     **signatures;
+static regex_t   *re;
+static size_t     exprs_num;
 shm_event_drregex ev;
 
-static char *tmpline = NULL;
-static size_t tmpline_len = 0;
-static char *partial_line = 0;
-static size_t partial_line_len = 0;
+static char  *tmpline                = NULL;
+static size_t tmpline_len            = 0;
+static char  *partial_line           = 0;
+static size_t partial_line_len       = 0;
 static size_t partial_line_alloc_len = 0;
 
 static void parse_line(bool iswrite, per_thread_t *data, char *line) {
@@ -115,10 +115,10 @@ static void parse_line(bool iswrite, per_thread_t *data, char *line) {
     (void)data;
     (void)iswrite;
 #endif
-    int status;
+    int               status;
     signature_operand op;
-    ssize_t len;
-    regmatch_t matches[MAXMATCH + 1];
+    ssize_t           len;
+    regmatch_t        matches[MAXMATCH + 1];
 
     /* fprintf(stderr, "LINE: %s\n", line); */
 
@@ -130,7 +130,7 @@ static void parse_line(bool iswrite, per_thread_t *data, char *line) {
         if (status != 0) {
             continue;
         }
-        int m = 1;
+        int   m = 1;
         void *addr;
 
         /** LOCKED --
@@ -145,8 +145,8 @@ static void parse_line(bool iswrite, per_thread_t *data, char *line) {
         ++ev.base.id;
         ev.base.kind = events[i].kind;
 #ifndef DRREGEX_ONLY_ARGS
-        ev.write = iswrite;
-        ev.fd = data->fd;
+        ev.write  = iswrite;
+        ev.fd     = data->fd;
         ev.thread = data->thread;
 #endif
         addr = buffer_partial_push(shm, addr, &ev, sizeof(ev));
@@ -231,9 +231,9 @@ static void push_event(bool iswrite, per_thread_t *data, ssize_t retlen) {
     data->buf);
                */
 
-    char *line = data->buf;
-    const char *endptr = line + retlen;
-    char *line_end = line;
+    char       *line     = data->buf;
+    const char *endptr   = line + retlen;
+    char       *line_end = line;
     do {
         while (line_end != endptr && *line_end != '\n') {
             ++line_end;
@@ -254,7 +254,7 @@ static void push_event(bool iswrite, per_thread_t *data, ssize_t retlen) {
                 if (partial_line_alloc_len <= linelen) {
                     free(partial_line);
                     partial_line_alloc_len = linelen + 1;
-                    partial_line = malloc(partial_line_alloc_len);
+                    partial_line           = malloc(partial_line_alloc_len);
                     DR_ASSERT(partial_line && "Allocation failed");
                 }
                 DR_ASSERT(partial_line_alloc_len > linelen);
@@ -297,7 +297,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
                        "http://...");
     drmgr_init();
     write_sysnum = get_write_sysnum();
-    read_sysnum = get_read_sysnum();
+    read_sysnum  = get_read_sysnum();
     dr_register_filter_syscall_event(event_filter_syscall);
     drmgr_register_pre_syscall_event(event_pre_syscall);
     drmgr_register_post_syscall_event(event_post_syscall);
@@ -323,10 +323,10 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     }
 
     const char *shmkey = argv[1];
-    char *exprs[exprs_num];
-    char *names[exprs_num];
+    char       *exprs[exprs_num];
+    char       *names[exprs_num];
     signatures = dr_global_alloc(exprs_num * sizeof(char *));
-    re = dr_global_alloc(exprs_num * sizeof(regex_t));
+    re         = dr_global_alloc(exprs_num * sizeof(regex_t));
 
     int arg_i = 2;
     for (int i = 0; i < (int)exprs_num; ++i) {
@@ -388,7 +388,7 @@ static void event_thread_context_init(void *drcontext, bool new_depth) {
     if (new_depth) {
         data = (per_thread_t *)dr_thread_alloc(drcontext, sizeof(per_thread_t));
         drmgr_set_cls_field(drcontext, tcls_idx, data);
-        data->fd = -1;
+        data->fd     = -1;
         data->thread = thread_num++;
         // FIXME: typo in the name
         // intialize_thread_buffer(1, 2);
@@ -417,13 +417,13 @@ static bool event_pre_syscall(void *drcontext, int sysnum) {
         return true;
     }
 
-    reg_t fd = dr_syscall_get_param(drcontext, 0);
-    reg_t buf = dr_syscall_get_param(drcontext, 1);
-    reg_t size = dr_syscall_get_param(drcontext, 2);
+    reg_t         fd   = dr_syscall_get_param(drcontext, 0);
+    reg_t         buf  = dr_syscall_get_param(drcontext, 1);
+    reg_t         size = dr_syscall_get_param(drcontext, 2);
     per_thread_t *data =
         (per_thread_t *)drmgr_get_cls_field(drcontext, tcls_idx);
-    data->fd = fd; /* store the fd for post-event */
-    data->buf = (void *)buf;
+    data->fd   = fd; /* store the fd for post-event */
+    data->buf  = (void *)buf;
     data->size = size;
     return true; /* execute normally */
 }
@@ -459,7 +459,7 @@ static int get_write_sysnum(void) {
 #ifdef UNIX
     return SYS_write;
 #else
-    byte *entry;
+    byte          *entry;
     module_data_t *data = dr_lookup_module_by_name("ntdll.dll");
     DR_ASSERT(data != NULL);
     entry = (byte *)dr_get_proc_address(data->handle, "NtWriteFile");
@@ -473,7 +473,7 @@ static int get_read_sysnum(void) {
 #ifdef UNIX
     return SYS_read;
 #else
-    byte *entry;
+    byte          *entry;
     module_data_t *data = dr_lookup_module_by_name("ntdll.dll");
     DR_ASSERT(data != NULL);
     entry = (byte *)dr_get_proc_address(data->handle, "NtReadFile");

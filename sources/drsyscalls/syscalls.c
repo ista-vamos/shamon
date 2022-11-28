@@ -25,8 +25,8 @@
 #endif
 
 typedef struct {
-    int fd;
-    void *buf;
+    int    fd;
+    void  *buf;
     size_t size;
 } per_thread_t;
 
@@ -36,8 +36,8 @@ static int tcls_idx;
 /* The system call number of SYS_write/NtWriteFile */
 static int write_sysnum, read_sysnum;
 
-static int get_write_sysnum(void);
-static int get_read_sysnum(void);
+static int  get_write_sysnum(void);
+static int  get_read_sysnum(void);
 static void event_exit(void);
 static bool event_filter_syscall(void *drcontext, int sysnum);
 static bool event_pre_syscall(void *drcontext, int sysnum);
@@ -87,7 +87,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
                        "http://...");
     drmgr_init();
     write_sysnum = get_write_sysnum();
-    read_sysnum = get_read_sysnum();
+    read_sysnum  = get_read_sysnum();
     dr_register_filter_syscall_event(event_filter_syscall);
     drmgr_register_pre_syscall_event(event_pre_syscall);
     drmgr_register_post_syscall_event(event_post_syscall);
@@ -149,13 +149,13 @@ static bool event_filter_syscall(void *drcontext, int sysnum) {
 static bool event_pre_syscall(void *drcontext, int sysnum) {
     (void)sysnum;
 
-    reg_t fd = dr_syscall_get_param(drcontext, 0);
-    reg_t buf = dr_syscall_get_param(drcontext, 1);
-    reg_t size = dr_syscall_get_param(drcontext, 2);
+    reg_t         fd   = dr_syscall_get_param(drcontext, 0);
+    reg_t         buf  = dr_syscall_get_param(drcontext, 1);
+    reg_t         size = dr_syscall_get_param(drcontext, 2);
     per_thread_t *data =
         (per_thread_t *)drmgr_get_cls_field(drcontext, tcls_idx);
-    data->fd = fd; /* store the fd for post-event */
-    data->buf = (void *)buf;
+    data->fd   = fd; /* store the fd for post-event */
+    data->buf  = (void *)buf;
     data->size = size;
     // dr_insert_clean_call(drcontext, ilist, nxt, (void *) at_mbr,
     //                     false/*don't need to save fp state*/,
@@ -217,7 +217,7 @@ static int get_write_sysnum(void) {
 #ifdef UNIX
     return SYS_write;
 #else
-    byte *entry;
+    byte          *entry;
     module_data_t *data = dr_lookup_module_by_name("ntdll.dll");
     DR_ASSERT(data != NULL);
     entry = (byte *)dr_get_proc_address(data->handle, "NtWriteFile");
@@ -231,7 +231,7 @@ static int get_read_sysnum(void) {
 #ifdef UNIX
     return SYS_read;
 #else
-    byte *entry;
+    byte          *entry;
     module_data_t *data = dr_lookup_module_by_name("ntdll.dll");
     DR_ASSERT(data != NULL);
     entry = (byte *)dr_get_proc_address(data->handle, "NtReadFile");

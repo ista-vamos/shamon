@@ -5,10 +5,10 @@
 
 struct event {
     char buf[BUF_SIZE];
-    int count;
-    int len;
-    int off;
-    int fd;
+    int  count;
+    int  len;
+    int  off;
+    int  fd;
 };
 
 #endif /* __SYSWRITE_H */

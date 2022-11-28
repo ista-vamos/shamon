@@ -31,12 +31,12 @@ static void usage_and_exit(int ret) {
 static size_t exprs_num;
 static size_t events_num;
 
-static char *tmpline = NULL;
+static char  *tmpline     = NULL;
 static size_t tmpline_len = 0;
 
-static char *current_line = NULL;
+static char  *current_line           = NULL;
 static size_t current_line_alloc_len = 0;
-static size_t current_line_idx = 0;
+static size_t current_line_idx       = 0;
 
 /*
 static int libbpf_print_fn(enum libbpf_print_level level, const char *format,
@@ -70,19 +70,19 @@ static size_t line_alloc_size(size_t x) {
     return n;
 }
 
-static regex_t *re;
-static char **signatures;
+static regex_t      *re;
+static char        **signatures;
 struct event_record *events;
-static size_t waiting_for_buffer;
-static shm_event ev;
+static size_t        waiting_for_buffer;
+static shm_event     ev;
 
 static struct buffer *shm;
 
 static void parse_line(bool iswrite, const struct event *e, char *line) {
-    int status;
+    int               status;
     signature_operand op;
-    ssize_t len;
-    regmatch_t matches[MAXMATCH + 1];
+    ssize_t           len;
+    regmatch_t        matches[MAXMATCH + 1];
 
     /* fprintf(stderr, "LINE: %s\n", line); */
 
@@ -94,7 +94,7 @@ static void parse_line(bool iswrite, const struct event *e, char *line) {
         if (status != 0) {
             continue;
         }
-        int m = 1;
+        int   m = 1;
         void *addr;
 
         while (!(addr = buffer_start_push(shm))) {
@@ -103,7 +103,7 @@ static void parse_line(bool iswrite, const struct event *e, char *line) {
         /* push the base info about event */
         ++ev.id;
         ev.kind = events[i].kind;
-        addr = buffer_partial_push(shm, addr, &ev, sizeof(ev));
+        addr    = buffer_partial_push(shm, addr, &ev, sizeof(ev));
 
         /* push the arguments of the event */
         for (const char *o = signatures[i]; *o && m <= MAXMATCH; ++o, ++m) {
@@ -213,7 +213,7 @@ static int handle_event(void *ctx, void *data, size_t data_sz) {
     return 0;
 }
 
-static volatile sig_atomic_t running = 1;
+static volatile sig_atomic_t running       = 1;
 static volatile sig_atomic_t child_running = 1;
 
 void sig_int(int signo) {
@@ -247,11 +247,11 @@ int main(int argc, char *argv[]) {
     }
 
     const char *shmkey = argv[1];
-    char *exprs[exprs_num];
-    char *names[exprs_num];
+    char       *exprs[exprs_num];
+    char       *names[exprs_num];
 
     signatures = malloc(sizeof(char *) * exprs_num);
-    re = malloc(exprs_num * sizeof(regex_t));
+    re         = malloc(exprs_num * sizeof(regex_t));
 
     int arg_i = 2;
     for (int i = 0; i < (int)exprs_num; ++i) {
@@ -285,8 +285,8 @@ int main(int argc, char *argv[]) {
     events = buffer_get_avail_events(shm, &events_num);
     free(control);
 
-    pid_t filter_pid = 0;
-    int fork_sync[2] = {-1, -1};
+    pid_t filter_pid   = 0;
+    int   fork_sync[2] = {-1, -1};
     if (strncmp(argv[prog_idx], "-p", 3) == 0) {
         if (argc <= prog_idx + 1) {
             usage_and_exit(1);
@@ -345,7 +345,7 @@ int main(int argc, char *argv[]) {
 
     LIBBPF_OPTS(bpf_object_open_opts, open_opts);
     struct syswrite_bpf *obj;
-    int err;
+    int                  err;
 
     libbpf_set_strict_mode(LIBBPF_STRICT_ALL);
     // libbpf_set_print(libbpf_print_fn);
@@ -363,7 +363,6 @@ int main(int argc, char *argv[]) {
         err = 1;
         goto cleanup_core;
     }
-
 
     if (filter_pid > 0)
         obj->rodata->filter_pid = filter_pid;

@@ -72,8 +72,6 @@ static void event_exit(void);
 #undef bool
 #define bool char
 
-
-
 static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
                                              instrlist_t *bb, instr_t *instr,
                                              bool for_trace, bool translating,
@@ -82,16 +80,16 @@ static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
 static void event_thread_context_init(void *drcontext, bool new_depth);
 static void event_thread_context_exit(void *drcontext, bool process_exit);
 
-static struct buffer *top_shmbuffer;
+static struct buffer         *top_shmbuffer;
 static struct source_control *top_control;
-static struct event_record *events;
-unsigned long *addresses;
-static size_t events_num;
+static struct event_record   *events;
+unsigned long                *addresses;
+static size_t                 events_num;
 
 typedef struct {
-    size_t thread;
+    size_t         thread;
     struct buffer *shm;
-    size_t waiting_for_buffer;
+    size_t         waiting_for_buffer;
 } per_thread_t;
 
 /* Thread-context-local storage index from drmgr */
@@ -151,7 +149,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     }
 
     const char *shmkey = argv[1];
-    events_num = argc - 2;
+    events_num         = argc - 2;
     dr_fprintf(STDERR, "shmkey: %s\n", shmkey);
     dr_fprintf(STDERR, "number of events: %lu\n", events_num);
     addresses = dr_global_alloc(events_num * sizeof(unsigned long));
@@ -161,15 +159,16 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     const char *signatures[events_num];
 
     for (size_t i = 0; i < events_num; ++i) {
-        names[i] = argv[i + 2];
+        names[i]    = argv[i + 2];
         char *colon = strchr(names[i], ':');
         if (colon) {
-            *colon = 0;
+            *colon        = 0;
             signatures[i] = colon + 1;
         } else {
             signatures[i] = "";
         }
-        dr_fprintf(STDERR, "Registering event '%s' with signature '%s'\n", names[i], signatures[i]);
+        dr_fprintf(STDERR, "Registering event '%s' with signature '%s'\n",
+                   names[i], signatures[i]);
     }
 
     /* Initialize the info about this source */
@@ -202,7 +201,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     dr_register_exit_event(event_exit);
     drmgr_register_module_load_event(find_functions);
 
-    drmgr_register_bb_instrumentation_event(NULL, (void *)event_app_instruction, 0);
+    drmgr_register_bb_instrumentation_event(NULL, (void *)event_app_instruction,
+                                            0);
 
     top_shmbuffer = create_shared_buffer(shmkey, top_control);
     DR_ASSERT(top_shmbuffer);
@@ -222,7 +222,8 @@ static void event_thread_context_init(void *drcontext, bool new_depth) {
         data = (per_thread_t *)dr_thread_alloc(drcontext, sizeof(per_thread_t));
         drmgr_set_cls_field(drcontext, tcls_idx, data);
         data->thread = ++thread_num;
-        /* TODO: for now we create a buffer of the same type as the top buffer */
+        /* TODO: for now we create a buffer of the same type as the top buffer
+         */
         data->shm = create_shared_sub_buffer(top_shmbuffer, top_control);
         data->waiting_for_buffer = 0;
         DR_ASSERT(data->shm && "Failed creating buffer");
@@ -236,8 +237,9 @@ static void event_thread_context_exit(void *drcontext, bool thread_exit) {
         return;
     per_thread_t *data =
         (per_thread_t *)drmgr_get_cls_field(drcontext, tcls_idx);
-    dr_printf("Thread %lu exits, looped in a busy wait for the buffer %lu times\n",
-              data->thread, data->waiting_for_buffer);
+    dr_printf(
+        "Thread %lu exits, looped in a busy wait for the buffer %lu times\n",
+        data->thread, data->waiting_for_buffer);
     dr_printf("... (releasing shared buffer)\n");
     release_shared_buffer(data->shm);
     dr_thread_free(drcontext, data, sizeof(per_thread_t));
@@ -258,7 +260,7 @@ static void event_exit(void) {
 
 /* adapted from instrcalls.c */
 static app_pc call_get_target(instr_t *instr) {
-    app_pc target = 0;
+    app_pc target   = 0;
     opnd_t targetop = instr_get_target(instr);
     if (opnd_is_pc(targetop)) {
         if (opnd_is_far_pc(targetop)) {
@@ -301,21 +303,21 @@ static inline void *call_get_arg_ptr(dr_mcontext_t *mc, int i, char o) {
 static size_t last_event_id = 0;
 
 static void at_call_generic(size_t fun_idx, const char *sig) {
-    dr_mcontext_t mc = {sizeof(mc), DR_MC_INTEGER};
-    void *drcontext = dr_get_current_drcontext();
+    dr_mcontext_t mc        = {sizeof(mc), DR_MC_INTEGER};
+    void         *drcontext = dr_get_current_drcontext();
     dr_get_mcontext(drcontext, &mc);
 
     per_thread_t *data =
         (per_thread_t *)drmgr_get_cls_field(drcontext, tcls_idx);
     struct buffer *shm = data->shm;
-    void *shmaddr;
+    void          *shmaddr;
     while (!(shmaddr = buffer_start_push(shm))) {
         ++data->waiting_for_buffer;
     }
     DR_ASSERT(fun_idx < events_num);
     shm_event_funcall *ev = (shm_event_funcall *)shmaddr;
-    ev->base.kind = events[fun_idx].kind;
-    ev->base.id = ++last_event_id;
+    ev->base.kind         = events[fun_idx].kind;
+    ev->base.id           = ++last_event_id;
     memcpy(ev->signature, events[fun_idx].signature, sizeof(ev->signature));
     shmaddr = ev->args;
     DR_ASSERT(shmaddr && "Failed partial push");
@@ -358,7 +360,8 @@ static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
     if (instr_is_call_direct(instr)) {
         app_pc target = call_get_target(instr);
         for (size_t i = 0; i < events_num; ++i) {
-            //dr_printf("   target 0x%x == 0x%x events[%lu].addr\n", target, events[i].addr, i);
+            // dr_printf("   target 0x%x == 0x%x events[%lu].addr\n", target,
+            // events[i].addr, i);
             if (target == (app_pc)addresses[i]) {
                 if (events[i].kind == 0) {
                     dr_printf("Found a call of %s, but skipping\n",
@@ -388,7 +391,6 @@ static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
     */
     return DR_EMIT_DEFAULT;
 }
-
 
 /*
 bool enumsym(const char *name, size_t off, void *data) {
@@ -435,4 +437,3 @@ sym.line, sym.line_offs);
     dr_free_module_data(data);
 }
 */
-

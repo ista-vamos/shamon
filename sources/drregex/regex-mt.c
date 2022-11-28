@@ -3,11 +3,11 @@
  */
 
 #include <assert.h>
-#include <regex.h>
 #include <errno.h>
+#include <immintrin.h> // For _mm_pause
+#include <regex.h>
 #include <stdatomic.h>
 #include <string.h> /* memset */
-#include <immintrin.h> // For _mm_pause
 
 #include "dr_api.h"
 #include "drmgr.h"
@@ -15,13 +15,13 @@
 
 #include "buffer.h"
 #include "client.h"
+#include "list-embedded.h"
 #include "signatures.h"
 #include "source.h"
-#include "utils.h"
-#include "list-embedded.h"
-#include "vector-macro.h"
 #include "spsc_ringbuf.h"
 #include "streams/stream-drregex.h" /* event type */
+#include "utils.h"
+#include "vector-macro.h"
 
 #define warn(...) dr_fprintf(STDERR, "warning: " __VA_ARGS__)
 #define info(...) dr_fprintf(STDERR, __VA_ARGS__)
@@ -58,13 +58,12 @@ static void *xmalloc(size_t sz) {
     return mem;
 }
 
-
 static char  *tmpline;
 static size_t tmpline_len;
 
 struct line {
     STRING(data);
-    size_t timestamp;
+    size_t            timestamp;
     shm_list_embedded list;
 } __attribute__((aligned(CACHELINE_SIZE)));
 
@@ -93,20 +92,14 @@ static int tcls_idx;
 static size_t thread_num = 0;
 
 struct lock {
-    CACHELINE_ALIGNED _Atomic bool  locked;
+    CACHELINE_ALIGNED _Atomic bool locked;
 };
 
 /* one lock for each fd */
 static struct lock _list_lock[3] = {
-    { .locked = false },
-    { .locked = false },
-    { .locked = false }
-};
+    {.locked = false}, {.locked = false}, {.locked = false}};
 static struct lock _pool_lock[3] = {
-    { .locked = false },
-    { .locked = false },
-    { .locked = false }
-};
+    {.locked = false}, {.locked = false}, {.locked = false}};
 
 static inline void _lock(struct lock *l) {
     while (atomic_exchange_explicit(&l->locked, true, memory_order_acquire))
@@ -155,8 +148,8 @@ static void usage_and_exit(int ret) {
     exit(ret);
 }
 
-char **exprs[3];
-char **names[3];
+char               **exprs[3];
+char               **names[3];
 static size_t        exprs_num[3];
 static regex_t      *re[3];
 static char        **signatures[3];
@@ -167,11 +160,11 @@ static shm_event     evs[3];
 static struct buffer *shmbuf[3];
 
 typedef struct {
-    int    fd;
-    void  *buf;
-    size_t size;
+    int     fd;
+    void   *buf;
+    size_t  size;
     ssize_t len;
-    size_t thread;
+    size_t  thread;
 } per_thread_t;
 
 static size_t timestamp = 0;
@@ -184,9 +177,9 @@ static int parse_line(int fd, struct line *line_info) {
     ssize_t           len;
     regmatch_t        matches[MAXMATCH + 1];
 
-    int            num = (int)exprs_num[fd];
-    struct buffer *shm = shmbuf[fd];
-    char *line = line_info->data;
+    int            num  = (int)exprs_num[fd];
+    struct buffer *shm  = shmbuf[fd];
+    char          *line = line_info->data;
 
     // info("[%d] parsing line (%p): '%s'\n", fd, line, line);
 
@@ -221,8 +214,7 @@ static int parse_line(int fd, struct line *line_info) {
         addr = buffer_partial_push(shm, addr, ev, sizeof(*ev));
         if (timestamps) {
             assert(*o == 't');
-            addr = buffer_partial_push(shm, addr,
-                                       &line_info->timestamp,
+            addr = buffer_partial_push(shm, addr, &line_info->timestamp,
                                        sizeof(line_info->timestamp));
             ++o;
         }
@@ -247,7 +239,7 @@ static int parse_line(int fd, struct line *line_info) {
             /* make sure we have big enough temporary buffer */
             if (tmpline_len < (size_t)len) {
                 free(tmpline);
-                tmpline = xmalloc(sizeof(char) * len + 1);
+                tmpline     = xmalloc(sizeof(char) * len + 1);
                 tmpline_len = len;
             }
 
@@ -309,7 +301,7 @@ static void dump_line(struct line *line) {
 }
 
 static void dump_lines(int fd) {
-    int n = 0;
+    int          n = 0;
     struct line *line;
     info("Lines [%d]:\n", fd);
     shm_list_embedded_foreach(line, &lines[fd].list, list) {
@@ -333,7 +325,6 @@ static inline void put_to_pool(int fd, struct line *line) {
 #endif
     pool_unlock(fd);
 }
-
 
 static inline struct line *get_line(int fd) {
     struct line *line;
@@ -369,7 +360,7 @@ static inline bool all_done() {
 
 static void parser_thread(void *data) {
     (void)data;
-    size_t no_line = 0;
+    size_t       no_line = 0;
     struct line *line;
 
     for (int i = 0; i < 3; ++i) {
@@ -395,7 +386,7 @@ static void parser_thread(void *data) {
                 list_unlock(i);
 
                 assert(line);
-                //info("parse line: '%s'\n", line->data);
+                // info("parse line: '%s'\n", line->data);
                 if (parse_line(i, line) < 0) {
                     warn("parse line returned error\n");
                     goto finish;
@@ -421,15 +412,12 @@ static void parser_thread(void *data) {
                     info("no line long time\n");
                 }
             }
-
         }
     }
 
 finish:
     __parser_finished = 1;
 }
-
-
 
 struct line *create_new_line() {
     struct line *line = xmalloc(sizeof *line);
@@ -460,7 +448,7 @@ static struct line *init_new_line(int fd) {
         if (allocated_lines[fd] >= ALLOCATED_LINES_THRESHOLD) {
             do {
                 line = get_line_from_pool(fd);
-            } while(line == NULL);
+            } while (line == NULL);
         } else {
             line = create_new_line();
             ++allocated_lines[fd];
@@ -476,7 +464,8 @@ static inline void finish_line(int fd) {
     current_line[fd]->timestamp = ++timestamp;
     list_lock(fd);
     /* insert at the end */
-    shm_list_embedded_insert_after(lines[fd].list.prev, &current_line[fd]->list);
+    shm_list_embedded_insert_after(lines[fd].list.prev,
+                                   &current_line[fd]->list);
     list_unlock(fd);
 }
 
@@ -491,10 +480,10 @@ static void handle_event(per_thread_t *data) {
     const int fd = data->fd;
     assert(fd >= 0 && fd < 3);
 
-    size_t n = 0;
+    size_t       n        = 0;
     const size_t data_len = data->len;
-    struct line *line = current_line[fd];
-    size_t space = 0;
+    struct line *line     = current_line[fd];
+    size_t       space    = 0;
     while (n < data_len) {
         if (space == 0) {
             STRING_ENSURE_SPACE(line->data);
@@ -504,7 +493,7 @@ static void handle_event(per_thread_t *data) {
         }
 
         while (n < data_len && space > 0) {
-            char c = ((char*)data->buf)[n++];
+            char c = ((char *)data->buf)[n++];
             --space;
 
             if (c == '\n' || c == '\0') {
@@ -532,8 +521,8 @@ static void handle_event(per_thread_t *data) {
 
 int parse_args(int argc, const char *argv[], char **exprs[3], char **names[3]) {
 
-    int      arg_i, cur_fd = 1;
-    int      args_i[3] = {0, 0, 0};
+    int arg_i, cur_fd = 1;
+    int args_i[3] = {0, 0, 0};
     int i         = 1;
     /*should the events be enriched with timestamps? */
     if (strncmp(argv[i], "-t", 3) == 0) {
@@ -558,8 +547,8 @@ int parse_args(int argc, const char *argv[], char **exprs[3], char **names[3]) {
 
         /* this is the begining of event def */
         arg_i                = args_i[cur_fd];
-        names[cur_fd][arg_i] = (char*)argv[i++];
-        exprs[cur_fd][arg_i] = (char*)argv[i++];
+        names[cur_fd][arg_i] = (char *)argv[i++];
+        exprs[cur_fd][arg_i] = (char *)argv[i++];
 
         /* +2 for 0 byte and possibly "t" for timestamp */
         signatures[cur_fd][arg_i] = xmalloc(sizeof(char) * strlen(argv[i]) + 2);
@@ -591,8 +580,8 @@ static const char *fd_to_name(int i) {
 }
 
 int get_exprs_num(int argc, const char *argv[]) {
-    int      n      = 0;
-    int      cur_fd = 1;
+    int n      = 0;
+    int cur_fd = 1;
     int i      = 1;
     if (strncmp(argv[i], "-t", 3) == 0) {
         ++i;
@@ -668,10 +657,10 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         if (num == 0)
             continue;
 
-        exprs[i] = xmalloc(num * sizeof(char *));
-        names[i] = xmalloc(num * sizeof(char *));
+        exprs[i]      = xmalloc(num * sizeof(char *));
+        names[i]      = xmalloc(num * sizeof(char *));
         signatures[i] = xmalloc(num * sizeof(char *));
-        re[i] = xmalloc(num * sizeof(regex_t));
+        re[i]         = xmalloc(num * sizeof(regex_t));
 
         STRING_INIT(lines[i].data);
         STRING_GROW(lines[i].data, 128);
@@ -771,13 +760,13 @@ static void event_exit(void) {
         if (shmbuf[i] == 0)
             continue;
 
-	if (!shm_list_embedded_empty(&lines[i].list)) {
+        if (!shm_list_embedded_empty(&lines[i].list)) {
             if (buffer_monitor_attached(shmbuf[i])) {
-	        dump_lines(i);
+                dump_lines(i);
                 assert(0 && "Have unprocessed lines");
-	    } /* else the monitor probably crashed and it makes
-		 sense we have unprocessed lines */
-	}
+            } /* else the monitor probably crashed and it makes
+             sense we have unprocessed lines */
+        }
     }
 #endif
 
@@ -796,7 +785,8 @@ static void event_exit(void) {
             "[fd %d] info: sent %lu events, busy waited on buffer %lu cycles\n",
             fd, evs[fd].id, waiting_for_buffer[fd]);
 #ifndef NDEBUG
-        info("[fd %d] info: maximum lines pool size: %lu\n", fd, pool_max_size[fd]);
+        info("[fd %d] info: maximum lines pool size: %lu\n", fd,
+             pool_max_size[fd]);
 #endif
         destroy_shared_buffer(shmbuf[fd]);
 
@@ -812,7 +802,6 @@ static void event_exit(void) {
         free(re[fd]);
         VEC_DESTROY(line_pool[fd].lines);
     }
-
 
     free(tmpline);
     /*info("Clean up done\n");*/
