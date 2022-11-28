@@ -14,7 +14,9 @@
 #include "source.h"
 #include "stream-generic.h"
 #include "stream.h"
+#include "streams.h"
 #include "utils.h"
+#include "monitors-utils.h"
 #include "vector.h"
 
 //#define CHECK_IDS
@@ -63,8 +65,6 @@ static inline void dump_args(shm_stream *stream, shm_event_generic *ev, const ch
     }
 }
 
-shm_stream *create_stream(int argc, char *argv[], int arg_i,
-                          const char *expected_stream_name);
 shamon *shmn;
 
 sig_atomic_t __run = 1;
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
 #endif
     for (int i = 1; i < argc; ++i) {
         fprintf(stderr, "Connecting stream '%s' ...\n", argv[i]);
-        shm_stream *stream = create_stream(argc, argv, i, NULL);
+        shm_stream *stream = create_stream(argc, argv, i, NULL, NULL);
         assert(stream && "Creating stream failed");
         assert(shm_stream_id(stream) == (size_t)i);
         shamon_add_stream(shmn, stream,
