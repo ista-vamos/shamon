@@ -107,6 +107,7 @@ void RaceInstrumentation::instrumentThreadCreate(CallInst *call, Value *data) {
     const FunctionCallee &tid_fun = module->getOrInsertFunction("__vrd_new_thrd_id",
                                                                 Type::getInt64Ty(ctx));
     auto *tid_call = CallInst::Create(tid_fun, {}, "", call);
+    tid_call->setDebugLoc(call->getDebugLoc());
     new StoreInst(tid_call, alloc_snd, call);
 
     CastInst *cast = CastInst::CreatePointerCast(alloc, Type::getInt8PtrTy(ctx), "", call);
@@ -117,6 +118,7 @@ void RaceInstrumentation::instrumentThreadCreate(CallInst *call, Value *data) {
                                                                   Type::getInt64Ty(ctx));
     std::vector<Value *> args = {tid_call};
     auto *new_call = CallInst::Create(instr_fun, args, "");
+    new_call->setDebugLoc(call->getDebugLoc());
     new_call->insertAfter(call);
 }
 
@@ -129,7 +131,18 @@ static void insertMutexLockOrUnlock(CallInst *call, Value *mtx, const std::strin
     CastInst *cast = CastInst::CreatePointerCast(mtx, Type::getInt8PtrTy(ctx));
     std::vector<Value *> args = {cast};
     auto *new_call = CallInst::Create(instr_fun, args, "", call);
+    new_call->setDebugLoc(call->getDebugLoc());
     cast->insertBefore(new_call);
+}
+
+DebugLoc findFirstDbgLoc(Instruction *I) {
+    for (const auto& inst : *I->getParent()) {
+        auto &DL = inst.getDebugLoc();
+        if (DL)
+            return DL;
+    }
+    assert(false && "Found no debugging loc");
+    return DebugLoc();
 }
 
 void RaceInstrumentation::instrumentTSanFuncEntry(CallInst *call) {
@@ -138,13 +151,18 @@ void RaceInstrumentation::instrumentTSanFuncEntry(CallInst *call) {
     LLVMContext &ctx = module->getContext();
     auto *dataTy = getThreadDataTy(ctx);
 
+    /* __tsan_fun_entry may not have dbgloc, workaround that */
+    if (!call->getDebugLoc())
+        call->setDebugLoc(findFirstDbgLoc(call));
+
     const FunctionCallee &instr_fun = module->getOrInsertFunction("__vrd_thrd_entry",
                                                                   Type::getVoidTy(ctx),
                                                                   Type::getInt64Ty(ctx));
 
     if (fun->getName().equals("main")) {
         std::vector<Value *> args = {Constant::getIntegerValue(Type::getInt64Ty(ctx), APInt(64, 0))};
-        CallInst::Create(instr_fun, args, "", call);
+        auto *new_call = CallInst::Create(instr_fun, args, "", call);
+        new_call->setDebugLoc(call->getDebugLoc());
         instrumentThreadFunExit(fun);
         return;
     }
@@ -163,7 +181,8 @@ void RaceInstrumentation::instrumentTSanFuncEntry(CallInst *call) {
     auto *load = new LoadInst(Type::getInt64Ty(ctx), data_snd, "", call);
 
     std::vector<Value *> args = {load};
-    CallInst::Create(instr_fun, args, "", call);
+    auto *new_call = CallInst::Create(instr_fun, args, "", call);
+    new_call->setDebugLoc(call->getDebugLoc());
 
     instrumentThreadFunExit(fun);
 }
@@ -177,7 +196,8 @@ static bool instrumentNoreturn(BasicBlock &block, const FunctionCallee &instr_fu
         if (auto *call = dyn_cast<CallInst>(&I)) {
             if (auto *fun = call->getCalledFunction()) {
                 if (fun->hasFnAttribute(Attribute::NoReturn)) {
-                    CallInst::Create(instr_fun, {}, "", &I);
+                    auto *new_call = CallInst::Create(instr_fun, {}, "", &I);
+                    new_call->setDebugLoc(call->getDebugLoc());
                     return true;
                 }
             }
@@ -199,7 +219,8 @@ void RaceInstrumentation::instrumentThreadFunExit(Function *fun) {
             }
 
             /* Failed finding noreturn call, so insert the call before the terminator */
-            CallInst::Create(instr_fun, {}, "", block.getTerminator());
+            auto *new_call = CallInst::Create(instr_fun, {}, "", block.getTerminator());
+            new_call->setDebugLoc(block.getTerminator()->getDebugLoc());
         }
     }
 }

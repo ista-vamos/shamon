@@ -6,7 +6,7 @@ set -x
 DIR="$(dirname 0)"
 SHAMONDIR="$DIR/../.."
 LLVM_PASS_DIR=$DIR/../llvm
-CFLAGS=-DDEBUG_STDOUT
+CFLAGS="-DDEBUG_STDOUT -g" #-O3
 SHAMON_INCLUDES=-I$DIR/../../
 SHAMON_LIBS="$SHAMONDIR/core/libshamon-arbiter.a\
              $SHAMONDIR/shmbuf/libshamon-shmbuf.a\
@@ -24,4 +24,4 @@ clang $CFLAGS $SHAMON_INCLUDES -std=c11 -emit-llvm -S tsan_impl.c
 llvm-link tsan_impl.ll code-instr.bc -o code-linked.bc
 llvm-dis code-linked.bc
 
-clang -pthread -O3 $CFLAGS code-linked.ll $SHAMON_LIBS 
+clang -pthread $CFLAGS code-linked.ll $SHAMON_LIBS 
