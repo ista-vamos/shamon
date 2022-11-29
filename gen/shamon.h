@@ -141,11 +141,6 @@ const char *shm_stream_get_name(shm_stream *);
 bool        shm_stream_consume(shm_stream *stream, size_t num);
 const char *shm_stream_get_str(shm_stream *stream, uint64_t elem);
 
-/* * Fill the 'dropped' event for the given stream */
-void shm_stream_get_dropped_event(shm_stream        *stream,
-                                  shm_event_dropped *dropped_ev, size_t id,
-                                  uint64_t n);
-
 shm_stream *shm_stream_create_from_argv(const char *name, int argc,
                                         char *argv[]);
 
