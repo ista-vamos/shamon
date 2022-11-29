@@ -1,3 +1,5 @@
+add_subdirectory(llvm)
+
 if (DYNAMORIO_SOURCES)
        add_subdirectory(drfun)
        add_subdirectory(drregex)

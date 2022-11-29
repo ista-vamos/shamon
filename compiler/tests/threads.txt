@@ -8,8 +8,8 @@ stream type ThreadEvent(threadid: int, nextts: uint64_t)
     unlock(timestamp: uint64_t, addr : uint64_t);
     alloc(timestamp : uint64_t, addr : uint64_t, size : uint64_t);
     free(timestamp: uint64_t, addr : uint64_t);
-    fork(timestamp: uint64_t, newthreadid: int) creates ThreadEvent;
-    join(timestamp: uint64_t, threadid: int);
+    fork(timestamp: uint64_t, newthreadid: uint64_t) creates ThreadEvent;
+    join(timestamp: uint64_t, threadid: uint64_t);
 }
 stream processor TEProcessor(threadid : int) : ThreadEvent(threadid, 0) -> ThreadEvent(threadid, 0) extends FORWARD
 {

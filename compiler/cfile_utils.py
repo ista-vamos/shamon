@@ -163,6 +163,7 @@ def initialize_stream_args():
     answer = ""
 
     for (stream_name, data) in TypeChecker.event_sources_data.items():
+        processor_name = data['processor_name']
         if len(data['input_stream_args']) > 0:
             stream_type = data["input_stream_type"]
             if data['copies']:
@@ -170,8 +171,7 @@ def initialize_stream_args():
                     answer += f"stream_args_{stream_name}_{i} = malloc(sizeof(STREAM_{stream_type}_ARGS));\n"
             else:
                 answer += f"stream_args_{stream_name} = malloc(sizeof(STREAM_{stream_type}_ARGS));\n"
-        else:
-            processor_name = data['processor_name']
+        elif processor_name != "forward":
             current_args = TypeChecker.stream_processors_data[processor_name]['output_args']
             stream_type = TypeChecker.stream_processors_data[processor_name]['output_type']
             if len(current_args) > 0:
@@ -1030,7 +1030,7 @@ def declare_monitor_args(tree, event_name, event_data, count_tabs) -> str:
 
     answer = ""
     for i in range(len(args)):
-        answer += f"{tabs}{args[i][1]} {ids[i]} = received_event->cases.{event_name}.{args[i][0]};\n"
+        answer += f"{tabs}{args[i]['type']} {ids[i]} = received_event->cases.{event_name}.{args[i]['name']};\n"
     return answer
 
 
@@ -1498,6 +1498,20 @@ struct _EVENT_{stream_processor}_hole
 typedef struct _EVENT_{stream_processor}_hole EVENT_{stream_processor}_hole;
 '''
 
+def generate_special_hole_functions():
+    answer = ""
+    for (stream_processor, data) in TypeChecker.stream_processors_data.items():
+        answer += f'''
+void init_hole_{stream_processor}(EVENT_{stream_processor}_hole *h) {"{"}
+  h->n = 0;
+{"}"}        
+'''
+        answer += f'''
+void update_hole_{stream_processor}(EVENT_{stream_processor}_hole *h, shm_event *ev) {"{"}
+    h->n++;
+{"}"}
+'''
+    
 def outside_main_code(components, streams_to_events_map, stream_types, ast, arbiter_event_source, existing_buffers):
     return f'''
 struct _EVENT_hole
@@ -1505,7 +1519,16 @@ struct _EVENT_hole
   uint64_t n;
 {"}"};
 typedef struct _EVENT_hole EVENT_hole;
+void init_hole(EVENT_hole *h) {"{"}
+  h->n = 0;
+{"}"}
+
+void update_hole(EVENT_hole *h, shm_event *ev) {"{"}
+    h->n++;
+{"}"}
+
 {special_hole_structs()}
+{generate_special_hole_functions()}
 {stream_type_structs(components["stream_type"])}
 {stream_type_args_structs(components["stream_type"])}
 {events_enum_kinds(components["event_source"], streams_to_events_map)}
