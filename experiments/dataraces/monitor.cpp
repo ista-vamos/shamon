@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <cstdio>
 #include <cinttypes>
 #include <unordered_map>
 #include <unordered_set>
