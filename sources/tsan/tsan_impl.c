@@ -81,8 +81,7 @@ void __tsan_init() {
     fprintf(stderr, "done\n");
 }
 
-static inline void *start_event(int type) {
-    struct buffer *shm = thread_data.shmbuf;
+static inline void *start_event(struct buffer *shm, int type) {
     shm_event     *ev;
     while (!(ev = buffer_start_push(shm))) {
         ++thread_data.waited_for_buffer;
@@ -108,7 +107,7 @@ uint64_t __vrd_new_thrd_id(void) {
 
 void __vrd_thrd_create(uint64_t tid) {
     struct buffer *shm  = thread_data.shmbuf;
-    void          *addr = start_event(EV_FORK);
+    void          *addr = start_event(shm, EV_FORK);
     buffer_partial_push(shm, addr, &tid, sizeof(tid));
     buffer_finish_push(shm);
 
@@ -120,7 +119,7 @@ void __vrd_thrd_create(uint64_t tid) {
 void __vrd_thrd_exit(void) {
     struct buffer *shm = thread_data.shmbuf;
     /*
-    void *addr = start_event(EV_THRD_EXIT);
+    void *addr = start_event(shm, EV_THRD_EXIT);
     buffer_partial_push(shm, addr, &thread_data.thread_id,
     sizeof(thread_data.thread_id)); buffer_finish_push(shm);
     */
@@ -156,7 +155,7 @@ void __vrd_thrd_entry(uint64_t tid) {
 
 void __vrd_thread_join(uint64_t tid) {
     struct buffer *shm  = thread_data.shmbuf;
-    void          *addr = start_event(EV_JOIN);
+    void          *addr = start_event(shm, EV_JOIN);
     buffer_partial_push(shm, addr, &tid, sizeof(tid));
     buffer_finish_push(shm);
 
@@ -167,7 +166,7 @@ void __vrd_thread_join(uint64_t tid) {
 
 void __tsan_read4(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(EV_READ);
+    void          *mem = start_event(shm, EV_READ);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 
@@ -179,7 +178,7 @@ void __tsan_read4(void *addr) {
 
 void __tsan_read8(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(EV_READ);
+    void          *mem = start_event(shm, EV_READ);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 
@@ -191,7 +190,7 @@ void __tsan_read8(void *addr) {
 
 void __tsan_write4(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(EV_WRITE);
+    void          *mem = start_event(shm, EV_WRITE);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 
@@ -203,7 +202,7 @@ void __tsan_write4(void *addr) {
 
 void __tsan_write8(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(EV_WRITE);
+    void          *mem = start_event(shm, EV_WRITE);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 
@@ -215,7 +214,7 @@ void __tsan_write8(void *addr) {
 
 void __vrd_mutex_lock(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(EV_LOCK);
+    void          *mem = start_event(shm, EV_LOCK);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 
@@ -227,7 +226,7 @@ void __vrd_mutex_lock(void *addr) {
 
 void __vrd_mutex_unlock(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(EV_UNLOCK);
+    void          *mem = start_event(shm, EV_UNLOCK);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 
