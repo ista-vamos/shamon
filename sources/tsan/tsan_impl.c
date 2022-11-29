@@ -64,7 +64,7 @@ void __tsan_init() {
         "alloc", "tll", "free", "tl", "fork", "ti", "join", "ti");
     assert(top_control);
 
-    top_shmbuf = create_shared_buffer(shmkey, top_control);
+    top_shmbuf = create_shared_buffer(shmkey, 512, top_control);
     assert(top_shmbuf);
 
     fprintf(stderr, "info: waiting for the monitor to attach... ");
@@ -139,7 +139,8 @@ void __vrd_thrd_entry(uint64_t tid) {
     if (tid == 0) {
         thread_data.shmbuf = top_shmbuf;
     } else {
-        thread_data.shmbuf = create_shared_sub_buffer(top_shmbuf, top_control);
+        thread_data.shmbuf =
+            create_shared_sub_buffer(top_shmbuf, 0, top_control);
         if (!thread_data.shmbuf) {
             assert(thread_data.shmbuf && "Failed creating buffer");
             abort();

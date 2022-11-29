@@ -396,7 +396,8 @@ int main(int argc, char **argv) {
     struct source_control *control = source_control_define_pairwise(
         exprs_num, (const char **)names, (const char **)signatures);
     assert(control);
-    struct buffer *shm = create_shared_buffer(shmkey, control);
+    const size_t   capacity = 256;
+    struct buffer *shm      = create_shared_buffer(shmkey, capacity, control);
     assert(shm);
     free(control);
 
