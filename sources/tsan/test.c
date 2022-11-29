@@ -2,16 +2,16 @@
 #include <threads.h>
 
 mtx_t m;
-int print_num = 0;
+int   print_num = 0;
 
 int thread(void *data) {
     thrd_t tid1, tid2;
 
     for (int i = 0; i < 10; ++i) {
-	mtx_lock(&m);
-	++print_num;
+        mtx_lock(&m);
+        ++print_num;
         printf("thread %lu: %d\n", (size_t)data, i);
-	mtx_unlock(&m);
+        mtx_unlock(&m);
     }
 
     thrd_exit(0);
@@ -26,10 +26,10 @@ int main(void) {
     thrd_create(&tid4, thread, (void *)4);
 
     for (int i = 0; i < 10; ++i) {
-	mtx_lock(&m);
-	++print_num;
+        mtx_lock(&m);
+        ++print_num;
         printf("thread %d: %d\n", 0, i);
-	mtx_unlock(&m);
+        mtx_unlock(&m);
     }
 
     thrd_join(tid1, NULL);
