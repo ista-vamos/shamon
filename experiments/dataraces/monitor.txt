@@ -1,0 +1,240 @@
+stream type ThreadEvent(threadid: int, nextts: uint64_t)
+{
+    read(timestamp: uint64_t, addr : uint64_t);
+    write(timestamp: uint64_t, addr : uint64_t);
+    atomicread(timestamp: uint64_t, addr : uint64_t, mode : int);
+    atomicwrite(timestamp: uint64_t, addr : uint64_t, mode : int);
+    lock(timestamp: uint64_t, addr : uint64_t);
+    unlock(timestamp: uint64_t, addr : uint64_t);
+    alloc(timestamp : uint64_t, addr : uint64_t, size : uint64_t);
+    free(timestamp: uint64_t, addr : uint64_t);
+    fork(timestamp: uint64_t, newthreadid: uint64_t) creates ThreadEvent;
+    join(timestamp: uint64_t, threadid: uint64_t);
+}
+stream processor TEProcessor(threadid : int) : ThreadEvent(threadid, 0) -> ThreadEvent(threadid, 0) extends FORWARD
+{
+    on fork(ts, ntid) creates ThreadEvent process using TEProcessor(ntid) to autodrop(@BUFSIZE) include in Threads forward;
+    hole
+    {
+        n = COUNT(*);
+        firstts = MIN(read.timestamp, write.timestamp, atomicread.timestamp, atomicwrite.timestamp, lock.timestamp, unlock.timestamp, alloc.timestamp, free.timestamp, fork.timestamp, join.timestamp);
+        lastts = MAX(read.timestamp, write.timestamp, atomicread.timestamp, atomicwrite.timestamp, lock.timestamp, unlock.timestamp, alloc.timestamp, free.timestamp, fork.timestamp, join.timestamp);
+    }
+}
+
+buffer group Threads : ThreadEvent order by nextts
+event source Program : ThreadEvent process using TEProcessor(0) to autodrop(@BUFSIZE) include in Threads
+
+stream type GlobalEvent
+{
+    read(tid: int, timestamp: uint64_t, addr : uint64_t);
+    write(tid: int, timestamp: uint64_t, addr : uint64_t);
+    atomicread(tid: int, timestamp: uint64_t, addr : uint64_t, mode : int);
+    atomicwrite(tid: int, timestamp: uint64_t, addr : uint64_t, mode : int);
+    lock(tid: int, timestamp: uint64_t, addr : uint64_t);
+    unlock(tid: int, timestamp: uint64_t, addr : uint64_t);
+    alloc(tid: int, timestamp : uint64_t, addr : uint64_t, size : uint64_t);
+    free(tid: int, timestamp: uint64_t, addr : uint64_t);
+    fork(tid: int, timestamp: uint64_t, newthreadid: int) creates ThreadEvent;
+    join(tid: int, timestamp: uint64_t, threadid: int);
+    skipstart(tid: int, timestamp : uint64_t);
+    skipend(tid: int, timestamp : uint64_t);
+    done_(tid: int);
+}
+globals
+$$
+    uint64_t nextts=0;
+    uint64_t leastts=MAXUINT64;
+    int seenNone=0;
+$$
+
+arbiter : GlobalEvent
+{
+    choose T from Threads where $$ $T.nextts; <= nextts $$
+    {
+        on T : | read(ts,addr)
+        $$
+            if(ts==nextts)
+            {
+                $yield read(T.threadid, ts, addr);
+                $drop 1 from T;
+                nextts++;
+                leastts=MAXUINT64;
+            }
+            else
+            {
+                $T.nextts;=ts;
+                leastts=min(leastts, ts);
+            }
+        $$
+        on T : | write(ts,addr)
+        $$
+            if(ts==nextts)
+            {
+                $yield write(T.threadid, ts, addr);
+                $drop 1 from T;
+                nextts++;
+                leastts=MAXUINT64;
+            }
+            else
+            {
+                $T.nextts;=ts;
+                leastts=min(leastts, ts);
+            }
+        $$
+        on T : | atomicread(ts,addr,mode)
+        $$
+            if(ts==nextts)
+            {
+                $yield atomicread(T.threadid, ts, addr,mode);
+                $drop 1 from T;
+                nextts++;
+                leastts=MAXUINT64;
+            }
+            else
+            {
+                $T.nextts;=ts;
+                leastts=min(leastts, ts);
+            }
+        $$
+        on T : | atomicwrite(ts,addr,mode)
+        $$
+            if(ts==nextts)
+            {
+                $yield atomicwrite(T.threadid, ts, addr,mode);
+                $drop 1 from T;
+                nextts++;
+                leastts=MAXUINT64;
+            }
+            else
+            {
+                $T.nextts;=ts;
+                leastts=min(leastts, ts);
+            }
+        $$
+        on T : | lock(ts,addr)
+        $$
+            if(ts==nextts)
+            {
+                $yield lock(T.threadid, ts, addr);
+                $drop 1 from T;
+                nextts++;
+                leastts=MAXUINT64;
+            }
+            else
+            {
+                $T.nextts;=ts;
+                leastts=min(leastts, ts);
+            }
+        $$
+        on T : | unlock(ts,addr)
+        $$
+            if(ts==nextts)
+            {
+                $yield unlock(T.threadid, ts, addr);
+                $drop 1 from T;
+                nextts++;
+                leastts=MAXUINT64;
+            }
+            else
+            {
+                $T.nextts;=ts;
+                leastts=min(leastts, ts);
+            }
+        $$
+        on T : | alloc(ts,addr,size)
+        $$
+            if(ts==nextts)
+            {
+                $yield alloc(T.threadid, ts, addr, size);
+                $drop 1 from T;
+                nextts++;
+                leastts=MAXUINT64;
+            }
+            else
+            {
+                $T.nextts;=ts;
+                leastts=min(leastts, ts);
+            }
+        $$
+        on T : | free(ts,addr)
+        $$
+            if(ts==nextts)
+            {
+                $yield free(T.threadid, ts, addr);
+                $drop 1 from T;
+                nextts++;
+                leastts=MAXUINT64;
+            }
+            else
+            {
+                $T.nextts;=ts;
+                leastts=min(leastts, ts);
+            }
+        $$
+        on T : | fork(ts,tid)
+        $$
+            if(ts==nextts)
+            {
+                $yield fork(T.threadid, ts, tid);
+                $drop 1 from T;
+                nextts++;
+                leastts=MAXUINT64;
+            }
+            else
+            {
+                $T.nextts;=ts;
+                leastts=min(leastts, ts);
+            }
+        $$
+        on T : | join(ts,tid)
+        $$
+            if(ts==nextts)
+            {
+                $yield join(T.threadid, ts, tid);
+                $drop 1 from T;
+                nextts++;
+                leastts=MAXUINT64;
+            }
+            else
+            {
+                $T.nextts;=ts;
+                leastts=min(leastts, ts);
+            }
+        $$
+        on T : | hole(n)
+        $$
+            if(mints==nextts)
+            {
+                $yield skipstart(T.threadid, mints);
+                $T.nextts;=maxts;
+                nextts++;
+                leastts=maxts;
+            }
+            else if(maxts==nextts)
+            {
+                $yield skipend(T.threadid, maxts);
+                $drop 1 from T;
+                nextts++;
+                leastts=MAXUINT64;
+            }
+            else
+            {
+                $T.nextts;=mints;
+                leastts=min(leastts, mints);
+            }
+        $$
+        on T : done
+        $$
+            $yield done_(T.threadid);
+            $remove T from Threads;
+        $$
+        on T : nothing
+        $$
+            seenNone=1;
+        $$
+    }
+
+}
+
+monitor {}
