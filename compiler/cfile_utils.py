@@ -922,7 +922,14 @@ def construct_arb_rule_outevent(mapping, output_ev_source, output_event, raw_arg
     arbiter_outevent->head.id = (*arbiter_counter)++;
     '''
     for (arg, outarg) in zip(local_args, mapping[output_ev_source][output_event]["args"]):
-        answer += f"((STREAM_{output_ev_source}_out *) arbiter_outevent)->cases.{output_event}.{outarg['name']} = {arg};\n"
+        if arg[0] == 'field_access':
+            field = arg[3]
+            object_name = f"stream_args_{arg[1]}"
+            if arg[2] is not None:
+                object_name+= f"_{arg[2]}"
+            answer += f"((STREAM_{output_ev_source}_out *) arbiter_outevent)->cases.{output_event}.{outarg['name']} = {object_name}->{field};\n"
+        else:
+            answer += f"((STREAM_{output_ev_source}_out *) arbiter_outevent)->cases.{output_event}.{outarg['name']} = {arg};\n"
     return answer
 
 
@@ -1484,19 +1491,21 @@ def get_imports():
     '''
 
 def special_hole_structs():
+    answer = ""
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
         if data['special_hole'] is not None:
             # TODO: set correctly data types of fields
             fields = ""
             for data_arg in data['special_hole']:
                 fields += f"\tdouble {data_arg['attribute']};\n" 
-            return f'''
+            answer += f'''
 struct _EVENT_{stream_processor}_hole
 {"{"}
 {fields}
 {"}"};
 typedef struct _EVENT_{stream_processor}_hole EVENT_{stream_processor}_hole;
 '''
+    return answer
 
 def generate_special_hole_functions():
     answer = ""
@@ -1511,6 +1520,7 @@ void update_hole_{stream_processor}(EVENT_{stream_processor}_hole *h, shm_event 
     h->n++;
 {"}"}
 '''
+    return answer
     
 def outside_main_code(components, streams_to_events_map, stream_types, ast, arbiter_event_source, existing_buffers):
     return f'''
