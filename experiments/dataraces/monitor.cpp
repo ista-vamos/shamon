@@ -38,6 +38,7 @@ class Cell {
 
 Cell * head=new Cell();
 Cell * tail=head;
+size_t cellcount=0;
 
 class Lockset
 {
@@ -75,6 +76,7 @@ inline void enqueue_sync_event(int thrd, ActionType tp, Action &a)
 	tail->type=tp;
 	tail->next=new Cell();
 	tail=tail->next;
+	cellcount++;
 }
 
 inline bool thread_holds_lock(int thrd, intptr_t lock)
@@ -216,7 +218,16 @@ void cell_rc_dec(Cell* cell)
 	cell->refcount--;
 	if(cell->refcount<=0)
 	{
-		
+		if(cellcount>10000&&head->refcount==0)
+		{
+			while(head->refcount==0&&head->next!=0)
+			{
+				Cell* last=head;
+				head=head->next;
+				cellcount--;
+				free(last);
+			}
+		}
 	}
 }
 
@@ -243,6 +254,13 @@ extern "C" void monitor_handle_read(int tid, uint64_t timestamp, intptr_t addr)
 	if(wentry!=Writes.end())
 	{
 		check_happens_before(wentry->second,entry->second);
+	}
+}
+extern "C" void monitor_handle_read_many(int tid, uint64_t timestamp, intptr_t addr, size_t bytes)
+{
+	for(size_t i=0;i<bytes;i++)
+	{
+		monitor_handle_read(tid,timestamp,addr+i);
 	}
 }
 
@@ -282,6 +300,13 @@ extern "C" void monitor_handle_write(int tid, uint64_t timestamp, intptr_t addr)
 		rinfo->second.clear();
 	}
 	Reads.extract(addr);
+}
+extern "C" void monitor_handle_write_many(int tid, uint64_t timestamp, intptr_t addr, size_t bytes)
+{
+	for(size_t i=0;i<bytes;i++)
+	{
+		monitor_handle_write(tid,timestamp,addr+i);
+	}
 }
 
 extern "C" void monitor_handle_lock(int tid, uint64_t timestamp, intptr_t addr)
