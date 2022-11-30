@@ -27,7 +27,8 @@ message(STATUS "LLVM definitions: ${LLVM_DEFINITIONS}")
 message(STATUS "Using compiler: ${CMAKE_CXX_COMPILER}")
 
 
+
 add_llvm_library(race-instrumentation
 		 MODULE RaceInstrumentation.cpp
 		 PLUGIN_TOOL opt)
-
+target_include_directories(race-instrumentation SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
