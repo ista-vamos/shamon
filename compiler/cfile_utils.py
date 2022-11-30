@@ -1487,7 +1487,8 @@ def get_imports():
 #include <signal.h>
 #include <stdio.h>
 #include <stdatomic.h>
-    '''
+#include <limits.h>
+'''
 
 def special_hole_structs():
     answer = ""
