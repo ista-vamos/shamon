@@ -450,9 +450,9 @@ def activate_threads() -> str:
         if copies:
             for i in range(copies):
                 name = f"{event_source}_{i}"
-                answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{processor_name}{tail_perf_layer},BUFFER_{event_source}{i});\n"
+                answer += f"\tthrd_create(&THREAD_{name}, (void*)PERF_LAYER_{processor_name}{tail_perf_layer},BUFFER_{event_source}{i});\n"
         else:
-            answer += f"\tthrd_create(&THREAD_{event_source}, PERF_LAYER_{processor_name}{tail_perf_layer},BUFFER_{event_source});\n"
+            answer += f"\tthrd_create(&THREAD_{event_source}, (void*)PERF_LAYER_{processor_name}{tail_perf_layer},BUFFER_{event_source});\n"
 
     return answer
 
@@ -640,7 +640,7 @@ mtx_unlock(&LOCK_{buffer_group});
             shm_stream_register_all_events(ev_source_temp);
             {stream_args_code}
             thrd_t temp_thread;
-            thrd_create(temp_thread, PERF_LAYER_{stream_processor_name}, temp_buffer);
+            thrd_create(&temp_thread, (void*)PERF_LAYER_{stream_processor_name}, temp_buffer);
             '''        
             answer+=f'''
                 case {mapping_in[event_name]["enum"]}:
@@ -1587,7 +1587,8 @@ def get_special_holes_init_code():
 
             init_attributes += f"\th->{attr_data['attribute']} = {value};\n"
         answer += f'''
-void init_hole_{hole_name}(EVENT_{hole_name}_hole *h) {"{"}
+static void init_hole_{hole_name}(shm_event *hev) {"{"}
+  EVENT_{hole_name}_hole *h = (EVENT_{hole_name}_hole *)hev;
   {init_attributes}
 {"}"}
 '''
@@ -1624,7 +1625,8 @@ def get_special_holes_update_code(mapping):
 {event_code}
             break;'''
         answer += f'''
-void update_hole_{hole_name}(EVENT_{hole_name}_hole *h, shm_event *ev) {"{"}
+static void update_hole_{hole_name}(shm_event *hev, shm_event *ev) {"{"}
+    EVENT_{hole_name}_hole *h = (EVENT_{hole_name}_hole *)hev;
     switch (((STREAM_{stream_type}_in *)ev)->head.kind) {"{"}
 {update_attributes_code}
     {"}"}
@@ -1663,12 +1665,12 @@ struct _EVENT_hole
   unsigned long long n;
 {"}"};
 typedef struct _EVENT_hole EVENT_hole;
-void init_hole(EVENT_hole *h) {"{"}
-  h->n = 0;
+static void init_hole(shm_event *h) {"{"}
+  ((EVENT_hole *)h)->n = 0;
 {"}"}
 
-void update_hole(EVENT_hole *h, shm_event *ev) {"{"}
-    h->n++;
+static void update_hole(shm_event *h, shm_event *ev) {"{"}
+    ((EVENT_hole *)h)->n++;
 {"}"}
 {events_enum_kinds(components["event_source"], streams_to_events_map)}
 {special_hole_structs()}
