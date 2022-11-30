@@ -27,25 +27,63 @@ def build_custom_hole(tree, result):
         build_custom_hole(tree[2], result)
     else:
         assert(tree[0] == 'hole-attribute')
-        attribute = tree[1]
-        agg_func = tree[2]
+        attribute_type = tree[1]
+        attribute = tree[2]
+        agg_func = tree[3]
         agg_func_name = agg_func[1]
         agg_func_params = []
         parse_list_events_agg_func(agg_func[2], agg_func_params)
         result.append({
+            'type': attribute_type,
             'attribute': attribute,
             'agg_func_name': agg_func_name,
             'agg_func_params': agg_func_params
         })
  
+def get_events_to_hole_update_data(data, all_events):
+    answer = dict()
+    for event in all_events:
+        answer[event] = []
+    for attribute_data in data:
+        agg_func = attribute_data["agg_func_name"]
+        attribute = attribute_data["attribute"]
+        agg_func_params = attribute_data['agg_func_params']
+        if len(agg_func_params) == 0:
+            raise Exception("Cannot call aggregation functions without parameters")
+
+        if len(agg_func_params) == 1 and agg_func_params[0] == "*":
+            assert(agg_func.lower() == "count")
+            for event in all_events:
+                answer[event].append({
+                    'agg_func': "count",
+                    'hole_attr': attribute,
+                    "ev_attr": None
+                })
+        else:
+            for param in agg_func_params:
+                assert(param[0] == 'field_access')
+                assert(param[2] is None)
+                event = param[1]
+                if event not in answer.keys():
+                    raise Exception("This is weird, all events should be in dictionary answer")
+
+                answer[event].append({
+                    'agg_func': agg_func,
+                    'hole_attr': attribute,
+                    "ev_attr": param[3]
+                })
+    return answer
+
+
+
 def get_processor_rules(tree, result):
     if tree[0] == "perf_layer_list":
-        part1_result = get_processor_rules(tree[1], result)
-        part2_result = get_processor_rules(tree[2], result)
-        if part1_result[0] is not None:
-            return part1_result
-        if part2_result[0] is not None:
-            return part2_result
+        (name1, part1_result) = get_processor_rules(tree[1], result)
+        (name2, part2_result) = get_processor_rules(tree[2], result)
+        if part1_result is not None:
+            return name1, part1_result
+        if part2_result is not None:
+            return name2, part2_result
         return None, None
     else:
         if tree[0] == "perf_layer_rule":
@@ -215,7 +253,7 @@ def get_events_data(tree: Tuple, events_data: Dict[str, Dict[str, str]]) -> None
         events_data[tree[PPEVENT_NAME]] = event_args
 
 
-def get_stream_to_events_mapping(stream_types: List[Tuple], stream_processors) -> Dict[str, Any]:
+def get_stream_to_events_mapping(stream_types: List[Tuple], stream_processors_object) -> Dict[str, Any]:
     mapping = dict()
     for tree in stream_types:
         assert(tree[0] == "stream_type")
@@ -225,19 +263,27 @@ def get_stream_to_events_mapping(stream_types: List[Tuple], stream_processors) -
         stream_type = tree[PPSTREAM_TYPE_NAME]
         assert(stream_type not in mapping.keys())
         mapping_events = {}
+        current_index = 2
         for (index, (event_name, args)) in enumerate(events_data.items()):
             data = {
                 'args': args
             }
             data.update({'index': index+2, 'enum' : f"{stream_type.upper()}_{event_name.upper()}"})
+            current_index = index+2
             mapping_events[f"{event_name}"] = data
 
-        # TODO: fill with special holes data
         mapping_events['hole'] = {'index': 1, 'args':[{'name': 'n', 'type': 'int'}], 'enum': f'{stream_type.upper()}_HOLE'}
+        for (_, data) in stream_processors_object.items():
+            if data["special_hole"] is not None:
+                current_index+=1
+                args_hole = []
+                for attr in data["special_hole"]:
+                    args_hole.append({'name': attr["attribute"], 'type': attr["type"]})
+                mapping_events[data['hole_name']] = {'index': current_index, 'args':args_hole, 'enum': f'{data["hole_name"]}_HOLE'}
         mapping[stream_type] = mapping_events
 
-    for (processor, data) in stream_processors.items():
-        mapping[processor] = mapping[data["input_type"]]
+
+        
     return mapping
 
 def get_stream_types(event_sources: Tuple) -> Dict[str, Any]:
@@ -394,7 +440,6 @@ def get_parameters_names(tree: Tuple, stream_name: str, mapping: Dict[str, Dict]
         assert(tree[0] == 'ev_call')
         ids = []
         get_list_ids(tree[PPLIST_EV_CALL_EV_PARAMS], ids)
-        assert (len(ids) == len(mapping[tree[PPLIST_EV_CALL_EV_NAME]]['args']))
         for (arg_bind, arg) in zip(mapping[tree[PPLIST_EV_CALL_EV_NAME]]['args'], ids):
             binded_args[arg] = (stream_name, tree[PPLIST_EV_CALL_EV_NAME], arg_bind['name'], arg_bind['type'], index, stream_index)
 

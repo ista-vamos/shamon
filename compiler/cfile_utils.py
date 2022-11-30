@@ -149,7 +149,14 @@ def stream_type_args_structs(stream_types) -> str:
 def instantiate_stream_args():
     answer = ""
     for (stream_name, data) in TypeChecker.event_sources_data.items():
-        if len(data['input_stream_args']) > 0:
+        has_args = len(data['input_stream_args']) > 0
+        processor_name = data['processor_name']
+
+        if processor_name is not None and processor_name.lower() != 'forward':
+            if has_args:
+                print(f"ignoring declared args of {stream_name}, using stream processor args")
+            has_args = len(TypeChecker.stream_processors_data[processor_name]['args'])
+        if has_args:
             stream_type = data["input_stream_type"]
             if data['copies'] is not None:
                 for i in range(data['copies']):
@@ -229,14 +236,21 @@ def initialize_stream_args():
 
 def stream_type_structs(stream_types) -> str:
     answer = ""
-    for tree in stream_types:
-        assert (tree[0] == "stream_type")
-        stream_name = tree[PPSTREAM_TYPE_NAME]
+    # union_events += f"EVENT_{hole_name}_hole {hole_name};"
+    special_holes = ""
+    for (_, data) in TypeChecker.stream_processors_data.items():
+        hole_name = data['hole_name']
+        if hole_name is not None:
+            special_holes += f"EVENT_{hole_name}_hole {hole_name};"
+    
+    for stream_name in TypeChecker.stream_types_to_events.keys():
         union_events = ""
         for name in TypeChecker.stream_types_to_events[stream_name]:
             union_events += f"EVENT_{stream_name}_{name} {name};"
-        value = f'''// event declarations for stream type {stream_name}
-{events_declaration_structs(stream_name, tree[-1])}
+
+        union_events += special_holes
+        answer += f'''// event declarations for stream type {stream_name}
+{events_declaration_structs(stream_name, TypeChecker.stream_types_data[stream_name]["raw_events_list"])}
 
 // input stream for stream type {stream_name}
 struct _STREAM_{stream_name}_in {"{"}
@@ -247,7 +261,7 @@ struct _STREAM_{stream_name}_in {"{"}
 {"}"};
 typedef struct _STREAM_{stream_name}_in STREAM_{stream_name}_in;
 
-// output stream for stream type {stream_name}
+// output stream for stream processor {stream_name}
 struct _STREAM_{stream_name}_out {"{"}
     shm_event head;
     union {"{"}
@@ -257,7 +271,6 @@ struct _STREAM_{stream_name}_out {"{"}
 {"}"};
 typedef struct _STREAM_{stream_name}_out STREAM_{stream_name}_out;
         '''
-        answer += value
     return answer
 
 
@@ -336,7 +349,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             hole_size = "sizeof(EVENT_hole)"
         else:
             out_name = TypeChecker.stream_processors_data[processor_name]["output_type"]
-            hole_size = f"sizeof(EVENT_{processor_name}_hole)"
+            hole_size = f"sizeof(EVENT_{TypeChecker.stream_processors_data[processor_name]['hole_name']}_hole)"
 
         connection_kind = TypeChecker.event_sources_data[stream_name]["connection_kind"]
         assert (connection_kind[0] == "conn_kind")
@@ -427,13 +440,17 @@ def activate_threads() -> str:
     answer = ""
     for (event_source, data) in TypeChecker.event_sources_data.items():
         processor_name = data["processor_name"]
+        if processor_name.lower() == 'forward':
+            tail_perf_layer = f"_{data['input_stream_type']}"
+        else:
+            tail_perf_layer = ""
         copies = data["copies"]
         if copies:
             for i in range(copies):
                 name = f"{event_source}_{i}"
-                answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{processor_name},BUFFER_{event_source}{i});\n"
+                answer += f"\tthrd_create(&THREAD_{name}, PERF_LAYER_{processor_name}{tail_perf_layer},BUFFER_{event_source}{i});\n"
         else:
-            answer += f"\tthrd_create(&THREAD_{event_source}, PERF_LAYER_{processor_name},BUFFER_{event_source});\n"
+            answer += f"\tthrd_create(&THREAD_{event_source}, PERF_LAYER_{processor_name}{tail_perf_layer},BUFFER_{event_source});\n"
 
     return answer
 
@@ -476,7 +493,7 @@ def instantiate_args(stream_name, event_name, new_arg_names):
     for (original_arg, new_arg) in zip(original_args, new_arg_names):
         original_name = original_arg["name"]
         arg_type = original_arg["type"]
-        declared_args += f"{arg_type} {new_arg} = e->cases.{event_name}.{original_name};\n"
+        declared_args += f"{arg_type} {new_arg} = ((STREAM_{stream_name}_in *)inevent)->cases.{event_name}.{original_name};\n"
     return declared_args
 
 
@@ -484,14 +501,14 @@ def build_drop_funcs_conds(rules, stream_name, mapping) -> str:
     for rule in rules:
         # TODO: missing implementation of creates at most
         event = rule["event"]
-        return f'''if (e->kind == {mapping[event]["enum"]}) {"{"}
+        return f'''if (inevent->kind == {mapping[event]["enum"]}) {"{"}
 {instantiate_args(stream_name, event, rule["event_args"])}
         {process_performance_match(rule["performance_match"])}
     {"}"}
         '''
 
 
-def build_should_keep_funcs(event_sources, mapping) -> str:
+def build_should_keep_funcs(mapping) -> str:
     answer = f'''bool SHOULD_KEEP_forward(shm_stream * s, shm_event * e) {"{"}
     return true;
 {"}"}
@@ -500,7 +517,7 @@ def build_should_keep_funcs(event_sources, mapping) -> str:
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
         performance_layer_rule_list = data["perf_layer_rule_list"]
         stream_type = data["input_type"]
-        answer += f'''bool SHOULD_KEEP_{stream_processor}(shm_stream * s, shm_event * e) {"{"}
+        answer += f'''bool SHOULD_KEEP_{stream_processor}(shm_stream * s, shm_event * inevent) {"{"}
 {build_drop_funcs_conds(performance_layer_rule_list, stream_type, mapping[stream_type])}
 return false;
 {"}"}
@@ -568,7 +585,7 @@ def build_switch_performance_match(tree, input_event, mapping_in, mapping_out, l
         {"}"}'''
 
 
-def get_stream_switch_cases(cases, mapping_in, mapping_out, level) -> str:
+def get_stream_switch_cases(cases, mapping_in, mapping_out, out_name, level) -> str:
     answer = ""
     for case in cases:
         if case['stream_type'] is None:
@@ -587,7 +604,7 @@ case {mapping_in[event_name]["enum"]}:
             if  stream_processor_name == 'forward' or TypeChecker.stream_processors_data[stream_processor_name]["special_hole"] is None:
                 hole_size = "sizeof(EVENT_hole)"
             else:
-                hole_size = f"sizeof(EVENT_{stream_processor_name}_hole)"
+                hole_size = f"sizeof(EVENT_{TypeChecker.stream_processors_data[stream_processor_name]['hole_name']}_hole)"
             if buffer_kind != 'autodrop':
                 raise Exception("implement of non-autodrop buffer missing!")
             buff_size = case['connection_kind']['size']
@@ -601,7 +618,7 @@ case {mapping_in[event_name]["enum"]}:
                 init_stream_args_code += f"{original_arg[2][1]} {original_arg[1]} = {new_arg};\n"
 
             for (arg, sp_arg) in zip(stream_type_args, original_sp_args):
-                init_stream_args_code += f"stream_args_temp->{stream_processor_name}_{arg['name']} = {sp_arg} \n"
+                init_stream_args_code += f"stream_args_temp->{arg['name']} = {sp_arg}; \n"
 
             stream_args_code = f'''
 STREAM_{stream_type}_ARGS * stream_args_temp = malloc(sizeof(STREAM_{stream_type}_ARGS));
@@ -616,12 +633,12 @@ mtx_unlock(&LOCK_{buffer_group});
               .init = NULL,
               .update = NULL
             }};
-            shm_stream *ev_source_temp = shm_stream_create_substream(stream, NULL, NULL, NULL, NULL, &hole_handling);
-            shm_arbiter_buffer *temp_buffer = shm_arbiter_buffer_create(ev_source_temp,  sizeof(STREAM_{stream_type}_out), {buff_size});
+            shm_stream *ev_source_temp = shm_stream_create_substream(stream, (inevent->head).id, &hole_handling);
+            shm_arbiter_buffer *temp_buffer = shm_arbiter_buffer_create(ev_source_temp,  sizeof(STREAM_{out_name}_out), {buff_size});
             shm_stream_register_all_events(ev_source_temp);
             {stream_args_code}
             thrd_t temp_thread;
-            thrd_create(&temp_thread, PERF_LAYER_TEProcessor, temp_buffer);
+            thrd_create(temp_thread, PERF_LAYER_{stream_processor_name}, temp_buffer);
             '''        
             answer+=f'''
                 case {mapping_in[event_name]["enum"]}:
@@ -634,43 +651,50 @@ mtx_unlock(&LOCK_{buffer_group});
 
 
 def declare_perf_layer_funcs(mapping) -> str:
-    answer = f'''
-    int PERF_LAYER_forward (shm_arbiter_buffer *buffer) {"{"}
-    atomic_fetch_add(&count_event_streams, 1); 
-    shm_stream *stream = shm_arbiter_buffer_stream(buffer);   
-    void *inevent;
-    void *outevent;   
+    answer ="" 
+    
+    for stream_type in TypeChecker.stream_types_data.keys():
+        answer+=f'''
+        int PERF_LAYER_forward_{stream_type} (shm_arbiter_buffer *buffer) {"{"}
+        atomic_fetch_add(&count_event_streams, 1); 
+        shm_stream *stream = shm_arbiter_buffer_stream(buffer);   
+        void *inevent;
+        void *outevent;   
 
-    // wait for active buffer
-    while ((!shm_arbiter_buffer_active(buffer))){"{"}
-        sleep_ns(10);
-    {"}"}
-    while(true) {"{"}
-        inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_forward);
-
-        if (inevent == NULL) {"{"}
-            // no more events
-            break;
+        // wait for active buffer
+        while ((!shm_arbiter_buffer_active(buffer))){"{"}
+            sleep_ns(10);
         {"}"}
-        outevent = shm_arbiter_buffer_write_ptr(buffer);
+        while(true) {"{"}
+            inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_forward, &init_hole, &update_hole);
 
-        memcpy(outevent, inevent, sizeof(STREAM_Primes_out));
-        shm_arbiter_buffer_write_finish(buffer);
-        
-        shm_stream_consume(stream, 1);
-    {"}"}  
-    atomic_fetch_add(&count_event_streams, -1);   
-{"}"}
-    '''
+            if (inevent == NULL) {"{"}
+                // no more events
+                break;
+            {"}"}
+            outevent = shm_arbiter_buffer_write_ptr(buffer);
+
+            memcpy(outevent, inevent, sizeof(STREAM_{stream_type}_in));
+            shm_arbiter_buffer_write_finish(buffer);
+            
+            shm_stream_consume(stream, 1);
+        {"}"}  
+        atomic_fetch_add(&count_event_streams, -1);   
+    {"}"}
+        '''
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
         stream_in_name = data['input_type']
         stream_out_name = data["output_type"]
         perf_layer_list = data["perf_layer_rule_list"]
+        if data["special_hole"] is None:
+            hole_name = ""
+        else:
+            hole_name = f"_{data['hole_name']}"
         perf_layer_code = f'''
                     switch ((inevent->head).kind) {"{"}
-        {get_stream_switch_cases(perf_layer_list, mapping[stream_in_name], mapping[stream_out_name], level=3)}
+        {get_stream_switch_cases(perf_layer_list, mapping[stream_in_name], mapping[stream_out_name], stream_out_name, level=3)}
                     default:
-                        memcpy(outevent, inevent, sizeof(STREAM_{stream_out_name}_out));   
+                        memcpy(outevent, inevent, sizeof(STREAM_{stream_in_name}_in));   
                         shm_arbiter_buffer_write_finish(buffer);
                 {"}"}
                     '''
@@ -685,7 +709,7 @@ def declare_perf_layer_funcs(mapping) -> str:
         sleep_ns(10);
     {"}"}
     while(true) {"{"}
-        inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_{stream_processor});
+        inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_{stream_processor}, &init_hole{hole_name}, &update_hole{hole_name});
 
         if (inevent == NULL) {"{"}
             // no more events
@@ -795,10 +819,16 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                     {inner_code}
                     {"}"}'''
                 elif tree[PPBUFFER_MATCH_ARG1][1] == "done":
-                    return f'''if (count_{stream_name} == 0 && is_stream_done(EV_SOURCE_{stream_name})) {"{"}
-                        {inner_code}
-                    {"}"}
-                    '''
+                    if stream_name not in TypeChecker.event_sources_data.keys():
+                        return f'''if (count_{stream_name} == 0 && is_stream_done({stream_name})) {"{"}
+                            {inner_code}
+                        {"}"}
+                        '''
+                    else:
+                        return f'''if (count_{stream_name} == 0 && is_stream_done(EV_SOURCE_{stream_name})) {"{"}
+                            {inner_code}
+                        {"}"}
+                        '''
                 else:
                     # check if there are n events
                     return f'''if (check_at_least_n_events(count_{stream_name}, {tree[PPBUFFER_MATCH_ARG1][1]})) {"{"}
@@ -1379,7 +1409,7 @@ def print_event_name(stream_types, mapping):
 
     code = ""
     for (event_source_index, (event_source, data)) in enumerate(TypeChecker.event_sources_data.items()):
-        output_type = stream_types[event_source][1]
+        output_type = stream_types[event_source][0]
         code += f'''
     if(ev_src_index == {event_source_index}) {"{"}
         {local_build_if_from_events(mapping[output_type])}
@@ -1419,7 +1449,7 @@ def get_event_name(stream_types, mapping):
 
     code = ""
     for (event_source_index, (event_source, data) )in enumerate(TypeChecker.event_sources_data.items()):
-        output_type = stream_types[event_source][1]
+        output_type = stream_types[event_source][0]
         code += f'''
     if(ev_src_index == {event_source_index}) {"{"}
         {local_build_if_from_events(mapping[output_type])}
@@ -1514,33 +1544,99 @@ def special_hole_structs():
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
         if data['special_hole'] is not None:
             # TODO: set correctly data types of fields
+            hole_name = data['hole_name']
             fields = ""
             for data_arg in data['special_hole']:
-                fields += f"\tdouble {data_arg['attribute']};\n" 
-            answer += f'''
-struct _EVENT_{stream_processor}_hole
+                fields += f"\t{data_arg['type']} {data_arg['attribute']};\n" 
+            answer+= f'''
+struct _EVENT_{hole_name}_hole
 {"{"}
 {fields}
 {"}"};
-typedef struct _EVENT_{stream_processor}_hole EVENT_{stream_processor}_hole;
+typedef struct _EVENT_{hole_name}_hole EVENT_{hole_name}_hole;
 '''
     return answer
 
-def generate_special_hole_functions():
+def get_special_holes_init_code():
     answer = ""
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
-        if data['special_hole'] is not None:
-            answer += f'''
-    void init_hole_{stream_processor}(EVENT_{stream_processor}_hole *h) {"{"}
-    h->n = 0;
-    {"}"}        
-    '''
-            answer += f'''
-    void update_hole_{stream_processor}(EVENT_{stream_processor}_hole *h, shm_event *ev) {"{"}
-        h->n++;
-    {"}"}
-    '''
+        data_hole = data['special_hole']
+        hole_name = data['hole_name']
+        init_attributes = ""
+        for attr_data in data_hole:
+            if  attr_data['agg_func_name'].upper() == 'COUNT':
+                value = 0
+            elif attr_data['agg_func_name'].upper() == 'MIN':
+                if attr_data['type'] == 'int':
+                    value = "INT_MAX"
+                elif attr_data['type'] == 'uint64_t':
+                    value = "ULLONG_MAX"
+                else:
+                    raise Exception(f"We dont cover this data {attr_data['type']} for agg function {attr_data['agg_func_name']}.")
+            elif attr_data['agg_func_name'].upper() == 'MAX':
+                if attr_data['type'] == 'int':
+                    value = "INT_MIN"
+                elif attr_data['type'] == 'uint64_t':
+                    value = "0"
+                else:
+                    raise Exception(f"We dont cover this data {attr_data['type']} for agg function {attr_data['agg_func_name']}.")
+            else:
+                raise Exception(f"Unknown aggregation function {attr_data['agg_func_name']}.")
+
+            init_attributes += f"\th->{attr_data['attribute']} = {value};\n"
+        answer += f'''
+void init_hole_{hole_name}(EVENT_{hole_name}_hole *h) {"{"}
+  {init_attributes}
+{"}"}
+'''
     return answer
+
+def get_special_holes_update_code(mapping):
+    
+    answer = ""
+    for (stream_processor, data) in TypeChecker.stream_processors_data.items():
+        stream_type = data['input_type']
+        data_events = mapping[stream_type]
+        hole_name = data['hole_name']
+        all_events = list(TypeChecker.stream_types_data[stream_type]["events"].keys())
+        event_to_holes_data = get_events_to_hole_update_data(data['special_hole'], all_events)
+        update_attributes_code = ""
+        for event in all_events:
+            event_code = ""
+            event_hole_data_ = event_to_holes_data[event]
+            for event_hole_data in event_hole_data_:
+                if event_hole_data["ev_attr"] is None:
+                    assert(event_hole_data["agg_func"] == "count")
+                    event_code += f"\t\t\th->{event_hole_data['hole_attr']}++;\n"
+                else:
+                    if event_hole_data["agg_func"] == "count":
+                        event_code += f"\t\t\th->{event_hole_data['hole_attr']}+=((STREAM_{stream_type}_in *) ev)->cases.{event}.{event_hole_data['ev_attr']};\n"
+                    elif event_hole_data["agg_func"] == "MAX":
+                        event_code += f"\t\t\th->{event_hole_data['hole_attr']} = max(h->{event_hole_data['hole_attr']},((STREAM_{stream_type}_in *) ev)->cases.{event}.{event_hole_data['ev_attr']});\n"
+                    elif event_hole_data["agg_func"] == "MIN":
+                        event_code += f"\t\t\th->{event_hole_data['hole_attr']} = min(h->{event_hole_data['hole_attr']},((STREAM_{stream_type}_in *) ev)->cases.{event}.{event_hole_data['ev_attr']});\n"
+                    else:
+                        raise Exception("Not implmented")
+            update_attributes_code += f'''
+        case {data_events[event]["enum"]}:
+{event_code}
+            break;'''
+        answer += f'''
+void update_hole_{hole_name}(EVENT_{hole_name}_hole *h, shm_event *ev) {"{"}
+    switch (((STREAM_{stream_type}_in *)ev)->head.kind) {"{"}
+{update_attributes_code}
+    {"}"}
+{"}"}
+'''
+    return answer
+
+def generate_special_hole_functions(streams_to_events_map):
+    
+    answer = f"{get_special_holes_init_code()}\n"
+    answer += f"{get_special_holes_update_code(streams_to_events_map)}\n"
+              
+    return answer
+    
     
 def outside_main_code(components, streams_to_events_map, stream_types, ast, arbiter_event_source, existing_buffers):
     return f'''
@@ -1556,12 +1652,12 @@ void init_hole(EVENT_hole *h) {"{"}
 void update_hole(EVENT_hole *h, shm_event *ev) {"{"}
     h->n++;
 {"}"}
-
+{events_enum_kinds(components["event_source"], streams_to_events_map)}
 {special_hole_structs()}
-{generate_special_hole_functions()}
+{generate_special_hole_functions(streams_to_events_map)}
 {stream_type_structs(components["stream_type"])}
 {stream_type_args_structs(components["stream_type"])}
-{events_enum_kinds(components["event_source"], streams_to_events_map)}
+
 
 {instantiate_stream_args()}
 int *arbiter_counter;
@@ -1573,7 +1669,7 @@ dll_node **chosen_streams; // used in rule set for get_first/last_n
 
 // globals code
 {get_globals_code(components, streams_to_events_map, stream_types)}
-{build_should_keep_funcs(components["event_source"], streams_to_events_map)}
+{build_should_keep_funcs(streams_to_events_map)}
 
 atomic_int count_event_streams = 0;
 

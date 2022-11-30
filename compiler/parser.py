@@ -226,10 +226,10 @@ def p_list_hole_attributes(p):
 
 def p_hole_attribute(p):
     '''
-    hole_attribute : ID "=" agg_func
+    hole_attribute : ID ID "=" agg_func
     '''
 
-    p[0] = ('hole-attribute', p[1], p[3])
+    p[0] = ('hole-attribute', p[1], p[2], p[4])
 
 def p_aggfunc(p):
     '''
