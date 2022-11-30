@@ -5,30 +5,23 @@ LDFLAGS=-lpthread
 MON_COMPILER_PY=../../compiler/main.py
 MON_COMPILER=../../gen/compile.sh
 
-SOURCE_LIBS=../../shmbuf/libshamon-shmbuf.a\
-            ../../core/libshamon-signature.a\
-            ../../core/libshamon-utils.a
-
-MONITOR_LIBS= ../../core/libshamon-signature.a\
-              ../../core/libshamon.a\
-              ../../core/libshamon-arbiter.a\
-              ../../core/libshamon-parallel-queue.a\
-              ../../core/libshamon-utils.a\
-              ../../streams/libshamon-streams.a\
-	      ../../shmbuf/libshamon-shmbuf.a
-
 all: monitor
 
 monitor.o: monitor.cpp
-	clang++ monitor.cpp -g -std=c++17 -c -O3
+	$(CXX) monitor.cpp -g -std=c++17 -c -O3
 
 monitor.c: monitor.txt clean
 	python3 $(MON_COMPILER_PY) monitor.txt -b 512 -o monitor.c
 	-clang-format -i monitor.c
 
-monitor: monitor.c monitor.o
-	$(MON_COMPILER) monitor.c monitor.o
+compiler_utils.o: ../../compiler/cfiles/compiler_utils.c
+	$(CC) -c $< -o $@
 
+monitor: monitor.c monitor.o compiler_utils.o
+	$(MON_COMPILER) monitor.c monitor.o -lstdc++ compiler_utils.o
+
+run: monitor
+	./monitor Program:generic:/vrd
 
 clean:
 	-rm monitor.c monitor.o

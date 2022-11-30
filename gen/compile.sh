@@ -11,7 +11,7 @@ if [ $# -eq 0 ]; then
 fi
 
 GENDIR=$(dirname $0)
-SHAMONDIR="$GENDIR/.."
+SHAMONDIR=$(readlink -f "$GENDIR/..")
 
 CPPFLAGS="-D_POSIX_C_SOURCE=200809L -I${GENDIR} -I$SHAMONDIR\
 	   -I$SHAMONDIR/streams -I$SHAMONDIR/core -I$SHAMONDIR/shmbuf"
