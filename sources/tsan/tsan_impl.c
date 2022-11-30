@@ -43,16 +43,18 @@ static inline uint64_t rt_timestamp(void) {
 const char           *shmkey = "/vrd";
 static struct buffer *top_shmbuf;
 
-#define EVENTS_NUM 8
+#define EVENTS_NUM 10
 enum {
     EV_READ   = 0,
     EV_WRITE  = 1,
-    EV_LOCK   = 2,
-    EV_UNLOCK = 3,
-    EV_ALLOC  = 4,
-    EV_FREE   = 5,
-    EV_FORK   = 6,
-    EV_JOIN   = 7,
+    EV_ATOMIC_READ   = 2,
+    EV_ATOMIC_WRITE  = 3,
+    EV_LOCK   = 4,
+    EV_UNLOCK = 5,
+    EV_ALLOC  = 6,
+    EV_FREE   = 7,
+    EV_FORK   = 8,
+    EV_JOIN   = 9,
 };
 
 /* local cache */
@@ -61,7 +63,10 @@ uint64_t event_kinds[EVENTS_NUM];
 void __tsan_init() {
     /* Initialize the info about this source */
     top_control = source_control_define(
-        EVENTS_NUM, "read", "tl", "write", "tl", "lock", "tl", "unlock", "tl",
+        EVENTS_NUM,
+                "read", "tl", "write", "tl",
+                "atomicread", "tl", "atomicwrite", "tl",
+                "lock", "tl", "unlock", "tl",
         "alloc", "tll", "free", "tl", "fork", "ti", "join", "ti");
     assert(top_control);
 

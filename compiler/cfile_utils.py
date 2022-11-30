@@ -379,7 +379,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                     answer += f"\tshm_arbiter_buffer_set_drop_space_threshold(BUFFER_{stream_name}{i},{min_size_uninterrupt})\n;"
                 answer += f"\t// register events in {name}\n"
                 for ev_name, attrs in streams_to_events_map[stream_type].items():
-                    if ev_name == 'hole': continue
+                    if ev_name in ("hole", hole_name): continue
                     answer += f"\tif (shm_stream_register_event(EV_SOURCE_{name}, \"{ev_name}\", {attrs['enum']}) < 0) {{\n"
                     answer += f"\t\tfprintf(stderr, \"Failed registering event {ev_name} for stream {name} : {stream_type}\\n\");\n"
                     answer += f"\t\tfprintf(stderr, \"Available events:\\n\");\n"
@@ -399,7 +399,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             answer += f"\tBUFFER_{stream_name} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
             answer += f"\t// register events in {name}\n"
             for ev_name, attrs in streams_to_events_map[stream_type].items():
-                if ev_name == 'hole': continue
+                if ev_name in ("hole", hole_name): continue
                 answer += f"\tif (shm_stream_register_event(EV_SOURCE_{name}, \"{ev_name}\", {attrs['enum']}) < 0) {{\n"
                 answer += f"\t\tfprintf(stderr, \"Failed registering event {ev_name} for stream {name} : {stream_type}\\n\");\n"
                 answer += f"\t\tfprintf(stderr, \"Available events:\\n\");\n"
