@@ -771,18 +771,18 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                 stream_name = context[stream_name]
         if len(tree) == 3:
             if not is_scan:
-                if tree[PPBUFFER_MATCH_ARG1] == "nothing":
+                if tree[PPBUFFER_MATCH_ARG1][1] == "nothing":
                     return f'''if (check_at_least_n_events(count_{stream_name}, 0)) {"{"}
                     {inner_code}
                     {"}"}'''
-                elif tree[PPBUFFER_MATCH_ARG1] == "done":
+                elif tree[PPBUFFER_MATCH_ARG1][1] == "done":
                     return f'''if (count_{stream_name} == 0 && is_stream_done(EV_SOURCE_{stream_name})) {"{"}
                         {inner_code}
                     {"}"}
                     '''
                 else:
                     # check if there are n events
-                    return f'''if (check_at_least_n_events(count_{stream_name}, {tree[PPBUFFER_MATCH_ARG1]})) {"{"}
+                    return f'''if (check_at_least_n_events(count_{stream_name}, {tree[PPBUFFER_MATCH_ARG1][1]})) {"{"}
                         {inner_code}
                     {"}"}'''
             return []
