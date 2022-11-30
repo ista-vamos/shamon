@@ -71,7 +71,7 @@ def init_buffer_groups():
             for i in range(data["arg_includes"]):
                 includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, BUFFER_{data['includes']}{i},stream_args_{data['includes']}_{i},{buff_name}_ORDER_EXP);\n"
         answer += f'''init_buffer_group(&BG_{buff_name});
-        if (mtx_init(&LOCK_{buff_name}, NULL) != 0) {"{"}
+        if (mtx_init(&LOCK_{buff_name}, mtx_plain) != 0) {"{"}
         printf("mutex init has failed for {buff_name} lock\\n");
         return 1;
     {"}"}
@@ -351,7 +351,14 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             for i in range(copies):
                 name = f"{stream_name}_{i}"
                 answer += f"\t// connect to event source {name}\n"
-                answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, {hole_size});\n"
+                answer += f"""
+                shm_stream_hole_handling hh = {{
+                  .hole_event_size = {hole_size},
+                  .init = NULL,
+                  .update = NULL
+                }};\n
+                """
+                answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
                 answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
                 if min_size_uninterrupt is not None:
                     answer += f"\tshm_arbiter_buffer_set_drop_space_threshold(BUFFER_{stream_name}{i},{min_size_uninterrupt})\n;"
@@ -366,7 +373,14 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
         else:
             name = f"{stream_name}"
             answer += f"\t// connect to event source {name}\n"
-            answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, {hole_size});\n"
+            answer += f"""
+                shm_stream_hole_handling hh = {{
+                  .hole_event_size = {hole_size},
+                  .init = NULL,
+                  .update = NULL
+                }};\n
+                """
+            answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
             answer += f"\tBUFFER_{stream_name} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
             answer += f"\t// register events in {name}\n"
             for ev_name, attrs in streams_to_events_map[stream_type].items():
@@ -607,7 +621,7 @@ mtx_unlock(&LOCK_{buffer_group});
             shm_stream_register_all_events(ev_source_temp);
             {stream_args_code}
             thrd_t temp_thread;
-            thrd_create(temp_thread, PERF_LAYER_TEProcessor, temp_buffer);
+            thrd_create(&temp_thread, PERF_LAYER_TEProcessor, temp_buffer);
             '''        
             answer+=f'''
                 case {mapping_in[event_name]["enum"]}:
@@ -958,7 +972,7 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
         return f"\tshm_arbiter_buffer_drop(BUFFER_{event_source_name}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
     if tree[0] == "remove":
         buffer_group = tree[2][1];
-        return f"mtx_lock(&LOCK_{buffer_group});\nbg_remove({buffer_group}, {tree[1]});\nmtx_unlock(&LOCK_{buffer_group});"
+        return f"mtx_lock(&LOCK_{buffer_group});\nbg_remove(&BG_{buffer_group}, {tree[1]});\nmtx_unlock(&LOCK_{buffer_group});"
 
     assert (tree[0] == "field_access")
     target_stream, index, field = tree[1], tree[2], tree[3]
