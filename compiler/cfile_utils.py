@@ -1121,6 +1121,7 @@ def monitor_code(tree, mapping, arbiter_event_source) -> str:
     if tree[PPMONITOR_RULE_LIST] is not None:
         return f'''
         // monitor
+        printf("-- starting monitor code \\n");
         STREAM_{arbiter_event_source}_out * received_event;
         while(true) {"{"}
             received_event = fetch_arbiter_stream(monitor_buffer);
@@ -1891,25 +1892,30 @@ int main(int argc, char **argv) {"{"}
 	arbiter_counter = malloc(sizeof(int));
 	*arbiter_counter = 10;
 	{get_pure_c_code(components, 'startup')}
-{initialize_stream_args()}
+    {initialize_stream_args()}
 
-{event_sources_conn_code(components['event_source'], streams_to_events_map)}
+    {event_sources_conn_code(components['event_source'], streams_to_events_map)}
      // activate buffers
-{activate_buffers()}
+     printf("-- creating buffers\\n");
+    {activate_buffers()}
  	monitor_buffer = shm_monitor_buffer_create(sizeof(STREAM_{arbiter_event_source}_out), {TypeChecker.monitor_buffer_size});
 
- 		// init buffer groups
-	{init_buffer_groups()}
+ 	 // init buffer groups
+     printf("-- initializing buffer groups\\n");
+     {init_buffer_groups()}
 
      // create source-events threads
-{activate_threads()}
+     printf("-- creating performance threads\\n");
+     {activate_threads()}
 
      // create arbiter thread
+     printf("-- creating arbiter thread\\n");
      thrd_create(&ARBITER_THREAD, arbiter, 0);
 
- {monitor_code(ast[3], streams_to_events_map, arbiter_event_source)}
+     {monitor_code(ast[3], streams_to_events_map, arbiter_event_source)}
 
-{destroy_all()}
+     printf("-- cleaning up\\n");
+     {destroy_all()}
 
 {get_pure_c_code(components, 'cleanup')}
 {"}"}

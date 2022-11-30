@@ -1,4 +1,5 @@
-CFLAGS=-g3 -O3 -flto  -fno-fat-lto-objects -fPIC -std=c11
+#CFLAGS=-g3 -O3 -flto  -fno-fat-lto-objects -fPIC -std=c11
+CFLAGS=-g -fPIC -std=c11
 CPPFLAGS=-D_POSIX_C_SOURCE=200809L -DNDEBUG
 LDFLAGS=-lpthread
 

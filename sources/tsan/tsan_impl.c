@@ -64,10 +64,11 @@ void __tsan_init() {
     /* Initialize the info about this source */
     top_control = source_control_define(
         EVENTS_NUM,
-                "read", "tl", "write", "tl",
-                "atomicread", "tl", "atomicwrite", "tl",
-                "lock", "tl", "unlock", "tl",
-        "alloc", "tll", "free", "tl", "fork", "ti", "join", "ti");
+        "read", "tl", "write", "tl",
+        "atomicread", "tl", "atomicwrite", "tl",
+        "lock", "tl", "unlock", "tl",
+        "alloc", "tll", "free", "tl",
+        "fork", "ti", "join", "ti");
     assert(top_control);
 
     top_shmbuf = create_shared_buffer(shmkey, 512, top_control);
