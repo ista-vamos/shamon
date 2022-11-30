@@ -43,8 +43,8 @@ stream type GlobalEvent
 }
 globals
 $$
-    uint64_t nextts=0;
-    uint64_t leastts=MAXUINT64;
+    unsigned long long nextts=0;
+    unsigned long long leastts=ULLONG_MAX;
     int seenNone=0;
 $$
 
