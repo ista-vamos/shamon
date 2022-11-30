@@ -212,7 +212,7 @@ def p_custom_hole(p):
 
     if p[1].lower() != 'hole':
         raise Exception("custom hole should be named hole")
-    p[0] = ('custom_hole', p[3])
+    p[0] = ('custom_hole', p[1], p[3])
 
 def p_list_hole_attributes(p):
     '''

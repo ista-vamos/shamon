@@ -1510,16 +1510,17 @@ typedef struct _EVENT_{stream_processor}_hole EVENT_{stream_processor}_hole;
 def generate_special_hole_functions():
     answer = ""
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
-        answer += f'''
-void init_hole_{stream_processor}(EVENT_{stream_processor}_hole *h) {"{"}
-  h->n = 0;
-{"}"}        
-'''
-        answer += f'''
-void update_hole_{stream_processor}(EVENT_{stream_processor}_hole *h, shm_event *ev) {"{"}
-    h->n++;
-{"}"}
-'''
+        if data['special_hole'] is not None:
+            answer += f'''
+    void init_hole_{stream_processor}(EVENT_{stream_processor}_hole *h) {"{"}
+    h->n = 0;
+    {"}"}        
+    '''
+            answer += f'''
+    void update_hole_{stream_processor}(EVENT_{stream_processor}_hole *h, shm_event *ev) {"{"}
+        h->n++;
+    {"}"}
+    '''
     return answer
     
 def outside_main_code(components, streams_to_events_map, stream_types, ast, arbiter_event_source, existing_buffers):
