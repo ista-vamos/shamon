@@ -1,4 +1,6 @@
+if (LLVM_SOURCES)
 add_subdirectory(llvm)
+endif()
 
 if (DYNAMORIO_SOURCES)
        add_subdirectory(drfun)
