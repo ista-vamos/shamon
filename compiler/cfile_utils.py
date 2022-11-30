@@ -1653,8 +1653,8 @@ void update_hole(EVENT_hole *h, shm_event *ev) {"{"}
     h->n++;
 {"}"}
 {events_enum_kinds(components["event_source"], streams_to_events_map)}
-{stream_type_structs(components["stream_type"])}
 {special_hole_structs()}
+{stream_type_structs(components["stream_type"])}
 {generate_special_hole_functions(streams_to_events_map)}
 
 {stream_type_args_structs(components["stream_type"])}
