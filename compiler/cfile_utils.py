@@ -344,6 +344,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
 
         processor_name = TypeChecker.event_sources_data[stream_name]["processor_name"]
         if processor_name.lower() == "forward":
+            hole_name = "hole"
             processor_name = processor_name.lower()
             out_name = TypeChecker.event_sources_data[stream_name]["input_stream_type"]
             hole_size = "sizeof(EVENT_hole)"
@@ -390,8 +391,8 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             answer += f"""
                 shm_stream_hole_handling hh = {{
                   .hole_event_size = {hole_size},
-                  .init = &init_hole_{processor_name},
-                  .update = &update_hole_{processor_name}
+                  .init = &init_hole_{hole_name},
+                  .update = &update_hole_{hole_name}
                 }};\n
                 """
             answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
