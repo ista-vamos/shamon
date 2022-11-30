@@ -459,11 +459,10 @@ def process_performance_match(tree) -> str:
 def instantiate_args(stream_name, event_name, new_arg_names):
     original_args = TypeChecker.args_table[f"EVENT_{stream_name}_{event_name}"]
     declared_args = ""
-
     for (original_arg, new_arg) in zip(original_args, new_arg_names):
         original_name = original_arg["name"]
         arg_type = original_arg["type"]
-        declared_args += f"(STREAM_{stream_name}_in *){arg_type} {new_arg} = e->cases.{event_name}.{original_name};\n"
+        declared_args += f"{arg_type} {new_arg} = e->cases.{event_name}.{original_name};\n"
     return declared_args
 
 
@@ -1526,7 +1525,7 @@ def outside_main_code(components, streams_to_events_map, stream_types, ast, arbi
     return f'''
 struct _EVENT_hole
 {"{"}
-  uint64_t n;
+  unsigned long long n;
 {"}"};
 typedef struct _EVENT_hole EVENT_hole;
 void init_hole(EVENT_hole *h) {"{"}

@@ -128,7 +128,8 @@ class TypeChecker:
             TypeChecker.stream_types_data[stream_name] = {
                 'args': stream_args_names,
                 'arg_types': stream_args_types,
-                'events': events
+                'events': events,
+                'raw_events_list': event_list
             }
 
     @staticmethod
@@ -273,8 +274,7 @@ class TypeChecker:
             output_type, output_args = get_name_with_args(tree[3])
             extends_node = tree[4]
             processor_rules = []
-            special_hole = get_processor_rules(tree[5], processor_rules)
-
+            hole_name, special_hole = get_processor_rules(tree[5], processor_rules)
             TypeChecker.stream_processors_data[stream_processor_name] = {
                 'args': args,
                 'input_type': input_type,
@@ -283,7 +283,8 @@ class TypeChecker:
                 'output_args': output_args,
                 'extends_node': extends_node,
                 'perf_layer_rule_list': processor_rules,
-                'special_hole': special_hole
+                'special_hole': special_hole,
+                'hole_name': hole_name
             }
 
     @staticmethod
