@@ -92,7 +92,7 @@ static inline void *start_event(struct buffer *shm, int type) {
     /* push the timestamp */
     uint64_t ts =
         atomic_fetch_add_explicit(&timestamp, 1, memory_order_acq_rel);
-    return buffer_partial_push(shm, ev + sizeof(ev->id) + sizeof(ev->kind), &ts,
+    return buffer_partial_push(shm, (void *)(((unsigned char *)ev) + sizeof(ev->id) + sizeof(ev->kind)), &ts,
                                sizeof(ts));
 }
 
