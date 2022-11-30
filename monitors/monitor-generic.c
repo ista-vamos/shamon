@@ -162,9 +162,16 @@ int main(int argc, char *argv[]) {
             ++n;
 
             int ind = 5 * shm_stream_id(stream);
-
             id   = shm_event_id(ev);
             kind = shm_event_kind(ev);
+
+            if (shm_event_is_hole(ev)) {
+                printf("%*s%s: ", ind, "", shm_stream_get_name(stream));
+                printf("\033[0;31mhole\033[0m(\033[0;34mid: %lu, kind: %lu\033[0m, ...)\n", id, kind);
+                ++drp;
+                continue;
+            }
+
 #ifdef CHECK_IDS
             stream_id = shm_stream_id(stream);
 #endif
@@ -177,7 +184,7 @@ int main(int argc, char *argv[]) {
             rec = shm_stream_get_event_record(stream, kind);
             rec = rec ? rec : &unknown_rec;
             printf("%*s%s: ", ind, "", shm_stream_get_name(stream));
-            printf("\033[0;35m%s(\033[0;34mid: %lu, kind: %lu\033[0m",
+            printf("\033[0;35m%s\033[0m(\033[0;34mid: %lu, kind: %lu\033[0m",
                    rec->name, id, kind);
 
 #ifdef CHECK_IDS

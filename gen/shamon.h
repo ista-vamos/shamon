@@ -142,14 +142,13 @@ bool        shm_stream_consume(shm_stream *stream, size_t num);
 const char *shm_stream_get_str(shm_stream *stream, uint64_t elem);
 
 shm_stream *shm_stream_create_from_argv(const char *name, int argc,
-                                        char *argv[]);
+                                        char *argv[],
+                                        shm_stream_hole_handling *hole_handling);
 
 shm_stream *shm_stream_create(const char *name, const char *spec);
 
 int shm_stream_register_event(shm_stream *, const char *name, shm_kind);
 
-shm_stream *shm_stream_create_from_argv(const char *stream_name, int argc,
-                                        char *argv[]);
 
 /************************************************************************
  * ARBITER BUFFER

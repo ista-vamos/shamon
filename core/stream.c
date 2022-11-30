@@ -65,7 +65,6 @@ void shm_stream_init(shm_stream *stream, struct buffer *incoming_events_buffer,
            hole_handling->init);
 
     stream->hole_handling = *hole_handling;
-    stream->hole_event    = xalloc(hole_handling->hole_event_size);
 }
 
 void shm_stream_destroy(shm_stream *stream) {
@@ -74,7 +73,6 @@ void shm_stream_destroy(shm_stream *stream) {
     free(stream->type);
     free(stream->name);
     free(stream->events_cache);
-    free(stream->hole_event);
 
     if (stream->destroy) {
         stream->destroy(stream);
@@ -149,6 +147,7 @@ static shm_kind get_max_kind(struct event_record *recs, size_t size) {
 
 struct event_record *shm_stream_get_event_record(shm_stream *stream,
                                                  shm_kind    kind) {
+    assert(kind > 0 && "Got invalid kind");
     struct event_record *rec = NULL;
     if (stream->events_cache) {
         if (kind < MAX_EVENTS_CACHE_SIZE) {
@@ -168,6 +167,7 @@ struct event_record *shm_stream_get_event_record(shm_stream *stream,
             (max_kind > MAX_EVENTS_CACHE_SIZE ? MAX_EVENTS_CACHE_SIZE
                                               : max_kind) +
             1;
+        assert(cache_sz > 0 && "Invalid cache size");
         stream->events_cache = malloc(cache_sz * sizeof(struct event_record));
         /* cache elements that fit into the cache (cache is indexed by kinds) */
         for (size_t i = 0; i < sz; ++i) {
@@ -204,13 +204,14 @@ size_t shm_stream_buffer_capacity(shm_stream *s) {
 }
 
 /* FIXME: no longer related to stream */
-void shm_stream_prepare_hole_event(shm_stream *stream, size_t id, uint64_t n) {
-    assert(stream->hole_event);
-    stream->hole_event->id   = id;
-    stream->hole_event->kind = shm_get_hole_kind();
+void shm_stream_prepare_hole_event(shm_stream *stream, shm_event *hole_event,
+                                   size_t id, uint64_t n) {
+    hole_event->id   = id;
+    hole_event->kind = shm_get_hole_kind();
 #ifdef DUMP_STATS
     stream->dropped_events += n;
 #else
+    (void)stream;
     (void)n;
 #endif
 }

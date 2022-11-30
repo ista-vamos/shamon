@@ -11,6 +11,7 @@
 #include <x86intrin.h>
 #endif
 
+#undef DEBUG_STDOUT
 #ifdef DEBUG_STDOUT
 #include <stdio.h>
 #endif
@@ -92,7 +93,7 @@ static inline void *start_event(struct buffer *shm, int type) {
     /* push the timestamp */
     uint64_t ts =
         atomic_fetch_add_explicit(&timestamp, 1, memory_order_acq_rel);
-    return buffer_partial_push(shm, ev + sizeof(ev->id) + sizeof(ev->kind), &ts,
+    return buffer_partial_push(shm, (void *)(((unsigned char *)ev) + sizeof(ev->id) + sizeof(ev->kind)), &ts,
                                sizeof(ts));
 }
 
@@ -101,19 +102,47 @@ void __tsan_func_entry(void *returnaddress) {
 }
 void __tsan_func_exit(void) {}
 
-uint64_t __vrd_new_thrd_id(void) {
-    return atomic_fetch_add(&last_thread_id, 1);
+struct __vrd_thread_data {
+    void *data;
+    uint64_t thread_id;
+};
+
+void *__vrd_create_thrd_data(void *original_data) {
+    uint64_t tid = atomic_fetch_add(&last_thread_id, 1);
+    /* FIXME: we leak these */
+    struct __vrd_thread_data *data = malloc(sizeof *data);
+    assert(data && "Allocation failed");
+
+    data->data = original_data;
+    data->thread_id = tid;
+
+    return data;
 }
 
-void __vrd_thrd_create(uint64_t tid) {
-    struct buffer *shm  = thread_data.shmbuf;
-    void          *addr = start_event(shm, EV_FORK);
-    buffer_partial_push(shm, addr, &tid, sizeof(tid));
-    buffer_finish_push(shm);
+void *__vrd_thrd_entry(void *data) {
+    struct __vrd_thread_data *tdata = (struct __vrd_thread_data *)data;
+
+    thread_data.waited_for_buffer = 0;
+    thread_data.last_id           = 0;
+
+    /* create a new sub-buffer (or use the top level one for the main thread) */
+    if (data == NULL) {
+        thread_data.thread_id = 0;
+        thread_data.shmbuf = top_shmbuf;
+        return NULL;
+    }
+
+    thread_data.thread_id = tdata->thread_id;
+    thread_data.shmbuf = create_shared_sub_buffer(top_shmbuf, 0, top_control);
+    if (!thread_data.shmbuf) {
+        assert(thread_data.shmbuf && "Failed creating buffer");
+        abort();
+    }
 
 #ifdef DEBUG_STDOUT
-    printf("[%lu] creating thread %lu\n", rt_timestamp(), tid);
+    printf("[%lu] thread %lu created\n", rt_timestamp(), thread_data.thread_id);
 #endif
+    return tdata->data;
 }
 
 void __vrd_thrd_exit(void) {
@@ -132,27 +161,6 @@ void __vrd_thrd_exit(void) {
 #endif
 }
 
-void __vrd_thrd_entry(uint64_t tid) {
-    /* create a new sub-buffer */
-    thread_data.thread_id = tid;
-    if (tid == 0) {
-        thread_data.shmbuf = top_shmbuf;
-    } else {
-        thread_data.shmbuf =
-            create_shared_sub_buffer(top_shmbuf, 0, top_control);
-        if (!thread_data.shmbuf) {
-            assert(thread_data.shmbuf && "Failed creating buffer");
-            abort();
-        }
-    }
-    thread_data.waited_for_buffer = 0;
-    thread_data.last_id           = 0;
-
-#ifdef DEBUG_STDOUT
-    printf("[%lu] thread %lu created\n", rt_timestamp(), thread_data.thread_id);
-#endif
-}
-
 void __vrd_thread_join(uint64_t tid) {
     struct buffer *shm  = thread_data.shmbuf;
     void          *addr = start_event(shm, EV_JOIN);
@@ -163,6 +171,32 @@ void __vrd_thread_join(uint64_t tid) {
     printf("[%lu] thread %lu exits\n", rt_timestamp(), thread_data.thread_id);
 #endif
 }
+
+void __tsan_read1(void *addr) {
+    struct buffer *shm = thread_data.shmbuf;
+    void          *mem = start_event(shm, EV_READ);
+    buffer_partial_push(shm, mem, &addr, sizeof(addr));
+    buffer_finish_push(shm);
+
+#ifdef DEBUG_STDOUT
+    printf("[%lu] thread %lu: read1(%p)\n", rt_timestamp(),
+           thread_data.thread_id, addr);
+#endif
+}
+
+
+void __tsan_read2(void *addr) {
+    struct buffer *shm = thread_data.shmbuf;
+    void          *mem = start_event(shm, EV_READ);
+    buffer_partial_push(shm, mem, &addr, sizeof(addr));
+    buffer_finish_push(shm);
+
+#ifdef DEBUG_STDOUT
+    printf("[%lu] thread %lu: read2(%p)\n", rt_timestamp(),
+           thread_data.thread_id, addr);
+#endif
+}
+
 
 void __tsan_read4(void *addr) {
     struct buffer *shm = thread_data.shmbuf;

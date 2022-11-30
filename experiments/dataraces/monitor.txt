@@ -43,8 +43,10 @@ stream type GlobalEvent
 }
 globals
 $$
-    uint64_t nextts=0;
-    uint64_t leastts=MAXUINT64;
+    #include <limits.h>
+
+    unsigned long long nextts=0;
+    unsigned long long leastts=ULLONG_MAX;
     int seenNone=0;
 $$
 
@@ -59,7 +61,7 @@ arbiter : GlobalEvent
                 $yield read(T.threadid, ts, addr);
                 $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {

@@ -42,11 +42,11 @@ def get_processor_rules(tree, result):
     if tree[0] == "perf_layer_list":
         part1_result = get_processor_rules(tree[1], result)
         part2_result = get_processor_rules(tree[2], result)
-        if part1_result is not None:
+        if part1_result[0] is not None:
             return part1_result
-        if part2_result is not None:
+        if part2_result[0] is not None:
             return part2_result
-        return None
+        return None, None
     else:
         if tree[0] == "perf_layer_rule":
             event, event_args = get_name_with_args(tree[1])
@@ -71,12 +71,12 @@ def get_processor_rules(tree, result):
                 'performance_match': performance_match,
                 'buff_group': buff_group
             })
-            return None
+            return None, None
         else:
             assert(tree[0] == "custom_hole")
             custom_hole = []
-            build_custom_hole(tree[1], custom_hole)
-            return custom_hole
+            build_custom_hole(tree[2], custom_hole)
+            return tree[1], custom_hole
 
 def replace_cmd_args(program, buffsize):
     answer = []
@@ -196,7 +196,11 @@ def get_event_args(tree: Tuple, event_args: List[Tuple[str, str]]) -> None:
         get_event_args(tree[PLIST_TAIL], event_args)
     else:
         assert(tree[0] == "field_decl")
-        event_args.append({"name": tree[PPFIELD_NAME], "type": tree[PPFIELD_TYPE][PTYPE_DATA]})
+        if tree[PPFIELD_TYPE][PTYPE_DATA] == 'uint64_t':
+            type_ = "unsigned long long"
+        else:
+            type_ = tree[PPFIELD_TYPE][PTYPE_DATA]
+        event_args.append({"name": tree[PPFIELD_NAME], "type": type_})
 
 
 def get_events_data(tree: Tuple, events_data: Dict[str, Dict[str, str]]) -> None:
@@ -266,8 +270,13 @@ def get_parameters_types_field_decl(tree: Tuple, params: List[Dict[str, Tuple]])
             get_parameters_types_field_decl(tree[PLIST_BASE_CASE], params)
             get_parameters_types_field_decl(tree[PLIST_TAIL], params)
         else:
+            
             assert (tree[0] == 'field_decl')
-            params.append({"name": tree[1], "type": tree[PPFIELD_TYPE][1], "is_primitive" : is_type_primitive(tree[PPFIELD_TYPE])})
+            if tree[PPFIELD_TYPE][1] == "uint64_t":
+                type_ = "unsigned long long"
+            else:
+                type_ = tree[PPFIELD_TYPE][1]
+            params.append({"name": tree[1], "type": type_, "is_primitive" : is_type_primitive(tree[PPFIELD_TYPE])})
 
 
 def get_parameters_names_field_decl(tree: Tuple, params: List[str]) -> None:
