@@ -22,11 +22,17 @@ all: monitor
 monitor.o: monitor.cpp
 	clang++ monitor.cpp -g -std=c++17 -c -O3
 
-monitor.c: monitor.txt
+monitor.c: monitor.txt clean
 	python3 $(MON_COMPILER_PY) monitor.txt -b 512 -o monitor.c
 	-clang-format -i monitor.c
 
 monitor: monitor.c monitor.o
 	$(MON_COMPILER) monitor.c monitor.o
+
+
+clean:
+	-rm monitor.c monitor.o
+
+.PHONY: all clean
 
 

@@ -58,7 +58,7 @@ def declare_buffer_groups():
     for (buff_name, data) in TypeChecker.buffer_group_data.items():
         answer += f'''
 buffer_group BG_{buff_name};
-pthread_mutex_t LOCK_{buff_name};
+mtx_t LOCK_{buff_name};
         '''
     return answer
 
@@ -71,7 +71,7 @@ def init_buffer_groups():
             for i in range(data["arg_includes"]):
                 includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, BUFFER_{data['includes']}{i},stream_args_{data['includes']}_{i},{buff_name}_ORDER_EXP);\n"
         answer += f'''init_buffer_group(&BG_{buff_name});
-        if (pthread_mutex_init(&LOCK_{buff_name}, NULL) != 0) {"{"}
+        if (mtx_init(&LOCK_{buff_name}, NULL) != 0) {"{"}
         printf("mutex init has failed for {buff_name} lock\\n");
         return 1;
     {"}"}
@@ -333,10 +333,10 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
 
         if processor_name.lower() == "forward":
             out_name = TypeChecker.event_sources_data[stream_name]["input_stream_type"]
-            hole_name = "sizeof(EVENT_hole)"
+            hole_size = "sizeof(EVENT_hole)"
         else:
             out_name = TypeChecker.stream_processors_data[processor_name]["output_type"]
-            hole_name = f"sizeof(EVENT_{processor_name}_hole)"
+            hole_size = f"sizeof(EVENT_{processor_name}_hole)"
 
         connection_kind = TypeChecker.event_sources_data[stream_name]["connection_kind"]
         assert (connection_kind[0] == "conn_kind")
@@ -351,7 +351,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             for i in range(copies):
                 name = f"{stream_name}_{i}"
                 answer += f"\t// connect to event source {name}\n"
-                answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, {hole_name});\n"
+                answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, {hole_size});\n"
                 answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
                 if min_size_uninterrupt is not None:
                     answer += f"\tshm_arbiter_buffer_set_drop_space_threshold(BUFFER_{stream_name}{i},{min_size_uninterrupt})\n;"
@@ -366,7 +366,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
         else:
             name = f"{stream_name}"
             answer += f"\t// connect to event source {name}\n"
-            answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, {hole_name});\n"
+            answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, {hole_size});\n"
             answer += f"\tBUFFER_{stream_name} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
             answer += f"\t// register events in {name}\n"
             for ev_name, attrs in streams_to_events_map[stream_type].items():
@@ -571,9 +571,9 @@ case {mapping_in[event_name]["enum"]}:
             buffer_group = case['buff_group']
             stream_processor_name = case['process_using']
             if  stream_processor_name == 'forward' or TypeChecker.stream_processors_data[stream_processor_name]["special_hole"] is None:
-                hole_name = "sizeof(EVENT_hole)"
+                hole_size = "sizeof(EVENT_hole)"
             else:
-                hole_name = f"sizeof(EVENT_{stream_processor_name}_hole)"
+                hole_size = f"sizeof(EVENT_{stream_processor_name}_hole)"
             if buffer_kind != 'autodrop':
                 raise Exception("implement of non-autodrop buffer missing!")
             buff_size = case['connection_kind']['size']
@@ -592,12 +592,17 @@ case {mapping_in[event_name]["enum"]}:
             stream_args_code = f'''
 STREAM_{stream_type}_ARGS * stream_args_temp = malloc(sizeof(STREAM_{stream_type}_ARGS));
 {init_stream_args_code}
-pthread_mutex_lock(&LOCK_{buffer_group});
+mtx_lock(&LOCK_{buffer_group});
 bg_insert(&BG_{buffer_group}, ev_source_temp, temp_buffer,stream_args_temp,{buffer_group}_ORDER_EXP);
-pthread_mutex_unlock(&LOCK_{buffer_group});
+mtx_unlock(&LOCK_{buffer_group});
 '''
             creates_code = f'''
-            shm_stream *ev_source_temp = shm_stream_create_substream(stream, (inevent->head).id, {hole_name});
+            shm_stream_hole_handling hole_handling = {{
+              .hole_event_size = {hole_size},
+              .init = NULL,
+              .update = NULL
+            }};
+            shm_stream *ev_source_temp = shm_stream_create_substream(stream, NULL, NULL, NULL, NULL, &hole_handling);
             shm_arbiter_buffer *temp_buffer = shm_arbiter_buffer_create(ev_source_temp,  sizeof(STREAM_{stream_type}_out), {buff_size});
             shm_stream_register_all_events(ev_source_temp);
             {stream_args_code}
@@ -854,9 +859,9 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         stream_type = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
 
         answer = f'''
-            pthread_mutex_lock(&LOCK_{buffer_name});
+            mtx_lock(&LOCK_{buffer_name});
             bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
-            pthread_mutex_unlock(&LOCK_{buffer_name});
+            mtx_unlock(&LOCK_{buffer_name});
             {choose_statement}
         '''
         permutation_streams_code = ""
@@ -953,7 +958,7 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
         return f"\tshm_arbiter_buffer_drop(BUFFER_{event_source_name}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
     if tree[0] == "remove":
         buffer_group = tree[2][1];
-        return f"pthread_mutex_lock(&LOCK_{buffer_group});\nbg_remove({buffer_group}, {tree[1]});\npthread_mutex_unlock(&LOCK_{buffer_group});"
+        return f"mtx_lock(&LOCK_{buffer_group});\nbg_remove({buffer_group}, {tree[1]});\nmtx_unlock(&LOCK_{buffer_group});"
 
     assert (tree[0] == "field_access")
     target_stream, index, field = tree[1], tree[2], tree[3]
@@ -1296,7 +1301,7 @@ def destroy_all():
     # destroy buffer groups
     for buffer_group in TypeChecker.buffer_group_data.keys():
         answer += f"\tdestroy_buffer_group(&BG_{buffer_group});\n"
-        answer += f"\tpthread_mutex_destroy(&LOCK_{buffer_group});\n"
+        answer += f"\tmtx_destroy(&LOCK_{buffer_group});\n"
 
     # destroy event sources
     for (event_source, data) in TypeChecker.event_sources_data.items():
