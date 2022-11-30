@@ -22,8 +22,8 @@ int main(void) {
     thrd_t tid1, tid2, tid3, tid4;
     thrd_create(&tid1, thread, (void *)1L);
     thrd_create(&tid2, thread, (void *)2L);
-   //thrd_create(&tid3, thread, (void *)3L);
-   //thrd_create(&tid4, thread, (void *)4L);
+    thrd_create(&tid3, thread, (void *)3L);
+    thrd_create(&tid4, thread, (void *)4L);
 
     for (int i = 0; i < N; ++i) {
         mtx_lock(&m);
@@ -34,7 +34,7 @@ int main(void) {
 
     thrd_join(tid1, NULL);
     thrd_join(tid2, NULL);
-   //thrd_join(tid3, NULL);
-   //thrd_join(tid4, NULL);
+    thrd_join(tid3, NULL);
+    thrd_join(tid4, NULL);
     printf("Printed %d messages\n", print_num);
 }

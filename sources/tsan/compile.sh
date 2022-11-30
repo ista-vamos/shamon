@@ -24,4 +24,4 @@ clang $CFLAGS $SHAMON_INCLUDES -std=c11 -emit-llvm -S tsan_impl.c
 llvm-link tsan_impl.ll code-instr.bc -o code-linked.bc
 llvm-dis code-linked.bc
 
-clang -pthread $CFLAGS code-linked.ll $SHAMON_LIBS 
+clang -pthread $CFLAGS code-linked.ll $SHAMON_LIBS
