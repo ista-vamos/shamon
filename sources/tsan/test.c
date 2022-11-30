@@ -4,15 +4,13 @@
 mtx_t m;
 int   print_num = 0;
 
-#define N 1000
+#define N 10000
 
 int thread(void *data) {
-    thrd_t tid1, tid2;
-
     for (int i = 0; i < N; ++i) {
         mtx_lock(&m);
         ++print_num;
-        printf("thread %lu: %d\n", (size_t)data, i);
+        printf("thread %ld: %d\n", (long int)data, i);
         mtx_unlock(&m);
     }
 
@@ -22,10 +20,10 @@ int thread(void *data) {
 int main(void) {
     mtx_init(&m, mtx_plain);
     thrd_t tid1, tid2, tid3, tid4;
-    thrd_create(&tid1, thread, (void *)1);
-    thrd_create(&tid2, thread, (void *)2);
-   //thrd_create(&tid3, thread, (void *)3);
-   //thrd_create(&tid4, thread, (void *)4);
+    thrd_create(&tid1, thread, (void *)1L);
+    thrd_create(&tid2, thread, (void *)2L);
+   //thrd_create(&tid3, thread, (void *)3L);
+   //thrd_create(&tid4, thread, (void *)4L);
 
     for (int i = 0; i < N; ++i) {
         mtx_lock(&m);

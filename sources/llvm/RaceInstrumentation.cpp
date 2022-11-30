@@ -19,6 +19,7 @@ struct RaceInstrumentation : public FunctionPass {
 
   RaceInstrumentation() : FunctionPass(ID) {}
 
+  /*
   StructType *getThreadDataTy(LLVMContext& ctx) {
     if (!thread_data_ty) {
       thread_data_ty = StructType::create("struct.__vrd_thread_data",
@@ -27,6 +28,7 @@ struct RaceInstrumentation : public FunctionPass {
     }
     return thread_data_ty;
   }
+  */
 
   void getAnalysisUsage(AnalysisUsage &Info) const override {
       Info.setPreservesAll();
@@ -89,37 +91,15 @@ static inline bool isTSanFuncEntry(Function *fun) {
 void RaceInstrumentation::instrumentThreadCreate(CallInst *call, Value *data) {
     Module *module = call->getModule();
     LLVMContext &ctx = module->getContext();
-    auto *dataTy = getThreadDataTy(ctx);
-    auto *alloc = new AllocaInst(dataTy, 0, "__vrd_thr_data", call);
 
-    std::vector<Value *> indices_fst = {
-        Constant::getIntegerValue(Type::getInt32Ty(ctx), APInt(32, 0)),
-        Constant::getIntegerValue(Type::getInt32Ty(ctx), APInt(32, 0))
-    };
-    std::vector<Value *> indices_snd = {
-        Constant::getIntegerValue(Type::getInt32Ty(ctx), APInt(32, 0)),
-        Constant::getIntegerValue(Type::getInt32Ty(ctx), APInt(32, 1))
-    };
-    auto *alloc_fst = GetElementPtrInst::Create(dataTy, alloc, indices_fst, "", call);
-    auto *alloc_snd = GetElementPtrInst::Create(dataTy, alloc, indices_snd, "", call);
-
-    new StoreInst(data, alloc_fst, call);
-    const FunctionCallee &tid_fun = module->getOrInsertFunction("__vrd_new_thrd_id",
-                                                                Type::getInt64Ty(ctx));
-    auto *tid_call = CallInst::Create(tid_fun, {}, "", call);
+    const FunctionCallee &vrd_fun = module->getOrInsertFunction("__vrd_create_thrd_data",
+                                                                Type::getInt8PtrTy(ctx),
+                                                                Type::getInt8PtrTy(ctx));
+    std::vector<Value *> args = {data};
+    auto *tid_call = CallInst::Create(vrd_fun, args, "", call);
     tid_call->setDebugLoc(call->getDebugLoc());
-    new StoreInst(tid_call, alloc_snd, call);
 
-    CastInst *cast = CastInst::CreatePointerCast(alloc, Type::getInt8PtrTy(ctx), "", call);
-    call->replaceUsesOfWith(data, cast);
-
-    const FunctionCallee &instr_fun = module->getOrInsertFunction("__vrd_thrd_create",
-                                                                  Type::getVoidTy(ctx),
-                                                                  Type::getInt64Ty(ctx));
-    std::vector<Value *> args = {tid_call};
-    auto *new_call = CallInst::Create(instr_fun, args, "");
-    new_call->setDebugLoc(call->getDebugLoc());
-    new_call->insertAfter(call);
+    call->replaceUsesOfWith(data, tid_call);
 }
 
 static void insertMutexLockOrUnlock(CallInst *call, Value *mtx, const std::string& fun) {
@@ -135,13 +115,29 @@ static void insertMutexLockOrUnlock(CallInst *call, Value *mtx, const std::strin
     cast->insertBefore(new_call);
 }
 
-DebugLoc findFirstDbgLoc(Instruction *I) {
-    for (const auto& inst : *I->getParent()) {
-        auto &DL = inst.getDebugLoc();
-        if (DL)
-            return DL;
+static const Instruction *findInstWithDbg(const BasicBlock *block) {
+    for (const auto& inst : *block) {
+        if (inst.getDebugLoc())
+            return &inst;
     }
-    assert(false && "Found no debugging loc");
+
+    return nullptr;
+}
+
+static DebugLoc findFirstDbgLoc(const Instruction *I) {
+    if (auto *i = findInstWithDbg(I->getParent())) {
+        return i->getDebugLoc();
+    }
+
+    // just find _some_ debug info. I know this is just wrong, but TSAN not putting
+    // debug info is also wrong and we need to workaround it somehow
+    for (const auto& block : *I->getFunction()) {
+        if (auto *i = findInstWithDbg(&block)) {
+            return i->getDebugLoc();
+        }
+    }
+
+    //assert(false && "Found no debugging loc");
     return DebugLoc();
 }
 
@@ -149,18 +145,13 @@ void RaceInstrumentation::instrumentTSanFuncEntry(CallInst *call) {
     Module *module = call->getModule();
     Function *fun = call->getFunction();
     LLVMContext &ctx = module->getContext();
-    auto *dataTy = getThreadDataTy(ctx);
-
-    /* __tsan_fun_entry may not have dbgloc, workaround that */
-    if (!call->getDebugLoc())
-        call->setDebugLoc(findFirstDbgLoc(call));
 
     const FunctionCallee &instr_fun = module->getOrInsertFunction("__vrd_thrd_entry",
-                                                                  Type::getVoidTy(ctx),
-                                                                  Type::getInt64Ty(ctx));
+                                                                  Type::getInt8PtrTy(ctx),
+                                                                  Type::getInt8PtrTy(ctx));
 
     if (fun->getName().equals("main")) {
-        std::vector<Value *> args = {Constant::getIntegerValue(Type::getInt64Ty(ctx), APInt(64, 0))};
+        std::vector<Value *> args = {Constant::getNullValue(Type::getInt8PtrTy(ctx))};
         auto *new_call = CallInst::Create(instr_fun, args, "", call);
         new_call->setDebugLoc(call->getDebugLoc());
         instrumentThreadFunExit(fun);
@@ -171,18 +162,19 @@ void RaceInstrumentation::instrumentTSanFuncEntry(CallInst *call) {
         return;
     }
 
-    std::vector<Value *> indices_snd = {
-        Constant::getIntegerValue(Type::getInt32Ty(ctx), APInt(32, 0)),
-        Constant::getIntegerValue(Type::getInt32Ty(ctx), APInt(32, 1))
-    };
+    /* Replace all uses of arg with a dummy value,
+     * then get the original arg and replace the dummy value
+     * with the original arg */
     Value *arg = fun->getArg(0);
-    auto *cast = CastInst::CreateBitOrPointerCast(arg, dataTy->getPointerTo(), "", call);
-    auto *data_snd = GetElementPtrInst::Create(dataTy, cast, indices_snd, "", call);
-    auto *load = new LoadInst(Type::getInt64Ty(ctx), data_snd, "", call);
+    auto *dummy_phi = PHINode::Create(Type::getInt8PtrTy(ctx), 0);
+    arg->replaceAllUsesWith(dummy_phi);
 
-    std::vector<Value *> args = {load};
+    std::vector<Value *> args = {arg};
     auto *new_call = CallInst::Create(instr_fun, args, "", call);
     new_call->setDebugLoc(call->getDebugLoc());
+
+    dummy_phi->replaceAllUsesWith(new_call);
+    delete dummy_phi;
 
     instrumentThreadFunExit(fun);
 }
@@ -234,6 +226,12 @@ bool RaceInstrumentation::runOnBasicBlock(BasicBlock& block) {
             if (calledfun == nullptr) {
                 errs() << "A call via function pointer ignored: " << *call << "\n";
                 continue;
+            }
+
+            if (calledfun->getName().startswith("__tsan_")) {
+                /* __tsan_* functions may not have dbgloc, workaround that */
+                if (!call->getDebugLoc())
+                    call->setDebugLoc(findFirstDbgLoc(call));
             }
 
             if (auto *mtx = getMutexLock(calledfun, call)) {
