@@ -47,6 +47,9 @@ $$
     uint64_t nextts=0;
     uint64_t leastts=ULLONG_MAX;
     int seenNone=0;
+
+    #define min(a, b) __vamos_min(a, b)
+    #define max(a, b) __vamos_max(a, b)
 $$
 
 arbiter : GlobalEvent

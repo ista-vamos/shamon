@@ -1614,9 +1614,9 @@ def get_special_holes_update_code(mapping):
                     if event_hole_data["agg_func"] == "count":
                         event_code += f"\t\t\th->{event_hole_data['hole_attr']}+=((STREAM_{stream_type}_in *) ev)->cases.{event}.{event_hole_data['ev_attr']};\n"
                     elif event_hole_data["agg_func"] == "MAX":
-                        event_code += f"\t\t\th->{event_hole_data['hole_attr']} = max(h->{event_hole_data['hole_attr']},((STREAM_{stream_type}_in *) ev)->cases.{event}.{event_hole_data['ev_attr']});\n"
+                        event_code += f"\t\t\th->{event_hole_data['hole_attr']} = __vamos_max(h->{event_hole_data['hole_attr']},((STREAM_{stream_type}_in *) ev)->cases.{event}.{event_hole_data['ev_attr']});\n"
                     elif event_hole_data["agg_func"] == "MIN":
-                        event_code += f"\t\t\th->{event_hole_data['hole_attr']} = min(h->{event_hole_data['hole_attr']},((STREAM_{stream_type}_in *) ev)->cases.{event}.{event_hole_data['ev_attr']});\n"
+                        event_code += f"\t\t\th->{event_hole_data['hole_attr']} = __vamos_min(h->{event_hole_data['hole_attr']},((STREAM_{stream_type}_in *) ev)->cases.{event}.{event_hole_data['ev_attr']});\n"
                     else:
                         raise Exception("Not implmented")
             update_attributes_code += f'''
@@ -1642,6 +1642,22 @@ def generate_special_hole_functions(streams_to_events_map):
     
 def outside_main_code(components, streams_to_events_map, stream_types, ast, arbiter_event_source, existing_buffers):
     return f'''
+
+#define __vamos_min(a, b) ((a < b) ? (a) : (b))
+#define __vamos_max(a, b) ((a > b) ? (a) : (b))
+
+#ifdef NDEBUG
+#define vamos_check(cond)
+#define vamos_assert(cond)
+#else
+#define vamos_check(cond) do {{ if (!cond) {{fprintf(stderr, "\033[31m%s:%s:%d: check '" #cond "' failed!\033[0m\\n", __FILE__, __func__, __LINE__); print_buffers_state(); }} }} while(0)
+#define vamos_assert(cond) do{{ if (!cond) {{fprintf(stderr, "\033[31m%s:%s:%d: assert '" #cond "' failed!\033[0m\\n", __FILE__, __func__, __LINE__); print_buffers_state(); __work_done = 1; }} }} while(0)
+#endif
+
+#define vamos_hard_assert(cond) do{{ if (!cond) {{fprintf(stderr, "\033[31m%s:%s:%d: assert '" #cond "' failed!\033[0m\\n", __FILE__, __func__, __LINE__); print_buffers_state(); __work_done = 1; abort();}} }} while(0)
+
+
+
 struct _EVENT_hole
 {"{"}
   unsigned long long n;
@@ -1762,16 +1778,6 @@ bool are_events_in_head(char* e1, size_t i1, char* e2, size_t i2, int count, siz
 
 	return true;
 {"}"}
-
-#ifdef NDEBUG
-#define vamos_check(cond)
-#define vamos_assert(cond)
-#else
-#define vamos_check(cond) do {{ if (!cond) {{fprintf(stderr, "\033[31m%s:%s:%d: check '" #cond "' failed!\033[0m\\n", __FILE__, __func__, __LINE__); print_buffers_state(); }} }} while(0)
-#define vamos_assert(cond) do{{ if (!cond) {{fprintf(stderr, "\033[31m%s:%s:%d: assert '" #cond "' failed!\033[0m\\n", __FILE__, __func__, __LINE__); print_buffers_state(); __work_done = 1; }} }} while(0)
-#endif
-
-#define vamos_hard_assert(cond) do{{ if (!cond) {{fprintf(stderr, "\033[31m%s:%s:%d: assert '" #cond "' failed!\033[0m\\n", __FILE__, __func__, __LINE__); print_buffers_state(); __work_done = 1; abort();}} }} while(0)
 
 /*
 static inline dump_event_data(shm_event *ev, size_t ev_size) {{
