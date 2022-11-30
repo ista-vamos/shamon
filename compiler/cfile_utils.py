@@ -635,7 +635,7 @@ mtx_unlock(&LOCK_{buffer_group});
               .init = NULL,
               .update = NULL
             }};
-            shm_stream *ev_source_temp = shm_stream_create_substream(stream, (inevent->head).id, &hole_handling);
+            shm_stream *ev_source_temp = shm_stream_create_substream(stream, NULL, NULL, NULL, NULL, &hole_handling);
             shm_arbiter_buffer *temp_buffer = shm_arbiter_buffer_create(ev_source_temp,  sizeof(STREAM_{out_name}_out), {buff_size});
             shm_stream_register_all_events(ev_source_temp);
             {stream_args_code}
