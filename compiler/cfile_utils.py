@@ -343,13 +343,14 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
         copies = TypeChecker.event_sources_data[stream_name]["copies"]
 
         processor_name = TypeChecker.event_sources_data[stream_name]["processor_name"]
-
         if processor_name.lower() == "forward":
+            processor_name = processor_name.lower()
             out_name = TypeChecker.event_sources_data[stream_name]["input_stream_type"]
             hole_size = "sizeof(EVENT_hole)"
         else:
             out_name = TypeChecker.stream_processors_data[processor_name]["output_type"]
-            hole_size = f"sizeof(EVENT_{TypeChecker.stream_processors_data[processor_name]['hole_name']}_hole)"
+            hole_name = TypeChecker.stream_processors_data[processor_name]['hole_name']
+            hole_size = f"sizeof(EVENT_{hole_name}_hole)"
 
         connection_kind = TypeChecker.event_sources_data[stream_name]["connection_kind"]
         assert (connection_kind[0] == "conn_kind")
@@ -367,8 +368,8 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 answer += f"""
                 shm_stream_hole_handling hh = {{
                   .hole_event_size = {hole_size},
-                  .init = NULL,
-                  .update = NULL
+                  .init = &init_hole_{processor_name},
+                  .update = &update_hole_{processor_name}
                 }};\n
                 """
                 answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
@@ -389,8 +390,8 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             answer += f"""
                 shm_stream_hole_handling hh = {{
                   .hole_event_size = {hole_size},
-                  .init = NULL,
-                  .update = NULL
+                  .init = &init_hole_{processor_name},
+                  .update = &update_hole_{processor_name}
                 }};\n
                 """
             answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
@@ -666,7 +667,7 @@ def declare_perf_layer_funcs(mapping) -> str:
             sleep_ns(10);
         {"}"}
         while(true) {"{"}
-            inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_forward, &init_hole, &update_hole);
+            inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_forward);
 
             if (inevent == NULL) {"{"}
                 // no more events
@@ -709,7 +710,7 @@ def declare_perf_layer_funcs(mapping) -> str:
         sleep_ns(10);
     {"}"}
     while(true) {"{"}
-        inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_{stream_processor}, &init_hole{hole_name}, &update_hole{hole_name});
+        inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_{stream_processor});
 
         if (inevent == NULL) {"{"}
             // no more events
