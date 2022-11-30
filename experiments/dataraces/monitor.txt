@@ -14,11 +14,11 @@ stream type ThreadEvent(threadid: int, nextts: uint64_t)
 stream processor TEProcessor(threadid : int) : ThreadEvent(threadid, 0) -> ThreadEvent(threadid, 0) extends FORWARD
 {
     on fork(ts, ntid) creates ThreadEvent process using TEProcessor(ntid) to autodrop(@BUFSIZE) include in Threads forward;
-    hole
+    my_hole
     {
-        n = COUNT(*);
-        firstts = MIN(read.timestamp, write.timestamp, atomicread.timestamp, atomicwrite.timestamp, lock.timestamp, unlock.timestamp, alloc.timestamp, free.timestamp, fork.timestamp, join.timestamp);
-        lastts = MAX(read.timestamp, write.timestamp, atomicread.timestamp, atomicwrite.timestamp, lock.timestamp, unlock.timestamp, alloc.timestamp, free.timestamp, fork.timestamp, join.timestamp);
+        int n = COUNT(*);
+        uint64_t firstts = MIN(read.timestamp, write.timestamp, atomicread.timestamp, atomicwrite.timestamp, lock.timestamp, unlock.timestamp, alloc.timestamp, free.timestamp, fork.timestamp, join.timestamp);
+        uint64_t lastts = MAX(read.timestamp, write.timestamp, atomicread.timestamp, atomicwrite.timestamp, lock.timestamp, unlock.timestamp, alloc.timestamp, free.timestamp, fork.timestamp, join.timestamp);
     }
 }
 
@@ -43,10 +43,8 @@ stream type GlobalEvent
 }
 globals
 $$
-    #include <limits.h>
-
-    unsigned long long nextts=0;
-    unsigned long long leastts=ULLONG_MAX;
+    uint64_t nextts=0;
+    uint64_t leastts=ULLONG_MAX;
     int seenNone=0;
 $$
 
@@ -76,7 +74,7 @@ arbiter : GlobalEvent
                 $yield write(T.threadid, ts, addr);
                 $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -91,7 +89,7 @@ arbiter : GlobalEvent
                 $yield atomicread(T.threadid, ts, addr,mode);
                 $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -106,7 +104,7 @@ arbiter : GlobalEvent
                 $yield atomicwrite(T.threadid, ts, addr,mode);
                 $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -121,7 +119,7 @@ arbiter : GlobalEvent
                 $yield lock(T.threadid, ts, addr);
                 $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -136,7 +134,7 @@ arbiter : GlobalEvent
                 $yield unlock(T.threadid, ts, addr);
                 $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -151,7 +149,7 @@ arbiter : GlobalEvent
                 $yield alloc(T.threadid, ts, addr, size);
                 $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -166,7 +164,7 @@ arbiter : GlobalEvent
                 $yield free(T.threadid, ts, addr);
                 $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -181,7 +179,7 @@ arbiter : GlobalEvent
                 $yield fork(T.threadid, ts, tid);
                 $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -196,7 +194,7 @@ arbiter : GlobalEvent
                 $yield join(T.threadid, ts, tid);
                 $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
@@ -204,7 +202,7 @@ arbiter : GlobalEvent
                 leastts=min(leastts, ts);
             }
         $$
-        on T : | hole(n)
+        on T : | my_hole(n, mints, maxts)
         $$
             if(mints==nextts)
             {
@@ -218,7 +216,7 @@ arbiter : GlobalEvent
                 $yield skipend(T.threadid, maxts);
                 $drop 1 from T;
                 nextts++;
-                leastts=MAXUINT64;
+                leastts=ULLONG_MAX;
             }
             else
             {
