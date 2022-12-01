@@ -68,7 +68,7 @@ void __tsan_init() {
         "atomicread", "tl", "atomicwrite", "tl",
         "lock", "tl", "unlock", "tl",
         "alloc", "tll", "free", "tl",
-        "fork", "ti", "join", "ti");
+        "fork", "tl", "join", "tl");
     assert(top_control);
 
     top_shmbuf = create_shared_buffer(shmkey, 512, top_control);
@@ -109,29 +109,62 @@ void __tsan_func_entry(void *returnaddress) {
 void __tsan_func_exit(void) {}
 
 struct __vrd_thread_data {
+    /* The original data passed to thrd_create */
     void *data;
+    /* Our internal unique thread ID */
     uint64_t thread_id;
+    /* ID assigned by the thrd_create/ptrhead_create function
+     * (might not be uinque) */
+    uint64_t std_thread_id;
+    /* SHM buffer */
+    struct buffer *shmbuf;
 };
 
-void *__vrd_create_thrd_data(void *original_data) {
+/*
+ * Called before thrd_create.
+ *
+ * Allocate memory with our data out the thread.
+ * Instrumentation replaces the thread data with this memory
+ * so that we get this memory on entering the thread
+ */
+void *__vrd_create_thrd(void *original_data) {
     uint64_t tid = atomic_fetch_add(&last_thread_id, 1);
-    /* FIXME: we leak these */
+    /* FIXME: we leak this memory */
     struct __vrd_thread_data *data = malloc(sizeof *data);
     assert(data && "Allocation failed");
 
     data->data = original_data;
     data->thread_id = tid;
+    data->shmbuf = create_shared_sub_buffer(top_shmbuf, 0, top_control);
+    if (!data->shmbuf) {
+        assert(data->shmbuf && "Failed creating buffer");
+        abort();
+    }
 
     return data;
 }
 
+/* Called after thrd_create. */
+void __vrd_thrd_created(void *data, uint64_t std_tid) {
+    struct __vrd_thread_data *tdata = (struct __vrd_thread_data *)data;
+    struct buffer *shm = thread_data.shmbuf;
+    assert(shm && "Do not have SHM buffer");
+    void *addr = start_event(shm, EV_FORK);
+    buffer_partial_push(shm, addr, &thread_data.thread_id,
+		        sizeof(thread_data.thread_id));
+    buffer_finish_push(shm);
+
+    tdata->std_thread_id = std_tid;
+}
+
+/* Called at the beginning of the thread routine (or main) */
 void *__vrd_thrd_entry(void *data) {
     struct __vrd_thread_data *tdata = (struct __vrd_thread_data *)data;
 
     thread_data.waited_for_buffer = 0;
     thread_data.last_id           = 0;
 
-    /* create a new sub-buffer (or use the top level one for the main thread) */
+    /* assign the SHM buffer to this thread */
     if (data == NULL) {
         thread_data.thread_id = 0;
         thread_data.shmbuf = top_shmbuf;
@@ -139,17 +172,15 @@ void *__vrd_thrd_entry(void *data) {
     }
 
     thread_data.thread_id = tdata->thread_id;
-    thread_data.shmbuf = create_shared_sub_buffer(top_shmbuf, 0, top_control);
-    if (!thread_data.shmbuf) {
-        assert(thread_data.shmbuf && "Failed creating buffer");
-        abort();
-    }
+    assert(tdata->shmbuf && "Do not have SHM buffer");
+    thread_data.shmbuf = tdata->shmbuf;
 
 #ifdef DEBUG_STDOUT
-    printf("[%lu] thread %lu created\n", rt_timestamp(), thread_data.thread_id);
+    printf("[%lu] thread %lu started\n", rt_timestamp(), thread_data.thread_id);
 #endif
     return tdata->data;
 }
+
 
 void __vrd_thrd_exit(void) {
     struct buffer *shm = thread_data.shmbuf;

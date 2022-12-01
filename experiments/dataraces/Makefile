@@ -16,7 +16,7 @@ monitor.c: monitor.txt clean
 	-clang-format -i monitor.c
 
 compiler_utils.o: ../../compiler/cfiles/compiler_utils.c
-	$(CC) -c $< -o $@
+	$(CC) -g -c $< -o $@
 
 monitor: monitor.c monitor.o compiler_utils.o
 	$(MON_COMPILER) monitor.c monitor.o -lstdc++ compiler_utils.o

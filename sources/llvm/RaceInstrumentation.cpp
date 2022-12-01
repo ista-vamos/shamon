@@ -92,14 +92,31 @@ void RaceInstrumentation::instrumentThreadCreate(CallInst *call, Value *data) {
     Module *module = call->getModule();
     LLVMContext &ctx = module->getContext();
 
-    const FunctionCallee &vrd_fun = module->getOrInsertFunction("__vrd_create_thrd_data",
+    // create our data structure and pass it as data to the thread
+    const FunctionCallee &vrd_fun = module->getOrInsertFunction("__vrd_create_thrd",
                                                                 Type::getInt8PtrTy(ctx),
                                                                 Type::getInt8PtrTy(ctx));
     std::vector<Value *> args = {data};
     auto *tid_call = CallInst::Create(vrd_fun, args, "", call);
     tid_call->setDebugLoc(call->getDebugLoc());
 
+    // XXX: couldn't be the 'data' value used in more places?
     call->replaceUsesOfWith(data, tid_call);
+
+    // now insert a call that registers that a thread was created and pass there
+    // our data and the thread identifier
+    // create our data structure and pass it as data to the thread
+    auto *tidType = cast<PointerType>(call->getOperand(0)->getType())->getContainedType(0);
+    const FunctionCallee &created_fun = module->getOrInsertFunction("__vrd_thrd_created",
+                                                                    Type::getVoidTy(ctx),
+                                                                    Type::getInt8PtrTy(ctx),
+                                                                    tidType);
+    auto *load = new LoadInst(tidType, call->getOperand(0), "", false, Align(4));
+    args = {tid_call, load};
+    auto *created_call = CallInst::Create(created_fun, args, "");
+    created_call->setDebugLoc(call->getDebugLoc());
+    created_call->insertAfter(call);
+    load->insertAfter(call);
 }
 
 static void insertMutexLockOrUnlock(CallInst *call, Value *mtx, const std::string& fun) {

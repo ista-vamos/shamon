@@ -636,24 +636,29 @@ mtx_lock(&LOCK_{buffer_group});
 bg_insert(&BG_{buffer_group}, ev_source_temp, temp_buffer,stream_args_temp,{buffer_group}_ORDER_EXP);
 mtx_unlock(&LOCK_{buffer_group});
 '''
+            hole_name = TypeChecker.stream_processors_data[stream_processor_name]['hole_name']
             creates_code = f'''
             shm_stream_hole_handling hole_handling = {{
               .hole_event_size = {hole_size},
-              .init = NULL,
-              .update = NULL
+              .init = &init_hole_{hole_name},
+              .update = &update_hole_{hole_name}
             }};
             shm_stream *ev_source_temp = shm_stream_create_substream(stream, NULL, NULL, NULL, NULL, &hole_handling);
+            if (!ev_source_temp) {{
+                fprintf(stderr, "Failed creating substream for '{out_name}'\\n");
+                abort();
+            }}
             shm_arbiter_buffer *temp_buffer = shm_arbiter_buffer_create(ev_source_temp,  sizeof(STREAM_{out_name}_out), {buff_size});
             shm_stream_register_all_events(ev_source_temp);
             {stream_args_code}
             thrd_t temp_thread;
             thrd_create(&temp_thread, (void*)PERF_LAYER_{stream_processor_name}, temp_buffer);
-            '''        
+            shm_arbiter_buffer_set_active(temp_buffer, true);
+            '''
             answer+=f'''
                 case {mapping_in[event_name]["enum"]}:
                 {build_switch_performance_match(case['performance_match'], event_name, mapping_in, mapping_out, level=level + 1)}
                 {creates_code}
-                shm_arbiter_buffer_write_finish(buffer);
                 break;
                 '''
     return answer

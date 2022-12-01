@@ -259,10 +259,14 @@ monitor {
     $$ printf("ATOMIC WRITE\n"); $$
 
     on lock(tid, timestamp, addr) where $$ true $$
-    $$ printf("LOCK\n"); $$
+    $$
+        printf("lock(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
+    $$
 
     on unlock(tid, timestamp, addr) where $$ true $$
-    $$ printf("UNLOCK\n"); $$
+    $$
+        printf("unlock(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
+    $$
 
     on alloc(tid, timestamp , addr, size) where $$ true $$ $$ printf("ALLOC\n"); $$
     on free(tid, timestamp, addr ) where $$ true $$        $$ printf("FREE\n"); $$
