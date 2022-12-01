@@ -1104,7 +1104,7 @@ def monitor_events_code(tree, stream_name, possible_events, count_tabs) -> str:
         return f'''
 {tabs}if (received_event->head.kind == {possible_events[event]["index"]}) {"{"}
 {declare_monitor_args(tree[PPMONITOR_RULE_EV_ARGS], event, possible_events[event], count_tabs + 1)}
-{tabs}  if ({tree[PPMONITOR_RULE_EXPR]}) {"{"}
+{tabs}  if ({tree[PPMONITOR_RULE_EXPR][1]}) {"{"}
 {tabs}      {tree[PPMONITOR_RULE_CODE]}
 {tabs}  {"}"}
 {tabs}{"}"}
@@ -1178,6 +1178,7 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
                     stream_drops_code += f"\tshm_arbiter_buffer_drop(BUFFER_{stream}, {count});\n"
             inner_code = f'''
             {define_binded_args(binded_args, stream_types)}
+           
             if({process_where_condition(tree[PPARB_RULE_CONDITION_CODE])}) {"{"}
 
                 {get_arb_rule_stmt_list_code(tree[PPARB_RULE_STMT_LIST], mapping, binded_args, stream_types,
@@ -1412,6 +1413,7 @@ def print_event_name(stream_types, mapping):
 
     code = ""
     for (event_source_index, (event_source, data)) in enumerate(TypeChecker.event_sources_data.items()):
+        
         output_type = stream_types[event_source][0]
         code += f'''
     if(ev_src_index == {event_source_index}) {"{"}
