@@ -495,7 +495,7 @@ def instantiate_args(stream_name, event_name, new_arg_names):
     for (original_arg, new_arg) in zip(original_args, new_arg_names):
         original_name = original_arg["name"]
         arg_type = original_arg["type"]
-        declared_args += f"{arg_type} {new_arg} = ((STREAM_{stream_name}_in *)inevent)->cases.{event_name}.{original_name};\n"
+        declared_args += f"\t\t{arg_type} {new_arg} = ((STREAM_{stream_name}_in *)inevent)->cases.{event_name}.{original_name};\n"
     return declared_args
 
 
@@ -503,7 +503,8 @@ def build_drop_funcs_conds(rules, stream_name, mapping) -> str:
     for rule in rules:
         # TODO: missing implementation of creates at most
         event = rule["event"]
-        return f'''if (inevent->kind == {mapping[event]["enum"]}) {"{"}
+        return f'''
+    if (inevent->kind == {mapping[event]["enum"]}) {"{"}
 {instantiate_args(stream_name, event, rule["event_args"])}
         {process_performance_match(rule["performance_match"])}
     {"}"}
@@ -511,17 +512,23 @@ def build_drop_funcs_conds(rules, stream_name, mapping) -> str:
 
 
 def build_should_keep_funcs(mapping) -> str:
-    answer = f'''bool SHOULD_KEEP_forward(shm_stream * s, shm_event * e) {"{"}
+    answer = f'''
+bool SHOULD_KEEP_forward(shm_stream * s, shm_event * e) {"{"}
     return true;
 {"}"}
-            '''
+'''
 
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
         performance_layer_rule_list = data["perf_layer_rule_list"]
         stream_type = data["input_type"]
+        extend_processor_name = data['extends_node'][0]
+        if extend_processor_name is None:
+            extend_processor_name = "forward"
+        if extend_processor_name.lower() == "forward":
+            extend_processor_name = extend_processor_name.lower()
         answer += f'''bool SHOULD_KEEP_{stream_processor}(shm_stream * s, shm_event * inevent) {"{"}
 {build_drop_funcs_conds(performance_layer_rule_list, stream_type, mapping[stream_type])}
-return true;
+    return SHOULD_KEEP_{extend_processor_name}(s, inevent);
 {"}"}
 '''
     return answer

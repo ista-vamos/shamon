@@ -135,6 +135,8 @@ def get_components_dict(tree: Tuple, answer: Dict[str, List[Tuple]]) -> None:
         answer[name].append(tree)
 
 def get_name_with_args(tree: Tuple):
+    if tree is None:
+        return None, None
     if tree[0] == "name-with-args":
         args = []
         if tree[2] is None:

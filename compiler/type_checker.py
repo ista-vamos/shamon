@@ -272,7 +272,7 @@ class TypeChecker:
             stream_processor_name, args = get_name_with_args(tree[1])
             input_type, input_args = get_name_with_args(tree[2])
             output_type, output_args = get_name_with_args(tree[3])
-            extends_node = tree[4]
+            extends_node = get_name_with_args(tree[4][1])
             processor_rules = []
             hole_name, special_hole = get_processor_rules(tree[5], processor_rules)
             TypeChecker.stream_processors_data[stream_processor_name] = {
