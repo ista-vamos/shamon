@@ -239,6 +239,14 @@ arbiter : GlobalEvent
         $$
     }
 
+	on any
+	$$
+		if(!seenNone)
+		{
+			nextts=leastts;
+		}
+		seenNone=0;
+	$$
 }
 
 monitor {
