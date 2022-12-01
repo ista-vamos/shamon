@@ -43,9 +43,13 @@ stream type GlobalEvent
 }
 globals
 $$
+    #include <limits.h>
     uint64_t nextts=0;
     uint64_t leastts=ULLONG_MAX;
     int seenNone=0;
+
+    #define min(a, b) __vamos_min(a, b)
+    #define max(a, b) __vamos_max(a, b)
 $$
 
 arbiter : GlobalEvent
@@ -235,6 +239,49 @@ arbiter : GlobalEvent
         $$
     }
 
+	always
+	$$
+		if(!seenNone)
+		{
+			nextts=leastts;
+		}
+		seenNone=0;
+	$$
 }
 
-monitor {}
+monitor {
+    on read(tid, timestamp, addr) where $$ true $$
+    $$
+    	printf("READ\n");
+    $$
+
+    on write(tid, timestamp, addr) where $$ true $$
+    $$
+    printf("WRITE\n");
+    $$
+
+    on atomicread(tid, timestamp, addr , mode) where $$ true $$
+    $$ printf("ATOMIC READ\n"); $$
+
+    on atomicwrite(tid, timestamp, addr , mode) where $$ true $$
+    $$ printf("ATOMIC WRITE\n"); $$
+
+    on lock(tid, timestamp, addr) where $$ true $$
+    $$
+        printf("lock(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
+    $$
+
+    on unlock(tid, timestamp, addr) where $$ true $$
+    $$
+        printf("unlock(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
+    $$
+
+    on alloc(tid, timestamp , addr, size) where $$ true $$ $$ printf("ALLOC\n"); $$
+    on free(tid, timestamp, addr ) where $$ true $$        $$ printf("FREE\n"); $$
+    on fork(tid, timestamp, newthreadid) where $$ true $$  $$ printf("FORK\n"); $$
+    on join(tid, timestamp, threadid) where $$ true $$     $$ printf("JOIN\n"); $$
+    on skipstart(tid, timestamp ) where $$ true $$         $$ printf("SKIPSTART\n"); $$
+    on skipend(tid, timestamp ) where $$ true $$           $$ printf("SKIPEND\n"); $$
+    on done_(tid) where $$ true $$                         $$ printf("DONE\n"); $$
+
+}
