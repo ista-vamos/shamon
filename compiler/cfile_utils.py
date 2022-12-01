@@ -521,7 +521,7 @@ def build_should_keep_funcs(mapping) -> str:
         stream_type = data["input_type"]
         answer += f'''bool SHOULD_KEEP_{stream_processor}(shm_stream * s, shm_event * inevent) {"{"}
 {build_drop_funcs_conds(performance_layer_rule_list, stream_type, mapping[stream_type])}
-return false;
+return true;
 {"}"}
 '''
     return answer
