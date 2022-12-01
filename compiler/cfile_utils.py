@@ -1270,8 +1270,8 @@ def check_progress(rule_set_name, tree, existing_buffers):
     for (buffer_name, desired_count) in buffers_to_peek.items():
         answer += f"if (count_{buffer_name} >= {desired_count}) {{"
         n += 1
-    answer += "\tok = 0;\n"
-    answer += "}" * n
+        answer += "\tok = 0;\n"
+        answer += "}" * n
 
     answer += "if (ok == 0) {\n"
 
