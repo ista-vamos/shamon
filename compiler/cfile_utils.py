@@ -1329,6 +1329,14 @@ def build_rule_set_functions(tree, mapping, stream_types, existing_buffers):
     def local_explore_rule_list(local_tree) -> str:
         if local_tree[0] == "arb_rule_list":
             return local_explore_rule_list(local_tree[1]) + local_explore_rule_list(local_tree[2])
+        elif local_tree[0] == "always":
+            return f'''
+    if ({process_where_condition(local_tree[1])}){"{"}
+        // always code
+        {local_tree[2]}
+        return 1;
+    {"}"}
+'''
         else:
             assert local_tree[0] == "arbiter_rule1" or local_tree[0] == "arbiter_rule2"
             return arbiter_rule_code(local_tree, mapping, stream_types, TypeChecker.arbiter_output_type)

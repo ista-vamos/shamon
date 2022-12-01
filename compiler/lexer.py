@@ -158,7 +158,8 @@ class MyLexer(object):
         "in": "IN",
         "count": "COUNT",
         "max": "MAX",
-        "min": "MIN"
+        "min": "MIN",
+        "always": "ALWAYS"
     }
 
     # Token names.

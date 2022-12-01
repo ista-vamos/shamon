@@ -630,8 +630,9 @@ def get_buffers_and_peeks(tree: Tuple, result: Dict[str, int], type_checker: Any
         get_buffers_and_peeks(tree[1], result, type_checker, existing_buffers)
         get_buffers_and_peeks(tree[2], result, type_checker, existing_buffers)
     else:
-        if tree[0] == "arbiter_rule1":
-
+        if tree[0] == 'always':
+            pass
+        elif tree[0] == "arbiter_rule1":
             list_buff_match = tree[1]
             local_get_buffer_peeks(list_buff_match, type_checker, result, existing_buffers)
         else:

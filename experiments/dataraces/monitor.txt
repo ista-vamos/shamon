@@ -239,7 +239,7 @@ arbiter : GlobalEvent
         $$
     }
 
-	on any
+	always
 	$$
 		if(!seenNone)
 		{

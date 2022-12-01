@@ -601,10 +601,19 @@ def p_arbiter_rule(p):
     '''
     arbiter_rule : ON list_buff_match_exp WHERE BEGIN_CCODE ccode_l_where_expression BEGIN_CCODE arbiter_rule_stmt_list
                  | ON list_buff_match_exp BEGIN_CCODE arbiter_rule_stmt_list
+                 | ALWAYS WHERE BEGIN_CCODE ccode_l_where_expression BEGIN_CCODE CCODE_TOKEN
+                 | ALWAYS BEGIN_CCODE CCODE_TOKEN
                  | CHOOSE listids arb_choose_middle_part '{' arbiter_rule_list '}'
                  | CHOOSE choose_order listids arb_choose_middle_part '{' arbiter_rule_list '}'
     '''
-    if p[1] == "on":
+    if p[1] == "always":
+        choose_count = None
+        if len(p) == 4:
+            p[0] = ('always', ("base_where_expr", "true"), p[3])
+        else:
+            assert(len(p) == 6)
+            p[0] = ('always', p[4], p[6])
+    elif p[1] == "on":
         if len(p) == 5:
             p[0] = ("arbiter_rule1", p[2], None, p[4])
         else:
