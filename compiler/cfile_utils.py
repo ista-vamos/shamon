@@ -664,32 +664,32 @@ def declare_perf_layer_funcs(mapping) -> str:
     
     for stream_type in TypeChecker.stream_types_data.keys():
         answer+=f'''
-        int PERF_LAYER_forward_{stream_type} (shm_arbiter_buffer *buffer) {"{"}
-        atomic_fetch_add(&count_event_streams, 1); 
-        shm_stream *stream = shm_arbiter_buffer_stream(buffer);   
-        void *inevent;
-        void *outevent;   
+int PERF_LAYER_forward_{stream_type} (shm_arbiter_buffer *buffer) {"{"}
+    atomic_fetch_add(&count_event_streams, 1); 
+    shm_stream *stream = shm_arbiter_buffer_stream(buffer);   
+    void *inevent;
+    void *outevent;   
 
-        // wait for active buffer
-        while ((!shm_arbiter_buffer_active(buffer))){"{"}
-            sleep_ns(10);
-        {"}"}
-        while(true) {"{"}
-            inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_forward);
-
-            if (inevent == NULL) {"{"}
-                // no more events
-                break;
-            {"}"}
-            outevent = shm_arbiter_buffer_write_ptr(buffer);
-
-            memcpy(outevent, inevent, sizeof(STREAM_{stream_type}_in));
-            shm_arbiter_buffer_write_finish(buffer);
-            
-            shm_stream_consume(stream, 1);
-        {"}"}  
-        atomic_fetch_add(&count_event_streams, -1);   
+    // wait for active buffer
+    while ((!shm_arbiter_buffer_active(buffer))){"{"}
+        sleep_ns(10);
     {"}"}
+    while(true) {"{"}
+        inevent = stream_filter_fetch(stream, buffer, &SHOULD_KEEP_forward);
+
+        if (inevent == NULL) {"{"}
+            // no more events
+            break;
+        {"}"}
+        outevent = shm_arbiter_buffer_write_ptr(buffer);
+
+        memcpy(outevent, inevent, sizeof(STREAM_{stream_type}_in));
+        shm_arbiter_buffer_write_finish(buffer);
+        
+        shm_stream_consume(stream, 1);
+    {"}"}  
+    atomic_fetch_add(&count_event_streams, -1);   
+{"}"}
         '''
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
         stream_in_name = data['input_type']
