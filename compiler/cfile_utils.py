@@ -3,7 +3,7 @@ from typing import Type
 from utils import *
 from parser_indices import *
 from type_checker import TypeChecker, ARBITER_RULE_SET
-from itertools import permutations
+from itertools import combinations
 
 
 class StaticCounter:
@@ -880,76 +880,9 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         if context is not None:
             if buffer_name in context.keys():
                 raise Exception("buffer name is in context created in match fun")
-        assert buffer_name in TypeChecker.buffer_group_data.keys()
-
-        temp_binded_streams = []
-        get_list_ids(tree[2], temp_binded_streams)
-
-        order = "first"
-        if choose_order is not None:
-            assert (choose_order[0] == "choose-order")
-            order = choose_order[1]
-            count_choose = choose_order[2]
-            if context is not None:
-                if count_choose in context.keys():
-                    count_choose = context[count_choose]
-        else:
-            count_choose = len(temp_binded_streams)
-
-        if order == "first":
-            choose_statement = f"is_selection_successful = bg_get_first_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
-        else:
-            choose_statement = f"is_selection_successful = bg_get_last_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
-
         binded_streams = []
-        if context is not None:
-            for bs in temp_binded_streams:
-                if bs in context.keys():
-                    binded_streams.append(context[bs])
-        else:
-            binded_streams = temp_binded_streams
-
-        assert len(binded_streams) == len(temp_binded_streams)
-        for s in binded_streams:
-            stream_types[s] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"],
-                               TypeChecker.buffer_group_data[buffer_name]["in_stream"])
-
-        stream_type = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
-
-        answer = f'''
-            mtx_lock(&LOCK_{buffer_name});
-            bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
-            mtx_unlock(&LOCK_{buffer_name});
-            {choose_statement}
-        '''
-        permutation_streams_code = ""
-        for perm in permutations(range(0, len(binded_streams))):
-            declared_streams = ""
-            for (index, name) in zip(perm, binded_streams):
-                declared_streams += f"shm_stream *{name} = chosen_streams[{index}]->stream;\n"
-                declared_streams += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams[{index}]->buffer;\n"
-                declared_streams += f"STREAM_{stream_type}_ARGS *stream_args_{name} = (STREAM_{stream_type}_ARGS *)chosen_streams[{index}]->args;\n"
-                buffer_peeks_res = dict()
-                existing_buffers = set()
-                existing_buffers.add(name)
-                local_get_buffer_peeks(current_tail, TypeChecker, buffer_peeks_res, existing_buffers)
-                if name in buffer_peeks_res.keys():
-                    declared_streams += f"char* e1_{name}; size_t i1_{name}; char* e2_{name}; size_t i2_{name};\n" \
-                                        f"int count_{name} = shm_arbiter_buffer_peek(BUFFER_{name}, {buffer_peeks_res[name]}, " \
-                                        f"(void**)&e1_{name}, &i1_{name}, (void**)&e2_{name}, &i2_{name});\n"
-
-            permutation_streams_code += f'''
-            {"{"}
-                {declared_streams}
-                {inner_code}
-            {"}"}
-            '''
-        answer += f'''
-            if (is_selection_successful) {'{'}
-                {permutation_streams_code}
-            {'}'}
-                    '''
-        return answer
+        get_list_ids(tree[2], binded_streams)        
+        return get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order, stream_types, current_tail, inner_code)
     else:
         assert (tree[0] == "buff_match_exp-args")
         match_fun_name, arg1, arg2 = tree[1], tree[2], tree[3]
@@ -1164,6 +1097,84 @@ def process_where_condition(tree):
             assert (field_access[0] == "field_access")
             return process_arb_rule_stmt(field_access, None, None)
 
+def get_choose_statement(binded_streams, buffer_name, choose_order):
+    at_least = len(binded_streams)
+    choose_count = at_least
+    if (choose_order is None) or (choose_order[1] == "first"):
+        choose_statement = ""
+        if choose_order is None:
+            choose_statement += "// does not specifies order, we take first n even sources\n"
+        else:
+            if choose_order[2]:
+                choose_count = choose_order[2]
+        choose_statement += f"is_selection_successful = bg_get_first_n(&BG_{buffer_name}, {at_least}, {choose_count}, &chosen_streams);\n"
+    else:
+        assert (choose_order[1] == "last")
+        if choose_order[2]:
+            choose_count = choose_order[2]
+        choose_statement = f"is_selection_successful = bg_get_last_n(&BG_{buffer_name}, {at_least}, {choose_count}, &chosen_streams);\n"
+    return choose_statement, choose_count
+
+def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order, stream_types, current_tail, inner_code):
+    assert buffer_name in TypeChecker.buffer_group_data.keys()
+    
+
+    stream_type = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
+    def declare_indices():
+        answer = ""
+        for (index, name) in enumerate(binded_streams):
+            answer += f"int index_{name} = {index}"
+        return answer
+
+    def get_local_inner_code():
+        answer = ""
+        for name in binded_streams:
+            answer += f"shm_stream *{name} = chosen_streams[index_{name}]->stream;\n"
+            answer += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams[index_{name}]->buffer;\n"
+            answer += f"STREAM_{stream_type}_ARGS *stream_args_{name} = (STREAM_{stream_type}_ARGS *)chosen_streams[index_{name}]->args;\n"
+            if current_tail is not None:
+                assert(inner_code is None)
+                # buffer peeks
+                buffer_peeks_res = dict()
+                existing_buffers = set()
+                existing_buffers.add(name)
+                local_get_buffer_peeks(current_tail, TypeChecker, buffer_peeks_res, existing_buffers)
+                if name in buffer_peeks_res.keys():
+                    answer += f"char* e1_{name}; size_t i1_{name}; char* e2_{name}; size_t i2_{name};\n" 
+                    answer += f"int count_{name} = shm_arbiter_buffer_peek(BUFFER_{name}, {buffer_peeks_res[name]}, " 
+                    answer += f"(void**)&e1_{name}, &i1_{name}, (void**)&e2_{name}, &i2_{name});\n"
+
+            answer += inner_code
+        return answer
+
+    loop_code = ""
+    choose_statement, choose_count = get_choose_statement(binded_streams, buffer_name, choose_order)
+    for (index, name) in enumerate(binded_streams):
+        unique_index_code = ""
+        for prev_name in binded_streams[:index]:
+            unique_index_code += f"if(index_{name} == index_{prev_name}){'{'} index_{name}++; continue;{'}'}\n"
+        if index > 0:
+            loop_code += f"index_{name} = 0;\n"
+        loop_code += f"while(index_{name} < {choose_count} && index_{name} < BG_{buffer_name}.size){'{'}\n"
+        loop_code += f"{unique_index_code}\n"
+    loop_code += get_local_inner_code()
+    
+    # close loops parenthesis
+    for name in binded_streams[::-1]:
+        loop_code += f"index_{name}++;\n"
+        loop_code += f"{'}'}\n"
+    return f'''
+{"{"}
+    mtx_lock(&LOCK_{buffer_name});
+    bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
+    {choose_statement}
+    mtx_unlock(&LOCK_{buffer_name});
+    if (is_selection_successful) {"{"}
+        {declare_indices()}
+        {loop_code}
+    {"}"}
+{"}"}
+'''
 
 def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
     # output_stream should be the output type of the event source
@@ -1209,56 +1220,17 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
             get_list_ids(tree[2], binded_streams)
 
             choose_order = tree[1]
-            count_choose = len(binded_streams)
             buffer_name = tree[3]
-            assert buffer_name in TypeChecker.buffer_group_data.keys()
-            if (choose_order is None) or (choose_order[1] == "first"):
-                choose_statement = ""
-                if choose_order is None:
-                    choose_statement += "// does not specifies order, we take first n even sources\n"
-                choose_statement += f"is_selection_successful = bg_get_first_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
-            else:
-                assert (choose_order[1] == "last")
-                choose_statement = f"is_selection_successful = bg_get_last_n(&BG_{buffer_name}, {count_choose}, &chosen_streams);\n"
-
             # TODO: get output type of event source correctly
             for stream in binded_streams:
                 stream_types[stream] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"],
-                                        TypeChecker.buffer_group_data[buffer_name]["in_stream"])
+                TypeChecker.buffer_group_data[buffer_name]["in_stream"])
+            for stream in binded_streams:
+                stream_types[stream] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"],
+                TypeChecker.buffer_group_data[buffer_name]["in_stream"])
             inner_code = arbiter_rule_code(tree[5], mapping, stream_types, output_ev_source)
+            return get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order, stream_types, None, inner_code)
 
-            # permute code
-            permutation_code = ""
-            stream_type = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
-            for perm in permutations(range(0, len(binded_streams))):
-                declared_streams = ""
-                for (index, name) in zip(perm, binded_streams):
-                    declared_streams += f"shm_stream *{name} = chosen_streams[{index}]->stream;\n"
-                    declared_streams += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams[{index}]->buffer;\n"
-                    declared_streams += f"STREAM_{stream_type}_ARGS *stream_args_{name} = (STREAM_{stream_type}_ARGS *)chosen_streams[{index}]->args;\n"
-
-                    buffer_peeks_res = dict()
-                    existing_buffers = set()
-                    existing_buffers.add(name)
-                    get_buffers_and_peeks(tree[5], buffer_peeks_res, TypeChecker, existing_buffers)
-                    if name in buffer_peeks_res.keys():
-                        declared_streams += f"char* e1_{name}; size_t i1_{name}; char* e2_{name}; size_t i2_{name};\n" \
-                                            f"int count_{name} = shm_arbiter_buffer_peek(BUFFER_{name}, {buffer_peeks_res[name]}, " \
-                                            f"(void **)&e1_{name}, &i1_{name}, (void**)&e2_{name}, &i2_{name});\n"
-                permutation_code += f'''
-                {"{"}
-                    {declared_streams}
-                    {inner_code}
-                {"}"}
-                '''
-
-            return f'''
-            bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
-            {choose_statement}
-            if (is_selection_successful) {"{"}
-                {permutation_code}
-            {"}"}
-            '''
 
 
 def buffer_peeks(tree, existing_buffers):
@@ -1680,8 +1652,6 @@ def outside_main_code(components, streams_to_events_map, stream_types, ast, arbi
 #endif
 
 #define vamos_hard_assert(cond) do{{ if (!cond) {{fprintf(stderr, "\033[31m%s:%s:%d: assert '" #cond "' failed!\033[0m\\n", __FILE__, __func__, __LINE__); print_buffers_state(); __work_done = 1; abort();}} }} while(0)
-
-
 
 struct _EVENT_hole
 {"{"}
