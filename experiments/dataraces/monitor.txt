@@ -54,7 +54,7 @@ $$
 
 arbiter : GlobalEvent
 {
-    choose T from Threads where $$ $T.nextts; <= nextts $$
+    choose first 5 T from Threads where $$ $T.nextts; <= nextts $$
     {
         on T : | read(ts,addr)
         $$
