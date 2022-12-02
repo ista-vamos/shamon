@@ -1115,7 +1115,7 @@ def get_choose_statement(binded_streams, buffer_name, choose_order):
         choose_statement = f"is_selection_successful = bg_get_last_n(&BG_{buffer_name}, {at_least}, {choose_count}, &chosen_streams);\n"
     return choose_statement, choose_count
 
-def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order, stream_types, current_tail, inner_code):
+def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order, stream_types, current_tail, inner_code, tree=None):
     assert buffer_name in TypeChecker.buffer_group_data.keys()
     
 
@@ -1123,7 +1123,7 @@ def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order,
     def declare_indices():
         answer = ""
         for (index, name) in enumerate(binded_streams):
-            answer += f"int index_{name} = {index}"
+            answer += f"int index_{name} = {index};"
         return answer
 
     def get_local_inner_code():
@@ -1132,17 +1132,20 @@ def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order,
             answer += f"shm_stream *{name} = chosen_streams[index_{name}]->stream;\n"
             answer += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams[index_{name}]->buffer;\n"
             answer += f"STREAM_{stream_type}_ARGS *stream_args_{name} = (STREAM_{stream_type}_ARGS *)chosen_streams[index_{name}]->args;\n"
+            buffer_peeks_res = dict()
+            existing_buffers = set()
+            existing_buffers.add(name)
             if current_tail is not None:
-                assert(inner_code is None)
                 # buffer peeks
-                buffer_peeks_res = dict()
-                existing_buffers = set()
-                existing_buffers.add(name)
                 local_get_buffer_peeks(current_tail, TypeChecker, buffer_peeks_res, existing_buffers)
-                if name in buffer_peeks_res.keys():
-                    answer += f"char* e1_{name}; size_t i1_{name}; char* e2_{name}; size_t i2_{name};\n" 
-                    answer += f"int count_{name} = shm_arbiter_buffer_peek(BUFFER_{name}, {buffer_peeks_res[name]}, " 
-                    answer += f"(void**)&e1_{name}, &i1_{name}, (void**)&e2_{name}, &i2_{name});\n"
+            else:
+                assert(tree is not None)
+                get_buffers_and_peeks(tree, buffer_peeks_res, TypeChecker, existing_buffers)
+            if name in buffer_peeks_res.keys():
+                answer += f"char* e1_{name}; size_t i1_{name}; char* e2_{name}; size_t i2_{name};\n" 
+                answer += f"int count_{name} = shm_arbiter_buffer_peek(BUFFER_{name}, {buffer_peeks_res[name]}, " 
+                answer += f"(void**)&e1_{name}, &i1_{name}, (void**)&e2_{name}, &i2_{name});\n"
+                
 
             answer += inner_code
         return answer
@@ -1229,7 +1232,7 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
                 stream_types[stream] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"],
                 TypeChecker.buffer_group_data[buffer_name]["in_stream"])
             inner_code = arbiter_rule_code(tree[5], mapping, stream_types, output_ev_source)
-            return get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order, stream_types, None, inner_code)
+            return get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order, stream_types, None, inner_code, tree[5])
 
 
 
