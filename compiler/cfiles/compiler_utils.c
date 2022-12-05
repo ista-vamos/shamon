@@ -77,8 +77,13 @@ bool bg_remove(buffer_group *bg, shm_stream *stream) {
         if (curr->stream == stream) {
             dll_node *after_curr = curr->next;
             dll_node *before_curr = curr->prev;
-            before_curr->next = after_curr;
-            after_curr->prev = before_curr;
+            if(before_curr != NULL){
+                before_curr->next = after_curr;
+            }
+            
+            if(after_curr != NULL){
+                after_curr->prev = before_curr;
+            }
             if(curr == bg->head) {
                 bg->head = after_curr;
             }
