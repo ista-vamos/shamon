@@ -1573,9 +1573,10 @@ typedef struct _EVENT_{hole_name}_hole EVENT_{hole_name}_hole;
 '''
     return answer
 
-def get_special_holes_init_code():
+def get_special_holes_init_code(streams_to_events_map):
     answer = ""
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
+        stream_type_in = data['input_type']
         data_hole = data['special_hole']
         hole_name = data['hole_name']
         init_attributes = ""
@@ -1600,9 +1601,11 @@ def get_special_holes_init_code():
                 raise Exception(f"Unknown aggregation function {attr_data['agg_func_name']}.")
 
             init_attributes += f"\th->{attr_data['attribute']} = {value};\n"
+        hole_enum = streams_to_events_map[stream_type_in][hole_name]['enum']
         answer += f'''
 static void init_hole_{hole_name}(shm_event *hev) {"{"}
   EVENT_{hole_name}_hole *h = (EVENT_{hole_name}_hole *)hev;
+  h->id = {hole_enum};
   {init_attributes}
 {"}"}
 '''
@@ -1649,8 +1652,7 @@ static void update_hole_{hole_name}(shm_event *hev, shm_event *ev) {"{"}
     return answer
 
 def generate_special_hole_functions(streams_to_events_map):
-    
-    answer = f"{get_special_holes_init_code()}\n"
+    answer = f"{get_special_holes_init_code(streams_to_events_map)}\n"
     answer += f"{get_special_holes_update_code(streams_to_events_map)}\n"
               
     return answer
