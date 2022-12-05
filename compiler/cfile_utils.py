@@ -1550,6 +1550,7 @@ def get_imports():
 #include <threads.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdatomic.h>
 #include <limits.h>
 '''
@@ -1673,7 +1674,7 @@ def outside_main_code(components, streams_to_events_map, stream_types, ast, arbi
 
 struct _EVENT_hole
 {"{"}
-  unsigned long long n;
+  uint64_t n;
 {"}"};
 typedef struct _EVENT_hole EVENT_hole;
 static void init_hole(shm_event *h) {"{"}

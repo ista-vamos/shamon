@@ -237,7 +237,7 @@ def get_event_args(tree: Tuple, event_args: List[Tuple[str, str]]) -> None:
     else:
         assert(tree[0] == "field_decl")
         if tree[PPFIELD_TYPE][PTYPE_DATA] == 'uint64_t':
-            type_ = "unsigned long long"
+            type_ = "uint64_t"
         else:
             type_ = tree[PPFIELD_TYPE][PTYPE_DATA]
         event_args.append({"name": tree[PPFIELD_NAME], "type": type_})
@@ -321,7 +321,7 @@ def get_parameters_types_field_decl(tree: Tuple, params: List[Dict[str, Tuple]])
             
             assert (tree[0] == 'field_decl')
             if tree[PPFIELD_TYPE][1] == "uint64_t":
-                type_ = "unsigned long long"
+                type_ = "uint64_t"
             else:
                 type_ = tree[PPFIELD_TYPE][1]
             params.append({"name": tree[1], "type": type_, "is_primitive" : is_type_primitive(tree[PPFIELD_TYPE])})
