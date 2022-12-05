@@ -150,8 +150,8 @@ void __vrd_thrd_created(void *data, uint64_t std_tid) {
     struct buffer *shm = thread_data.shmbuf;
     assert(shm && "Do not have SHM buffer");
     void *addr = start_event(shm, EV_FORK);
-    buffer_partial_push(shm, addr, &thread_data.thread_id,
-		        sizeof(thread_data.thread_id));
+    buffer_partial_push(shm, addr, &tdata->thread_id,
+		        sizeof(tdata->thread_id));
     buffer_finish_push(shm);
 
     tdata->std_thread_id = std_tid;
