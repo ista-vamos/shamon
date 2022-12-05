@@ -35,7 +35,7 @@ stream type GlobalEvent
     unlock(tid: int, timestamp: uint64_t, addr : uint64_t);
     alloc(tid: int, timestamp : uint64_t, addr : uint64_t, size : uint64_t);
     free(tid: int, timestamp: uint64_t, addr : uint64_t);
-    fork(tid: int, timestamp: uint64_t, newthreadid: int) creates ThreadEvent;
+    fork(tid: int, timestamp: uint64_t, newthreadid: int);
     join(tid: int, timestamp: uint64_t, threadid: int);
     skipstart(tid: int, timestamp : uint64_t);
     skipend(tid: int, timestamp : uint64_t);
