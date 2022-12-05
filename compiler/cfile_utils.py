@@ -77,6 +77,20 @@ def init_buffer_groups():
     {"}"}
     {includes_str}        
     '''
+
+    for (event_source, data) in TypeChecker.event_sources_data.items():
+        buff_name = data['include_in']
+        if buff_name is not None:
+            if data['copies']:
+                for i in range(data['copies']):
+                    answer += f'''
+\tbg_insert(&BG_{buff_name}, EV_SOURCE_{event_source}_{i}, BUFFER_{event_source}{i},stream_args_{event_source}_{i},{buff_name}_ORDER_EXP);\n
+        '''
+            else:
+                answer += f'''
+\tbg_insert(&BG_{buff_name}, EV_SOURCE_{event_source}, BUFFER_{event_source},stream_args_{event_source},{buff_name}_ORDER_EXP);\n
+        '''
+
     return answer
 
 
