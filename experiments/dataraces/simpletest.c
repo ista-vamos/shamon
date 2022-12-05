@@ -62,9 +62,9 @@ int Thread2(void* arg)
 
 int main(int argc, char**argv)
 {
-	char *line;
 	srand(time(NULL));
-	size_t linelen;
+	char *line = NULL;
+	size_t linelen = 0;
 	thrd_t thread1;
 	thrd_t thread2;
 	countA=0;
