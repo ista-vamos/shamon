@@ -1173,7 +1173,7 @@ def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order,
             unique_index_code += f"if(index_{name} == index_{prev_name}){'{'} index_{name}++; continue;{'}'}\n"
         if index > 0:
             loop_code += f"index_{name} = 0;\n"
-        loop_code += f"while(index_{name} < {choose_count} && index_{name} < BG_{buffer_name}.size){'{'}\n"
+        loop_code += f"while(index_{name} < {choose_count} && index_{name} < BG_{buffer_name}_size){'{'}\n"
         loop_code += f"{unique_index_code}\n"
     loop_code += get_local_inner_code()
     
@@ -1185,6 +1185,7 @@ def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order,
 {"{"}
     mtx_lock(&LOCK_{buffer_name});
     bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
+    int BG_{buffer_name}_size = BG_{buffer_name}.size;
     {choose_statement}
     mtx_unlock(&LOCK_{buffer_name});
     if (is_selection_successful) {"{"}
