@@ -204,7 +204,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     drmgr_register_bb_instrumentation_event(NULL, (void *)event_app_instruction,
                                             0);
 
-    top_shmbuffer = create_shared_buffer(shmkey, top_control);
+    const size_t   capacity = 256;
+    top_shmbuffer = create_shared_buffer(shmkey, capacity, top_control);
     DR_ASSERT(top_shmbuffer);
 
     events = buffer_get_avail_events(top_shmbuffer, &events_num);
@@ -224,7 +225,7 @@ static void event_thread_context_init(void *drcontext, bool new_depth) {
         data->thread = ++thread_num;
         /* TODO: for now we create a buffer of the same type as the top buffer
          */
-        data->shm = create_shared_sub_buffer(top_shmbuffer, top_control);
+        data->shm = create_shared_sub_buffer(top_shmbuffer, 0, top_control);
         data->waiting_for_buffer = 0;
         DR_ASSERT(data->shm && "Failed creating buffer");
     } else {
