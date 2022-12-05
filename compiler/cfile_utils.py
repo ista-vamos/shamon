@@ -569,7 +569,7 @@ def declare_performance_layer_args(event_case: str, mapping_in: Dict[str, Any], 
     return answer
 
 
-def build_switch_performance_match(tree, input_event, mapping_in, mapping_out, level) -> str:
+def build_switch_performance_match(tree, input_event, mapping_in, mapping_out, stream_type, level) -> str:
     if tree[0] == 'perf_match1':
         performance_action = tree[PPERF_MATCH_ACTION]
         if performance_action[0] == "perf_act_drop":
@@ -582,9 +582,11 @@ def build_switch_performance_match(tree, input_event, mapping_in, mapping_out, l
             event_out_name = performance_action[PPPERF_ACTION_FORWARD_EVENT]
             if event_out_name.lower() == "forward":
                 event_out_name = input_event
-                assign_args_code = ""
+                assign_args_code = f"memcpy(outevent, inevent, sizeof(STREAM_{stream_type}_in));\n"
             else:
                 assign_args_code = f'''
+{tabs}(outevent->head).kind = {mapping_out[event_out_name]["enum"]};
+{tabs}(outevent->head).id = (inevent->head).id;
 {declare_performance_layer_args(event_out_name,
                                 mapping_in[event_out_name],
                                 performance_action[PPPERF_ACTION_FORWARD_EXPRS])}
@@ -593,8 +595,7 @@ def build_switch_performance_match(tree, input_event, mapping_in, mapping_out, l
                 '''
                 
             return f'''
-{tabs}(outevent->head).kind = {mapping_out[event_out_name]["enum"]};
-{tabs}(outevent->head).id = (inevent->head).id;
+
 {tabs}{assign_args_code}
 {tabs}shm_arbiter_buffer_write_finish(buffer);
             '''
@@ -671,7 +672,7 @@ mtx_unlock(&LOCK_{buffer_group});
             '''
             answer+=f'''
                 case {mapping_in[event_name]["enum"]}:
-                {build_switch_performance_match(case['performance_match'], event_name, mapping_in, mapping_out, level=level + 1)}
+                {build_switch_performance_match(case['performance_match'], event_name, mapping_in, mapping_out,stream_type, level=level + 1)}
                 {creates_code}
                 break;
                 '''
