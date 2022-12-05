@@ -929,7 +929,7 @@ def construct_arb_rule_outevent(mapping, output_ev_source, output_event, raw_arg
     get_expressions(raw_args, local_args)
 
     answer = f'''arbiter_outevent->head.kind = {mapping[output_ev_source][output_event]["index"]};
-    arbiter_outevent->head.id = (*arbiter_counter)++;
+    arbiter_outevent->head.id = arbiter_counter++;
     '''
     for (arg, outarg) in zip(local_args, mapping[output_ev_source][output_event]["args"]):
         if arg[0] == 'field_access':
@@ -1379,7 +1379,6 @@ def destroy_all():
         else:
             answer += f"\tshm_arbiter_buffer_free(BUFFER_{event_source});\n"
 
-    answer += "\tfree(arbiter_counter);\n"
     answer += "\tfree(monitor_buffer);\n"
     answer += "\tfree(chosen_streams);\n"
 
@@ -1693,7 +1692,7 @@ static void update_hole(shm_event *h, shm_event *ev) {"{"}
 
 
 {instantiate_stream_args()}
-int *arbiter_counter;
+int arbiter_counter;
 // monitor buffer
 shm_monitor_buffer *monitor_buffer;
 
@@ -1900,8 +1899,7 @@ int main(int argc, char **argv) {"{"}
     setup_signals();
 
 	chosen_streams = (dll_node *) malloc({TypeChecker.max_choose_size}); // the maximum size this can have is the total number of event sources
-	arbiter_counter = malloc(sizeof(int));
-	*arbiter_counter = 10;
+	arbiter_counter = 10;
 	{get_pure_c_code(components, 'startup')}
     {initialize_stream_args()}
 
