@@ -352,7 +352,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         exprs_num, (const char **)names, (const char **)signatures);
     assert(control);
 
-    shm = create_shared_buffer(shmkey, control);
+    const size_t capacity = 256;
+    shm                   = create_shared_buffer(shmkey, capacity, control);
     assert(shm);
     events = buffer_get_avail_events(shm, &events_num);
     free(control);

@@ -501,8 +501,11 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         exprs_num_out, (const char **)names_out, (const char **)signatures_out);
     assert(control_out);
 
-    struct buffer *shm_out = create_shared_buffer(shmkey_name_out, control_out);
-    struct buffer *shm_in  = create_shared_buffer(shmkey_name_in, control_in);
+    const size_t   capacity = 256;
+    struct buffer *shm_out =
+        create_shared_buffer(shmkey_name_out, capacity, control_out);
+    struct buffer *shm_in =
+        create_shared_buffer(shmkey_name_in, capacity, control_in);
     assert(shm_out);
     assert(shm_in);
     free(control_out);
