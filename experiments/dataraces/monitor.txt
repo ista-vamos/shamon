@@ -44,7 +44,7 @@ stream type GlobalEvent
 globals
 $$
     #include <limits.h>
-    uint64_t nextts=0;
+    uint64_t nextts=1;
     uint64_t leastts=ULLONG_MAX;
     int seenNone=0;
 
