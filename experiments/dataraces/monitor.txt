@@ -252,19 +252,23 @@ arbiter : GlobalEvent
 monitor {
     on read(tid, timestamp, addr) where $$ true $$
     $$
-    	printf("READ\n");
+        printf("read(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
     $$
 
     on write(tid, timestamp, addr) where $$ true $$
     $$
-    printf("WRITE\n");
+        printf("write(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
     $$
 
     on atomicread(tid, timestamp, addr , mode) where $$ true $$
-    $$ printf("ATOMIC READ\n"); $$
+    $$
+        printf("atomicread(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
+    $$
 
     on atomicwrite(tid, timestamp, addr , mode) where $$ true $$
-    $$ printf("ATOMIC WRITE\n"); $$
+    $$
+        printf("atomicwrite(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
+    $$
 
     on lock(tid, timestamp, addr) where $$ true $$
     $$
@@ -278,8 +282,14 @@ monitor {
 
     on alloc(tid, timestamp , addr, size) where $$ true $$ $$ printf("ALLOC\n"); $$
     on free(tid, timestamp, addr ) where $$ true $$        $$ printf("FREE\n"); $$
-    on fork(tid, timestamp, newthreadid) where $$ true $$  $$ printf("FORK\n"); $$
-    on join(tid, timestamp, threadid) where $$ true $$     $$ printf("JOIN\n"); $$
+    on fork(tid, timestamp, newthreadid) where $$ true $$
+    $$
+        printf("fork(tid=%lu, ts=%lu, newtid=%lu\n", tid, timestamp, newthreadid);
+    $$
+    on join(tid, timestamp, threadid) where $$ true $$
+    $$
+        printf("join(tid=%lu, ts=%lu, jointid=%lu\n", tid, timestamp, threadid);
+    $$
     on skipstart(tid, timestamp ) where $$ true $$         $$ printf("SKIPSTART\n"); $$
     on skipend(tid, timestamp ) where $$ true $$           $$ printf("SKIPEND\n"); $$
     on done_(tid) where $$ true $$                         $$ printf("DONE\n"); $$
