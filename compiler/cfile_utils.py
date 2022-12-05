@@ -844,7 +844,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         if len(tree) == 3:
             if not is_scan:
                 if tree[PPBUFFER_MATCH_ARG1][1] == "nothing":
-                    return f'''if (check_at_least_n_events(count_{stream_name}, 0)) {"{"}
+                    return f'''if (count_{stream_name} == 0) {"{"}
                     {inner_code}
                     {"}"}'''
                 elif tree[PPBUFFER_MATCH_ARG1][1] == "done":
@@ -964,7 +964,7 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
         return f"\tshm_arbiter_buffer_drop(BUFFER_{event_source_name}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
     if tree[0] == "remove":
         buffer_group = tree[2][1];
-        return f"mtx_lock(&LOCK_{buffer_group});\nbg_remove(&BG_{buffer_group}, {tree[1]});\nmtx_unlock(&LOCK_{buffer_group});"
+        return f"mtx_lock(&LOCK_{buffer_group});\nbg_remove(&BG_{buffer_group}, {tree[1]});\nmtx_unlock(&LOCK_{buffer_group});\n"
 
     assert (tree[0] == "field_access")
     target_stream, index, field = tree[1], tree[2], tree[3]
