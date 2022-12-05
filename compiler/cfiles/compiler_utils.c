@@ -1,6 +1,7 @@
 #include "compiler_utils.h"
 #include "../../core/shamon.h"
 #include "../../gen/mmlib.h"
+#include <stdio.h>
 
 void init_buffer_group(buffer_group *bg) {
     //bg = malloc(sizeof(buffer_group));
@@ -139,7 +140,7 @@ bool bg_get_last_n(buffer_group *bg, int at_least, int n, dll_node ***result) {
         return false;
     }
     dll_node * curr = bg->tail;
-    for (int i = 0; i< n; i++){
+    for (int i = 0; i< n && curr!=NULL; i++){
         (*result)[i] = curr;
         curr = curr->prev;
     }

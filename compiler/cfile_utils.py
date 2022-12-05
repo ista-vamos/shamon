@@ -1889,7 +1889,12 @@ static void setup_signals() {{
 }}
     '''
 
+def init_chosen_streams():
+    answer = ""
+    for i in range(TypeChecker.max_choose_size):
+        answer += f"\tchosen_streams[{i}] = NULL;\n"
 
+    return answer
 def get_c_program(components, ast, streams_to_events_map, stream_types, arbiter_event_source, existing_buffers):
     program = f'''
 
@@ -1899,8 +1904,9 @@ def get_c_program(components, ast, streams_to_events_map, stream_types, arbiter_
 int main(int argc, char **argv) {"{"}
     setup_signals();
 
-	chosen_streams = (dll_node *) malloc({TypeChecker.max_choose_size}); // the maximum size this can have is the total number of event sources
-	arbiter_counter = 10;
+	chosen_streams = (dll_node **) malloc(sizeof(dll_node*)*{TypeChecker.max_choose_size}); // the maximum size this can have is the total number of event sources
+{init_chosen_streams()}
+    arbiter_counter = 10;
 	{get_pure_c_code(components, 'startup')}
     {initialize_stream_args()}
 
