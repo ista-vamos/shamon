@@ -1677,6 +1677,7 @@ def outside_main_code(components, streams_to_events_map, stream_types, ast, arbi
 
 struct _EVENT_hole
 {"{"}
+  shm_event head;
   uint64_t n;
 {"}"};
 typedef struct _EVENT_hole EVENT_hole;
