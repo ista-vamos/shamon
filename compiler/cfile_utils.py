@@ -1680,8 +1680,11 @@ struct _EVENT_hole
   uint64_t n;
 {"}"};
 typedef struct _EVENT_hole EVENT_hole;
-static void init_hole(shm_event *h) {"{"}
-  ((EVENT_hole *)h)->n = 0;
+static void init_hole(shm_event *hev) {"{"}
+    EVENT_hole *h = (EVENT_hole *) hev;
+    h->head.kind = 1;
+    h->n = 0;
+
 {"}"}
 
 static void update_hole(shm_event *h, shm_event *ev) {"{"}
