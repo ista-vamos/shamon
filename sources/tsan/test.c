@@ -4,7 +4,7 @@
 mtx_t m;
 int   print_num = 0;
 
-#define N 3
+#define N 200
 
 int thread(void *data) {
     for (int i = 0; i < N; ++i) {
