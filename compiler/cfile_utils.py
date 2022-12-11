@@ -1223,8 +1223,7 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
            
             if({process_where_condition(tree[PPARB_RULE_CONDITION_CODE])}) {"{"}
 
-                {get_arb_rule_stmt_list_code(tree[PPARB_RULE_STMT_LIST], mapping, binded_args, stream_types,
-                                             output_ev_source)}
+                {get_arb_rule_stmt_list_code(tree[PPARB_RULE_STMT_LIST], mapping, binded_args, stream_types, output_ev_source)}
                 {stream_drops_code}
                 return 1;
             {"}"}
