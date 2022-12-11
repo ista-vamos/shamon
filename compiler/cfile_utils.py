@@ -1225,6 +1225,9 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
 
                 {get_arb_rule_stmt_list_code(tree[PPARB_RULE_STMT_LIST], mapping, binded_args, stream_types, output_ev_source)}
                 {stream_drops_code}
+
+                // always code:
+                {TypeChecker.always_code}
                 return 1;
             {"}"}
             '''
@@ -1320,13 +1323,7 @@ def build_rule_set_functions(tree, mapping, stream_types, existing_buffers):
         if local_tree[0] == "arb_rule_list":
             return local_explore_rule_list(local_tree[1]) + local_explore_rule_list(local_tree[2])
         elif local_tree[0] == "always":
-            return f'''
-    if ({process_where_condition(local_tree[1])}){"{"}
-        // always code
-        {local_tree[2]}
-        return 1;
-    {"}"}
-'''
+            return f''''''
         else:
             assert local_tree[0] == "arbiter_rule1" or local_tree[0] == "arbiter_rule2"
             return arbiter_rule_code(local_tree, mapping, stream_types, TypeChecker.arbiter_output_type)
@@ -1342,6 +1339,7 @@ def build_rule_set_functions(tree, mapping, stream_types, existing_buffers):
                        f"{buffer_peeks(local_tree[2], existing_buffers)}" \
                        f"{local_explore_rule_list(local_tree[2])}" \
                        f"{check_progress(rule_set_name, local_tree[2], existing_buffers)}" \
+                       f"{TypeChecker.always_code}"\
                        f"\treturn 0;\n" \
                        f"{'}'}"
         else:
