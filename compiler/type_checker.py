@@ -41,6 +41,7 @@ class TypeChecker:
     match_expr_funcs: List[Any] = []
     monitor_buffer_size: int = 4
     stream_types_data: Dict[str, Dict[str, Any]] = dict()
+    always_code = ""
 
     @staticmethod
     def clean_checker():
@@ -180,6 +181,11 @@ class TypeChecker:
                 event_source = ast[PPBUFFER_MATCH_EV_NAME]
                 for i in range(1, len(ast)):
                     TypeChecker.check_event_calls(ast[i], event_source)
+
+    @staticmethod
+    def add_always_code(node):
+        assert(node[0] == 'always')
+        TypeChecker.always_code += node[2];
 
     @staticmethod
     def is_event_in_event_source(event_source, event, is_input=True):
