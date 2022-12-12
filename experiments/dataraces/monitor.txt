@@ -208,6 +208,7 @@ arbiter : GlobalEvent
         $$
         on T : | my_hole(n, mints, maxts)
         $$
+            printf("\033[36m[a] my_hole(n=%lu, mints=%lu, maxts=%lu)\033[0m\n", n, mints, maxts);
             if(mints==nextts)
             {
                 $yield skipstart(T.threadid, mints);
@@ -252,32 +253,32 @@ arbiter : GlobalEvent
 monitor {
     on read(tid, timestamp, addr) where $$ true $$
     $$
-        printf("read(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
+        printf("read(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
     $$
 
     on write(tid, timestamp, addr) where $$ true $$
     $$
-        printf("write(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
+        printf("write(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
     $$
 
     on atomicread(tid, timestamp, addr , mode) where $$ true $$
     $$
-        printf("atomicread(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
+        printf("atomicread(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
     $$
 
     on atomicwrite(tid, timestamp, addr , mode) where $$ true $$
     $$
-        printf("atomicwrite(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
+        printf("atomicwrite(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
     $$
 
     on lock(tid, timestamp, addr) where $$ true $$
     $$
-        printf("lock(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
+        printf("lock(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
     $$
 
     on unlock(tid, timestamp, addr) where $$ true $$
     $$
-        printf("unlock(tid=%lu, ts=%lu, addr=%p\n", tid, timestamp, addr);
+        printf("unlock(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
     $$
 
     on alloc(tid, timestamp , addr, size) where $$ true $$ $$ printf("ALLOC\n"); $$
@@ -290,8 +291,14 @@ monitor {
     $$
         printf("join(tid=%lu, ts=%lu, jointid=%lu\n", tid, timestamp, threadid);
     $$
-    on skipstart(tid, timestamp ) where $$ true $$         $$ printf("SKIPSTART\n"); $$
-    on skipend(tid, timestamp ) where $$ true $$           $$ printf("SKIPEND\n"); $$
+    on skipstart(tid, timestamp ) where $$ true $$
+    $$
+        printf("skipstart(tid=%lu, ts=%lu)\n", tid, timestamp);
+    $$
+    on skipend(tid, timestamp ) where $$ true $$
+    $$
+        printf("skipend(tid=%lu, ts=%lu)\n", tid, timestamp);
+    $$
     on done_(tid) where $$ true $$                         $$ printf("DONE\n"); $$
 
 }
