@@ -1521,9 +1521,18 @@ def print_buffers_state():
 void print_buffers_state() {"{"}
     int event_index;
 {code}
-{"}"}    
+{"}"}
+
+static void print_buffer_state(shm_arbiter_buffer *buffer) {{
+    int count;
+    void *e1, *e2;
+    size_t i1, i2;
+    count = shm_arbiter_buffer_peek(buffer, 10, (void**)&e1, &i1, (void**)&e2, &i2);
+    print_buffer_prefix(buffer, -1, i1 + i2, count, e1, i1, e2, i2);
+}}
 
 '''
+
 
 
 def declare_const_rule_set_names(tree):
