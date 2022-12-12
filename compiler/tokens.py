@@ -54,7 +54,8 @@ reserved = {
     "count": "COUNT",
     "max": "MAX",
     "min": "MIN",
-    "always": "ALWAYS"
+    "always": "ALWAYS",
+    "continue": "CONTINUE"
 }
 
 # Token names.

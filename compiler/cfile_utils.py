@@ -965,6 +965,8 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
     if tree[0] == "remove":
         buffer_group = tree[2][1];
         return f"mtx_lock(&LOCK_{buffer_group});\nbg_remove(&BG_{buffer_group}, {tree[1]});\nmtx_unlock(&LOCK_{buffer_group});\n"
+    if tree[0] == 'continue':
+        return "local_continue_ = true;"
 
     assert (tree[0] == "field_access")
     target_stream, index, field = tree[1], tree[2], tree[3]
@@ -1222,13 +1224,15 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
             {define_binded_args(binded_args, stream_types)}
            
             if({process_where_condition(tree[PPARB_RULE_CONDITION_CODE])}) {"{"}
-
+                bool local_continue_ = false;
                 {get_arb_rule_stmt_list_code(tree[PPARB_RULE_STMT_LIST], mapping, binded_args, stream_types, output_ev_source)}
                 {stream_drops_code}
 
                 // always code:
                 {TypeChecker.always_code}
-                return 1;
+                if (!local_continue_) {"{"}
+                    return 1;
+                {"}"}
             {"}"}
             '''
             return f'''

@@ -877,6 +877,7 @@ def p_arbiter_rule_stmt(p):
     arbiter_rule_stmt : YIELD ID '(' expression_list ')'
                       | YIELD ID '(' ')'
                       | SWITCH TO ID
+                      | CONTINUE
                       | DROP INT FROM event_src_ref
                       | REMOVE ID FROM event_src_ref
                       | ADD ID FROM event_src_ref
@@ -900,7 +901,10 @@ def p_arbiter_rule_stmt(p):
         event_source_name = p[PARB_RULE_STMT_DROP_EV_SOURCE][1]
         # TypeChecker.assert_symbol_type(event_source_name, EVENT_SOURCE_NAME)
     elif len(p) == 2:
-        p[0] = p[1]
+        if p[0] == 'continue':
+            p[0] = ('continue')
+        else:
+            p[0] = p[1]
     else:
         assert(p[1] == "switch")
         p[0] = ("switch", p[PARB_RULE_STMT_SWITCH_ARB_RULE])
