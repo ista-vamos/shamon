@@ -213,8 +213,14 @@ arbiter : GlobalEvent
             {
                 $yield skipstart(T.threadid, mints);
                 $T.nextts;=maxts;
-                nextts++;
                 leastts=maxts;
+		if(maxts==nextts)
+           	{
+           	    $yield skipend(T.threadid, maxts);
+           	    $drop 1 from T;
+           	    leastts=ULLONG_MAX;
+            	}
+                nextts++;
             }
             else if(maxts==nextts)
             {
