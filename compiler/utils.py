@@ -602,7 +602,8 @@ def local_get_buffer_peeks(local_tree: Tuple, type_checker: Any, result: Dict[st
                         insert_in_result(event_src_name, 0, result, existing_buffers)
                     else:
                         # event_src_ref ':' INT
-                        insert_in_result(event_src_name, local_tree[-1], result, existing_buffers)
+                        
+                        insert_in_result(event_src_name, local_tree[-1][1], result, existing_buffers)
             else:
                 # assert(len(local_tree) == 4)
                 event_src_ref = local_tree[1]
