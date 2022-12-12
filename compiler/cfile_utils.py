@@ -361,11 +361,9 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             hole_name = "hole"
             processor_name = processor_name.lower()
             out_name = TypeChecker.event_sources_data[stream_name]["input_stream_type"]
-            hole_size = "sizeof(EVENT_hole)"
         else:
             out_name = TypeChecker.stream_processors_data[processor_name]["output_type"]
             hole_name = TypeChecker.stream_processors_data[processor_name]['hole_name']
-            hole_size = f"sizeof(EVENT_{hole_name}_hole)"
 
         connection_kind = TypeChecker.event_sources_data[stream_name]["connection_kind"]
         assert (connection_kind[0] == "conn_kind")
@@ -376,13 +374,14 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             min_size_uninterrupt = connection_kind[3]
 
         stream_type = stream_type_from_ev_source(event_source)
+        in_event = f"STREAM_{stream_type}_in"
         if copies:
             for i in range(copies):
                 name = f"{stream_name}_{i}"
                 answer += f"\t// connect to event source {name}\n"
                 answer += f"""
                 shm_stream_hole_handling hh = {{
-                  .hole_event_size = {hole_size},
+                  .hole_event_size = sizeof({in_event}),
                   .init = &init_hole_{processor_name},
                   .update = &update_hole_{processor_name}
                 }};\n
@@ -404,7 +403,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             answer += f"\t// connect to event source {name}\n"
             answer += f"""
                 shm_stream_hole_handling hh = {{
-                  .hole_event_size = {hole_size},
+                  .hole_event_size = sizeof({in_event}),
                   .init = &init_hole_{hole_name},
                   .update = &update_hole_{hole_name}
                 }};\n
@@ -652,9 +651,10 @@ bg_insert(&BG_{buffer_group}, ev_source_temp, temp_buffer,stream_args_temp,{buff
 mtx_unlock(&LOCK_{buffer_group});
 '''
             hole_name = TypeChecker.stream_processors_data[stream_processor_name]['hole_name']
+            in_event = f"STREAM_{stream_type}_in"
             creates_code = f'''
             shm_stream_hole_handling hole_handling = {{
-              .hole_event_size = {hole_size},
+              .hole_event_size = sizeof({in_event}),
               .init = &init_hole_{hole_name},
               .update = &update_hole_{hole_name}
             }};
@@ -1585,7 +1585,6 @@ def special_hole_structs():
             answer+= f'''
 struct _EVENT_{hole_name}_hole
 {"{"}
-shm_event head;
 {fields}
 {"}"};
 typedef struct _EVENT_{hole_name}_hole EVENT_{hole_name}_hole;
@@ -1621,10 +1620,13 @@ def get_special_holes_init_code(streams_to_events_map):
 
             init_attributes += f"\th->{attr_data['attribute']} = {value};\n"
         hole_enum = streams_to_events_map[stream_type_in][hole_name]['enum']
+        print(stream_type_in)
         answer += f'''
 static void init_hole_{hole_name}(shm_event *hev) {"{"}
-  EVENT_{hole_name}_hole *h = (EVENT_{hole_name}_hole *)hev;
-  h->head.kind = {hole_enum};
+  STREAM_{stream_type_in}_in *e = (STREAM_{stream_type_in}_in*) hev;
+  e->head.kind = {hole_enum};
+
+  EVENT_{hole_name}_hole *h = &e->cases.{hole_name};
   {init_attributes}
 {"}"}
 '''
@@ -1662,8 +1664,9 @@ def get_special_holes_update_code(mapping):
             break;'''
         answer += f'''
 static void update_hole_{hole_name}(shm_event *hev, shm_event *ev) {"{"}
-    EVENT_{hole_name}_hole *h = (EVENT_{hole_name}_hole *)hev;
-    switch (((STREAM_{stream_type}_in *)ev)->head.kind) {"{"}
+    STREAM_{stream_type}_in *e = (STREAM_{stream_type}_in*) hev;
+    EVENT_{hole_name}_hole *h = &e->cases.{hole_name};
+    switch (ev->kind) {"{"}
 {update_attributes_code}
     {"}"}
 {"}"}
@@ -1701,7 +1704,7 @@ struct _EVENT_hole
 typedef struct _EVENT_hole EVENT_hole;
 static void init_hole(shm_event *hev) {"{"}
     EVENT_hole *h = (EVENT_hole *) hev;
-    h->head.kind = 1;
+    h->head.kind = shm_get_hole_kind();
     h->n = 0;
 
 {"}"}
