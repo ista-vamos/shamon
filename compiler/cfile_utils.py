@@ -1235,8 +1235,6 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
                 {get_arb_rule_stmt_list_code(tree[PPARB_RULE_STMT_LIST], mapping, binded_args, stream_types, output_ev_source)}
                 {stream_drops_code}
 
-                // always code:
-                {TypeChecker.always_code}
                 if (!local_continue_) {"{"}
                     return 1;
                 {"}"}
