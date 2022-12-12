@@ -965,9 +965,8 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
     if tree[0] == "remove":
         buffer_group = tree[2][1];
         return f"mtx_lock(&LOCK_{buffer_group});\nbg_remove(&BG_{buffer_group}, {tree[1]});\nmtx_unlock(&LOCK_{buffer_group});\n"
-    if tree[0] == 'continue':
+    if tree == 'continue':
         return "local_continue_ = true;"
-
     assert (tree[0] == "field_access")
     target_stream, index, field = tree[1], tree[2], tree[3]
     stream_name = target_stream
