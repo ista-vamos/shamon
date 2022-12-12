@@ -1131,8 +1131,13 @@ def get_choose_statement(binded_streams, buffer_name, choose_order):
         choose_statement = f"is_selection_successful = bg_get_last_n(&BG_{buffer_name}, {at_least}, {choose_count}, &chosen_streams);\n"
     return choose_statement, choose_count
 
-def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order, stream_types, current_tail, inner_code, tree=None):
+def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order, stream_types, current_tail, inner_code, tree=None, choose_condition=None):
     assert buffer_name in TypeChecker.buffer_group_data.keys()
+
+    if choose_condition is None:
+        choose_code = "true"
+    else:
+        choose_code = process_where_condition(choose_condition)
     
 
     stream_type = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
@@ -1163,7 +1168,11 @@ def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order,
                 answer += f"(void**)&e1_{name}, &i1_{name}, (void**)&e2_{name}, &i2_{name});\n"
                 
 
-            answer += inner_code
+            answer += f'''
+if({choose_code}) {"{"}
+    {inner_code}
+{"}"}
+            '''
         return answer
 
     loop_code = ""
@@ -1177,7 +1186,6 @@ def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order,
         loop_code += f"while(index_{name} < {choose_count} && index_{name} < BG_{buffer_name}_size){'{'}\n"
         loop_code += f"{unique_index_code}\n"
     loop_code += get_local_inner_code()
-    
     # close loops parenthesis
     for name in binded_streams[::-1]:
         loop_code += f"index_{name}++;\n"
@@ -1242,6 +1250,7 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
             assert (tree[0] == "arbiter_rule2")
             binded_streams = []
             get_list_ids(tree[2], binded_streams)
+            choose_condition = tree[4]
 
             choose_order = tree[1]
             buffer_name = tree[3]
@@ -1253,7 +1262,7 @@ def arbiter_rule_code(tree, mapping, stream_types, output_ev_source) -> str:
                 stream_types[stream] = (TypeChecker.buffer_group_data[buffer_name]["in_stream"],
                 TypeChecker.buffer_group_data[buffer_name]["in_stream"])
             inner_code = arbiter_rule_code(tree[5], mapping, stream_types, output_ev_source)
-            return get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order, stream_types, None, inner_code, tree[5])
+            return get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order, stream_types, None, inner_code, tree[5], choose_condition)
 
 
 
