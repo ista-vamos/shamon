@@ -1618,7 +1618,6 @@ def get_special_holes_init_code(streams_to_events_map):
 
             init_attributes += f"\th->{attr_data['attribute']} = {value};\n"
         hole_enum = streams_to_events_map[stream_type_in][hole_name]['enum']
-        print(stream_type_in)
         answer += f'''
 static void init_hole_{hole_name}(shm_event *hev) {"{"}
   STREAM_{stream_type_in}_in *e = (STREAM_{stream_type_in}_in*) hev;
@@ -1916,11 +1915,11 @@ static void setup_signals() {{
     '''
 
 def init_chosen_streams():
-    answer = ""
-    for i in range(TypeChecker.max_choose_size):
-        answer += f"\tchosen_streams[{i}] = NULL;\n"
-
+    answer = f"\tfor (int i = 0; i < {TypeChecker.max_choose_size}; i++){'{'}\n"
+    answer += f"\t\tchosen_streams[i] = NULL;\n"
+    answer += "\t{'}'}"
     return answer
+
 def get_c_program(components, ast, streams_to_events_map, stream_types, arbiter_event_source, existing_buffers):
     program = f'''
 
