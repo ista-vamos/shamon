@@ -1,4 +1,4 @@
-stream type ThreadEvent(threadid: int, nextts: uint64_t)
+stream type ThreadEvent(threadid: int, tstate : int16_t, nonecount : uint16_t, nextts: uint64_t, nonets: uint64_t, optskipstart : uint64_t)
 {
     read(timestamp: uint64_t, addr : uint64_t);
     write(timestamp: uint64_t, addr : uint64_t);
@@ -11,7 +11,7 @@ stream type ThreadEvent(threadid: int, nextts: uint64_t)
     fork(timestamp: uint64_t, newthreadid: uint64_t) creates ThreadEvent;
     join(timestamp: uint64_t, threadid: uint64_t);
 }
-stream processor TEProcessor(threadid : int) : ThreadEvent(threadid, 0) -> ThreadEvent(threadid, 0) extends FORWARD
+stream processor TEProcessor(threadid : int) : ThreadEvent(threadid, 0, 0, 0, 0, 0) -> ThreadEvent(threadid, 0, 0, 0, 0, 0) extends FORWARD
 {
     on fork(ts, ntid) creates ThreadEvent process using TEProcessor(ntid) to autodrop(@BUFSIZE) include in Threads forward;
     my_hole
@@ -46,6 +46,9 @@ $$
     #include <limits.h>
     uint64_t nextts=1;
     uint64_t leastts=ULLONG_MAX;
+    uint64_t skipcount=0;
+    uint16_t nonebarrier=1;
+    uint64_t nonecycles=0;
     int seenNone=0;
 
     #define min(a, b) __vamos_min(a, b)
@@ -54,7 +57,7 @@ $$
 
 arbiter : GlobalEvent
 {
-    choose first 5 T from Threads where $$ $T.nextts; <= nextts $$
+    choose first 5 T from Threads where $$ $T.nextts; <= nextts && ($T.nonecount; < nonebarrier || $T.nonets; < nextts) $$
     {
         on T : | read(ts,addr)
         $$
@@ -65,10 +68,14 @@ arbiter : GlobalEvent
                 nextts++;
                 leastts=ULLONG_MAX;
             }
-            else
+            else if(ts>nextts)
             {
                 $T.nextts;=ts;
                 leastts=min(leastts, ts);
+            }
+            else
+            {
+                $drop 1 from T;
             }
         $$
         on T : | write(ts,addr)
@@ -80,10 +87,14 @@ arbiter : GlobalEvent
                 nextts++;
                 leastts=ULLONG_MAX;
             }
-            else
+            else if(ts>nextts)
             {
                 $T.nextts;=ts;
                 leastts=min(leastts, ts);
+            }
+            else
+            {
+                $drop 1 from T;
             }
         $$
         on T : | atomicread(ts,addr,mode)
@@ -95,10 +106,14 @@ arbiter : GlobalEvent
                 nextts++;
                 leastts=ULLONG_MAX;
             }
-            else
+            else if(ts>nextts)
             {
                 $T.nextts;=ts;
                 leastts=min(leastts, ts);
+            }
+            else
+            {
+                $drop 1 from T;
             }
         $$
         on T : | atomicwrite(ts,addr,mode)
@@ -110,10 +125,14 @@ arbiter : GlobalEvent
                 nextts++;
                 leastts=ULLONG_MAX;
             }
-            else
+            else if(ts>nextts)
             {
                 $T.nextts;=ts;
                 leastts=min(leastts, ts);
+            }
+            else
+            {
+                $drop 1 from T;
             }
         $$
         on T : | lock(ts,addr)
@@ -125,10 +144,14 @@ arbiter : GlobalEvent
                 nextts++;
                 leastts=ULLONG_MAX;
             }
-            else
+            else if(ts>nextts)
             {
                 $T.nextts;=ts;
                 leastts=min(leastts, ts);
+            }
+            else
+            {
+                $drop 1 from T;
             }
         $$
         on T : | unlock(ts,addr)
@@ -140,10 +163,14 @@ arbiter : GlobalEvent
                 nextts++;
                 leastts=ULLONG_MAX;
             }
-            else
+            else if(ts>nextts)
             {
                 $T.nextts;=ts;
                 leastts=min(leastts, ts);
+            }
+            else
+            {
+                $drop 1 from T;
             }
         $$
         on T : | alloc(ts,addr,size)
@@ -155,10 +182,14 @@ arbiter : GlobalEvent
                 nextts++;
                 leastts=ULLONG_MAX;
             }
-            else
+            else if(ts>nextts)
             {
                 $T.nextts;=ts;
                 leastts=min(leastts, ts);
+            }
+            else
+            {
+                $drop 1 from T;
             }
         $$
         on T : | free(ts,addr)
@@ -170,10 +201,14 @@ arbiter : GlobalEvent
                 nextts++;
                 leastts=ULLONG_MAX;
             }
-            else
+            else if(ts>nextts)
             {
                 $T.nextts;=ts;
                 leastts=min(leastts, ts);
+            }
+            else
+            {
+                $drop 1 from T;
             }
         $$
         on T : | fork(ts,tid)
@@ -185,10 +220,14 @@ arbiter : GlobalEvent
                 nextts++;
                 leastts=ULLONG_MAX;
             }
-            else
+            else if(ts>nextts)
             {
                 $T.nextts;=ts;
                 leastts=min(leastts, ts);
+            }
+            else
+            {
+                $drop 1 from T;
             }
         $$
         on T : | join(ts,tid)
@@ -200,27 +239,35 @@ arbiter : GlobalEvent
                 nextts++;
                 leastts=ULLONG_MAX;
             }
-            else
+            else if(ts>nextts)
             {
                 $T.nextts;=ts;
                 leastts=min(leastts, ts);
+            }
+            else
+            {
+                $drop 1 from T;
             }
         $$
         on T : | my_hole(n, mints, maxts)
         $$
             printf("\033[36m[a] my_hole(n=%lu, mints=%lu, maxts=%lu)\033[0m\n", n, mints, maxts);
-            if(mints==nextts)
+            if(mints<=nextts)
             {
-                $yield skipstart(T.threadid, mints);
+                skipcount+=n;
+                $yield skipstart(T.threadid, nextts);
                 $T.nextts;=maxts;
                 leastts=maxts;
-		if(maxts==nextts)
-           	{
-           	    $yield skipend(T.threadid, maxts);
-           	    $drop 1 from T;
-           	    leastts=ULLONG_MAX;
-            	}
-                nextts++;
+                if(maxts<=nextts)
+                {
+                    $yield skipend(T.threadid, nextts);
+                    $drop 1 from T;
+                    leastts=ULLONG_MAX;
+                }
+                if(mints==nextts)
+                {
+                    nextts++;
+                }
             }
             else if(maxts==nextts)
             {
@@ -242,18 +289,46 @@ arbiter : GlobalEvent
         $$
         on T : nothing
         $$
+            if($T.nonets;<nextts)
+            {
+                $T.nonecount;=0;
+                $T.nonets;=nextts;
+            }
+            $T.nonecount;+=1;
             seenNone=1;
         $$
     }
 
-	always
-	$$
-		if(!seenNone)
-		{
-			nextts=leastts;
-		}
-		seenNone=0;
-	$$
+    always
+    $$
+        if((!seenNone) || (nonecycles>1000 && skipcount >= leastts - nextts))
+        {
+            if(leastts!=ULLONG_MAX)
+            {
+                if(!seenNone)
+                {
+                    skipcount-=(leastts-nextts);
+                }
+                nextts=leastts;
+            }
+            else
+            {
+                if(!seenNone)
+                {
+                    skipcount-=1;
+                }
+                nextts++;
+            }
+            nonebarrier=1;
+            nonecycles=0;
+        }
+        else
+        {                
+            nonebarrier++;
+            nonecycles++;
+        }
+        seenNone=0;
+    $$
 }
 
 monitor {
