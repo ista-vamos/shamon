@@ -389,7 +389,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
                 answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
                 if min_size_uninterrupt is not None:
-                    answer += f"\tshm_arbiter_buffer_set_drop_space_threshold(BUFFER_{stream_name}{i},{min_size_uninterrupt})\n;"
+                    answer += f"\tshm_arbiter_buffer_set_drop_space_threshold(BUFFER_{stream_name}{i},{min_size_uninterrupt});\n"
                 answer += f"\t// register events in {name}\n"
                 for ev_name, attrs in streams_to_events_map[stream_type].items():
                     if ev_name in ("hole", hole_name): continue
@@ -410,6 +410,8 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 """
             answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
             answer += f"\tBUFFER_{stream_name} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
+            if min_size_uninterrupt is not None:
+                answer += f"\tshm_arbiter_buffer_set_drop_space_threshold(BUFFER_{stream_name},{min_size_uninterrupt});\n"
             answer += f"\t// register events in {name}\n"
             for ev_name, attrs in streams_to_events_map[stream_type].items():
                 if ev_name in ("hole", hole_name): continue
@@ -650,6 +652,11 @@ mtx_lock(&LOCK_{buffer_group});
 bg_insert(&BG_{buffer_group}, ev_source_temp, temp_buffer,stream_args_temp,{buffer_group}_ORDER_EXP);
 mtx_unlock(&LOCK_{buffer_group});
 '''
+            stream_threshold_code = f""
+            min_size_uninterrupt = case['connection_kind']['threshold']
+            if min_size_uninterrupt > 2:
+                stream_threshold_code = f"\tshm_arbiter_buffer_set_drop_space_threshold(temp_buffer,{min_size_uninterrupt});\n"
+
             hole_name = TypeChecker.stream_processors_data[stream_processor_name]['hole_name']
             in_event = f"STREAM_{stream_type}_in"
             creates_code = f'''
@@ -664,6 +671,7 @@ mtx_unlock(&LOCK_{buffer_group});
                 abort();
             }}
             shm_arbiter_buffer *temp_buffer = shm_arbiter_buffer_create(ev_source_temp,  sizeof(STREAM_{out_name}_out), {buff_size});
+            {stream_threshold_code}
             shm_stream_register_all_events(ev_source_temp);
             {stream_args_code}
             thrd_t temp_thread;
