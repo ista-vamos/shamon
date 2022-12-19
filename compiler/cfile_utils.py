@@ -1917,7 +1917,7 @@ static void setup_signals() {{
 def init_chosen_streams():
     answer = f"\tfor (int i = 0; i < {TypeChecker.max_choose_size}; i++){'{'}\n"
     answer += f"\t\tchosen_streams[i] = NULL;\n"
-    answer += "\t{'}'}"
+    answer += f"\t{'}'}"
     return answer
 
 def get_c_program(components, ast, streams_to_events_map, stream_types, arbiter_event_source, existing_buffers):
