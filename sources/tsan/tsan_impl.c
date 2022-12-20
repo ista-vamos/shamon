@@ -22,39 +22,37 @@
 #include "shmbuf/client.h"
 
 static CACHELINE_ALIGNED _Atomic size_t last_thread_id = 1;
-static CACHELINE_ALIGNED _Atomic size_t timestamp      = 1;
+static CACHELINE_ALIGNED _Atomic size_t timestamp = 1;
 // static CACHELINE_ALIGNED _Thread_local size_t thread_id;
 
-static struct buffer         *top_shmbuf;
+static struct buffer *top_shmbuf;
 static struct source_control *top_control;
 static CACHELINE_ALIGNED _Thread_local struct _thread_data {
-    size_t         thread_id;
-    shm_eventid    last_id;
+    size_t thread_id;
+    shm_eventid last_id;
     struct buffer *shmbuf;
-    size_t         waited_for_buffer;
+    size_t waited_for_buffer;
 } thread_data;
 
 #ifdef DEBUG_STDOUT
-static inline uint64_t rt_timestamp(void) {
-    return __rdtsc();
-}
+static inline uint64_t rt_timestamp(void) { return __rdtsc(); }
 #endif
 
-const char           *shmkey = "/vrd";
+const char *shmkey = "/vrd";
 static struct buffer *top_shmbuf;
 
 #define EVENTS_NUM 10
 enum {
-    EV_READ   = 0,
-    EV_WRITE  = 1,
-    EV_ATOMIC_READ   = 2,
-    EV_ATOMIC_WRITE  = 3,
-    EV_LOCK   = 4,
+    EV_READ = 0,
+    EV_WRITE = 1,
+    EV_ATOMIC_READ = 2,
+    EV_ATOMIC_WRITE = 3,
+    EV_LOCK = 4,
     EV_UNLOCK = 5,
-    EV_ALLOC  = 6,
-    EV_FREE   = 7,
-    EV_FORK   = 8,
-    EV_JOIN   = 9,
+    EV_ALLOC = 6,
+    EV_FREE = 7,
+    EV_FORK = 8,
+    EV_JOIN = 9,
 };
 
 /* local cache */
@@ -63,12 +61,9 @@ uint64_t event_kinds[EVENTS_NUM];
 void __tsan_init() {
     /* Initialize the info about this source */
     top_control = source_control_define(
-        EVENTS_NUM,
-        "read", "tl", "write", "tl",
-        "atomicread", "tl", "atomicwrite", "tl",
-        "lock", "tl", "unlock", "tl",
-        "alloc", "tll", "free", "tl",
-        "fork", "tl", "join", "tl");
+        EVENTS_NUM, "read", "tl", "write", "tl", "atomicread", "tl",
+        "atomicwrite", "tl", "lock", "tl", "unlock", "tl", "alloc", "tll",
+        "free", "tl", "fork", "tl", "join", "tl");
     assert(top_control);
 
     top_shmbuf = create_shared_buffer(shmkey, 512, top_control);
@@ -79,7 +74,7 @@ void __tsan_init() {
     fprintf(stderr, "done\n");
 
     fprintf(stderr, "Creating events kinds cache... ");
-    size_t               num;
+    size_t num;
     struct event_record *events = buffer_get_avail_events(top_shmbuf, &num);
     assert(num == EVENTS_NUM && "Invalid number of events");
     for (unsigned i = 0; i < EVENTS_NUM; ++i) {
@@ -89,23 +84,23 @@ void __tsan_init() {
 }
 
 static inline void *start_event(struct buffer *shm, int type) {
-    shm_event     *ev;
+    shm_event *ev;
     while (!(ev = buffer_start_push(shm))) {
         ++thread_data.waited_for_buffer;
     }
     /* push the base info about event */
-    ev->id   = ++thread_data.last_id;
+    ev->id = ++thread_data.last_id;
     ev->kind = event_kinds[type];
     /* push the timestamp */
     uint64_t ts =
         atomic_fetch_add_explicit(&timestamp, 1, memory_order_acq_rel);
-    return buffer_partial_push(shm, (void *)(((unsigned char *)ev) + sizeof(ev->id) + sizeof(ev->kind)), &ts,
-                               sizeof(ts));
+    return buffer_partial_push(
+        shm,
+        (void *)(((unsigned char *)ev) + sizeof(ev->id) + sizeof(ev->kind)),
+        &ts, sizeof(ts));
 }
 
-void __tsan_func_entry(void *returnaddress) {
-    (void)returnaddress;
-}
+void __tsan_func_entry(void *returnaddress) { (void)returnaddress; }
 void __tsan_func_exit(void) {}
 
 struct __vrd_thread_data {
@@ -150,8 +145,7 @@ void __vrd_thrd_created(void *data, uint64_t std_tid) {
     struct buffer *shm = thread_data.shmbuf;
     assert(shm && "Do not have SHM buffer");
     void *addr = start_event(shm, EV_FORK);
-    buffer_partial_push(shm, addr, &tdata->thread_id,
-		        sizeof(tdata->thread_id));
+    buffer_partial_push(shm, addr, &tdata->thread_id, sizeof(tdata->thread_id));
     buffer_finish_push(shm);
 
     tdata->std_thread_id = std_tid;
@@ -162,7 +156,7 @@ void *__vrd_thrd_entry(void *data) {
     struct __vrd_thread_data *tdata = (struct __vrd_thread_data *)data;
 
     thread_data.waited_for_buffer = 0;
-    thread_data.last_id           = 0;
+    thread_data.last_id = 0;
 
     /* assign the SHM buffer to this thread */
     if (data == NULL) {
@@ -181,7 +175,6 @@ void *__vrd_thrd_entry(void *data) {
     return tdata->data;
 }
 
-
 void __vrd_thrd_exit(void) {
     struct buffer *shm = thread_data.shmbuf;
     /*
@@ -199,8 +192,8 @@ void __vrd_thrd_exit(void) {
 }
 
 void __vrd_thread_join(uint64_t tid) {
-    struct buffer *shm  = thread_data.shmbuf;
-    void          *addr = start_event(shm, EV_JOIN);
+    struct buffer *shm = thread_data.shmbuf;
+    void *addr = start_event(shm, EV_JOIN);
     buffer_partial_push(shm, addr, &tid, sizeof(tid));
     buffer_finish_push(shm);
 
@@ -211,7 +204,7 @@ void __vrd_thread_join(uint64_t tid) {
 
 void __tsan_read1(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(shm, EV_READ);
+    void *mem = start_event(shm, EV_READ);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 
@@ -221,10 +214,9 @@ void __tsan_read1(void *addr) {
 #endif
 }
 
-
 void __tsan_read2(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(shm, EV_READ);
+    void *mem = start_event(shm, EV_READ);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 
@@ -234,10 +226,9 @@ void __tsan_read2(void *addr) {
 #endif
 }
 
-
 void __tsan_read4(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(shm, EV_READ);
+    void *mem = start_event(shm, EV_READ);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 
@@ -249,7 +240,7 @@ void __tsan_read4(void *addr) {
 
 void __tsan_read8(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(shm, EV_READ);
+    void *mem = start_event(shm, EV_READ);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 
@@ -261,7 +252,7 @@ void __tsan_read8(void *addr) {
 
 void __tsan_write4(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(shm, EV_WRITE);
+    void *mem = start_event(shm, EV_WRITE);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 
@@ -273,7 +264,7 @@ void __tsan_write4(void *addr) {
 
 void __tsan_write8(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(shm, EV_WRITE);
+    void *mem = start_event(shm, EV_WRITE);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 
@@ -285,7 +276,7 @@ void __tsan_write8(void *addr) {
 
 void __vrd_mutex_lock(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(shm, EV_LOCK);
+    void *mem = start_event(shm, EV_LOCK);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 
@@ -297,7 +288,7 @@ void __vrd_mutex_lock(void *addr) {
 
 void __vrd_mutex_unlock(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
-    void          *mem = start_event(shm, EV_UNLOCK);
+    void *mem = start_event(shm, EV_UNLOCK);
     buffer_partial_push(shm, mem, &addr, sizeof(addr));
     buffer_finish_push(shm);
 

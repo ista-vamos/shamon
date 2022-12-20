@@ -2,7 +2,7 @@
 #include <threads.h>
 
 mtx_t m;
-int   print_num = 0;
+int print_num = 0;
 
 #define N 200
 

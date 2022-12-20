@@ -4,18 +4,17 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <immintrin.h> // For _mm_pause
+#include <immintrin.h>  // For _mm_pause
 #include <regex.h>
 #include <stdatomic.h>
 #include <string.h> /* memset */
 
-#include "dr_api.h"
-#include "drmgr.h"
-#include "shm_string-macro.h"
-
 #include "buffer.h"
 #include "client.h"
+#include "dr_api.h"
+#include "drmgr.h"
 #include "list-embedded.h"
+#include "shm_string-macro.h"
 #include "signatures.h"
 #include "source.h"
 #include "spsc_ringbuf.h"
@@ -58,12 +57,12 @@ static void *xmalloc(size_t sz) {
     return mem;
 }
 
-static char  *tmpline;
+static char *tmpline;
 static size_t tmpline_len;
 
 struct line {
     STRING(data);
-    size_t            timestamp;
+    size_t timestamp;
     shm_list_embedded list;
 } __attribute__((aligned(CACHELINE_SIZE)));
 
@@ -82,7 +81,7 @@ static size_t pool_max_size[3];
 #endif
 
 bool first_match_only = true;
-bool timestamps       = false;
+bool timestamps = false;
 
 const char *shmkey;
 
@@ -110,21 +109,13 @@ static inline void _unlock(struct lock *l) {
     atomic_store_explicit(&l->locked, false, memory_order_release);
 }
 
-static inline void list_lock(int i) {
-    _lock(_list_lock + i);
-}
+static inline void list_lock(int i) { _lock(_list_lock + i); }
 
-static inline void list_unlock(int i) {
-    _unlock(_list_lock + i);
-}
+static inline void list_unlock(int i) { _unlock(_list_lock + i); }
 
-static inline void pool_lock(int i) {
-    _lock(_pool_lock + i);
-}
+static inline void pool_lock(int i) { _lock(_pool_lock + i); }
 
-static inline void pool_unlock(int i) {
-    _unlock(_pool_lock + i);
-}
+static inline void pool_unlock(int i) { _unlock(_pool_lock + i); }
 
 /* The system call number of SYS_write/NtWriteFile */
 static int write_sysnum, read_sysnum;
@@ -133,8 +124,8 @@ static int write_sysnum, read_sysnum;
 #undef bool
 #define bool char
 
-static int  get_write_sysnum(void);
-static int  get_read_sysnum(void);
+static int get_write_sysnum(void);
+static int get_read_sysnum(void);
 static void event_exit(void);
 static bool event_filter_syscall(void *drcontext, int sysnum);
 static bool event_pre_syscall(void *drcontext, int sysnum);
@@ -148,23 +139,23 @@ static void usage_and_exit(int ret) {
     exit(ret);
 }
 
-char               **exprs[3];
-char               **names[3];
-static size_t        exprs_num[3];
-static regex_t      *re[3];
-static char        **signatures[3];
+char **exprs[3];
+char **names[3];
+static size_t exprs_num[3];
+static regex_t *re[3];
+static char **signatures[3];
 struct event_record *events[3];
-static size_t        waiting_for_buffer[3];
-static shm_event     evs[3];
+static size_t waiting_for_buffer[3];
+static shm_event evs[3];
 
 static struct buffer *shmbuf[3];
 
 typedef struct {
-    int     fd;
-    void   *buf;
-    size_t  size;
+    int fd;
+    void *buf;
+    size_t size;
     ssize_t len;
-    size_t  thread;
+    size_t thread;
 } per_thread_t;
 
 static size_t timestamp = 0;
@@ -172,14 +163,14 @@ static size_t timestamp = 0;
 static int parse_line(int fd, struct line *line_info) {
     assert(fd >= 0 && fd < 3);
 
-    int               status;
+    int status;
     signature_operand op;
-    ssize_t           len;
-    regmatch_t        matches[MAXMATCH + 1];
+    ssize_t len;
+    regmatch_t matches[MAXMATCH + 1];
 
-    int            num  = (int)exprs_num[fd];
-    struct buffer *shm  = shmbuf[fd];
-    char          *line = line_info->data;
+    int num = (int)exprs_num[fd];
+    struct buffer *shm = shmbuf[fd];
+    char *line = line_info->data;
 
     // info("[%d] parsing line (%p): '%s'\n", fd, line, line);
 
@@ -194,11 +185,11 @@ static int parse_line(int fd, struct line *line_info) {
             continue;
         }
 
-        int   m = 1;
+        int m = 1;
         void *addr;
 
-        size_t      waiting = 0;
-        const char *o       = signatures[fd][i];
+        size_t waiting = 0;
+        const char *o = signatures[fd][i];
         while (!(addr = buffer_start_push(shm))) {
             ++waiting_for_buffer[fd];
             if (++waiting > 5000) {
@@ -239,7 +230,7 @@ static int parse_line(int fd, struct line *line_info) {
             /* make sure we have big enough temporary buffer */
             if (tmpline_len < (size_t)len) {
                 free(tmpline);
-                tmpline     = xmalloc(sizeof(char) * len + 1);
+                tmpline = xmalloc(sizeof(char) * len + 1);
                 tmpline_len = len;
             }
 
@@ -255,32 +246,33 @@ static int parse_line(int fd, struct line *line_info) {
             }
 
             switch (*o) {
-            case 'c':
-                assert(len == 1);
-                addr = buffer_partial_push(
-                    shm, addr, (char *)(line + matches[m].rm_eo), sizeof(op.c));
-                break;
-            case 'i':
-                op.i = atoi(tmpline);
-                addr = buffer_partial_push(shm, addr, &op.i, sizeof(op.i));
-                break;
-            case 'l':
-                op.l = atol(tmpline);
-                addr = buffer_partial_push(shm, addr, &op.l, sizeof(op.l));
-                break;
-            case 'f':
-                op.f = atof(tmpline);
-                addr = buffer_partial_push(shm, addr, &op.f, sizeof(op.f));
-                break;
-            case 'd':
-                op.d = strtod(tmpline, NULL);
-                addr = buffer_partial_push(shm, addr, &op.d, sizeof(op.d));
-                break;
-            case 'S':
-                addr = buffer_partial_push_str(shm, addr, ev->id, tmpline);
-                break;
-            default:
-                assert(0 && "Invalid signature");
+                case 'c':
+                    assert(len == 1);
+                    addr = buffer_partial_push(
+                        shm, addr, (char *)(line + matches[m].rm_eo),
+                        sizeof(op.c));
+                    break;
+                case 'i':
+                    op.i = atoi(tmpline);
+                    addr = buffer_partial_push(shm, addr, &op.i, sizeof(op.i));
+                    break;
+                case 'l':
+                    op.l = atol(tmpline);
+                    addr = buffer_partial_push(shm, addr, &op.l, sizeof(op.l));
+                    break;
+                case 'f':
+                    op.f = atof(tmpline);
+                    addr = buffer_partial_push(shm, addr, &op.f, sizeof(op.f));
+                    break;
+                case 'd':
+                    op.d = strtod(tmpline, NULL);
+                    addr = buffer_partial_push(shm, addr, &op.d, sizeof(op.d));
+                    break;
+                case 'S':
+                    addr = buffer_partial_push_str(shm, addr, ev->id, tmpline);
+                    break;
+                default:
+                    assert(0 && "Invalid signature");
             }
         }
         buffer_finish_push(shm);
@@ -301,7 +293,7 @@ static void dump_line(struct line *line) {
 }
 
 static void dump_lines(int fd) {
-    int          n = 0;
+    int n = 0;
     struct line *line;
     info("Lines [%d]:\n", fd);
     shm_list_embedded_foreach(line, &lines[fd].list, list) {
@@ -328,9 +320,7 @@ static inline void put_to_pool(int fd, struct line *line) {
 
 static inline struct line *get_line(int fd) {
     struct line *line;
-    shm_list_embedded_foreach(line, &lines[fd].list, list) {
-        return line;
-    }
+    shm_list_embedded_foreach(line, &lines[fd].list, list) { return line; }
     return NULL;
 }
 
@@ -360,7 +350,7 @@ static inline bool all_done() {
 
 static void parser_thread(void *data) {
     (void)data;
-    size_t       no_line = 0;
+    size_t no_line = 0;
     struct line *line;
 
     for (int i = 0; i < 3; ++i) {
@@ -480,10 +470,10 @@ static void handle_event(per_thread_t *data) {
     const int fd = data->fd;
     assert(fd >= 0 && fd < 3);
 
-    size_t       n        = 0;
+    size_t n = 0;
     const size_t data_len = data->len;
-    struct line *line     = current_line[fd];
-    size_t       space    = 0;
+    struct line *line = current_line[fd];
+    size_t space = 0;
     while (n < data_len) {
         if (space == 0) {
             STRING_ENSURE_SPACE(line->data);
@@ -520,10 +510,9 @@ static void handle_event(per_thread_t *data) {
 }
 
 int parse_args(int argc, const char *argv[], char **exprs[3], char **names[3]) {
-
     int arg_i, cur_fd = 1;
     int args_i[3] = {0, 0, 0};
-    int i         = 1;
+    int i = 1;
     /*should the events be enriched with timestamps? */
     if (strncmp(argv[i], "-t", 3) == 0) {
         ++i;
@@ -546,7 +535,7 @@ int parse_args(int argc, const char *argv[], char **exprs[3], char **names[3]) {
         }
 
         /* this is the begining of event def */
-        arg_i                = args_i[cur_fd];
+        arg_i = args_i[cur_fd];
         names[cur_fd][arg_i] = (char *)argv[i++];
         exprs[cur_fd][arg_i] = (char *)argv[i++];
 
@@ -580,9 +569,9 @@ static const char *fd_to_name(int i) {
 }
 
 int get_exprs_num(int argc, const char *argv[]) {
-    int n      = 0;
+    int n = 0;
     int cur_fd = 1;
-    int i      = 1;
+    int i = 1;
     if (strncmp(argv[i], "-t", 3) == 0) {
         ++i;
     }
@@ -624,7 +613,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
                        "http://...");
     drmgr_init();
     write_sysnum = get_write_sysnum();
-    read_sysnum  = get_read_sysnum();
+    read_sysnum = get_read_sysnum();
     dr_register_filter_syscall_event(event_filter_syscall);
     drmgr_register_pre_syscall_event(event_pre_syscall);
     drmgr_register_post_syscall_event(event_post_syscall);
@@ -657,10 +646,10 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         if (num == 0)
             continue;
 
-        exprs[i]      = xmalloc(num * sizeof(char *));
-        names[i]      = xmalloc(num * sizeof(char *));
+        exprs[i] = xmalloc(num * sizeof(char *));
+        names[i] = xmalloc(num * sizeof(char *));
         signatures[i] = xmalloc(num * sizeof(char *));
-        re[i]         = xmalloc(num * sizeof(regex_t));
+        re[i] = xmalloc(num * sizeof(regex_t));
 
         STRING_INIT(lines[i].data);
         STRING_GROW(lines[i].data, 128);
@@ -678,7 +667,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     }
 
     char extended_shmkey[256];
-    int  filter_fd_mask = 0;
+    int filter_fd_mask = 0;
 
     info("Creating SHM buffers\n");
 
@@ -814,7 +803,7 @@ static void event_thread_context_init(void *drcontext, bool new_depth) {
     if (new_depth) {
         data = (per_thread_t *)dr_thread_alloc(drcontext, sizeof(per_thread_t));
         drmgr_set_cls_field(drcontext, tcls_idx, data);
-        data->fd     = -1;
+        data->fd = -1;
         data->thread = thread_num++;
     } else {
         data = (per_thread_t *)drmgr_get_cls_field(drcontext, tcls_idx);
@@ -840,13 +829,13 @@ static bool event_pre_syscall(void *drcontext, int sysnum) {
         return true;
     }
 
-    reg_t         fd   = dr_syscall_get_param(drcontext, 0);
-    reg_t         buf  = dr_syscall_get_param(drcontext, 1);
-    reg_t         size = dr_syscall_get_param(drcontext, 2);
+    reg_t fd = dr_syscall_get_param(drcontext, 0);
+    reg_t buf = dr_syscall_get_param(drcontext, 1);
+    reg_t size = dr_syscall_get_param(drcontext, 2);
     per_thread_t *data =
         (per_thread_t *)drmgr_get_cls_field(drcontext, tcls_idx);
-    data->fd   = fd; /* store the fd for post-event */
-    data->buf  = (void *)buf;
+    data->fd = fd; /* store the fd for post-event */
+    data->buf = (void *)buf;
     data->size = size;
     return true; /* execute normally */
 }
@@ -878,7 +867,7 @@ static int get_write_sysnum(void) {
 #ifdef UNIX
     return SYS_write;
 #else
-    byte          *entry;
+    byte *entry;
     module_data_t *data = dr_lookup_module_by_name("ntdll.dll");
     DR_ASSERT(data != NULL);
     entry = (byte *)dr_get_proc_address(data->handle, "NtWriteFile");
@@ -892,7 +881,7 @@ static int get_read_sysnum(void) {
 #ifdef UNIX
     return SYS_read;
 #else
-    byte          *entry;
+    byte *entry;
     module_data_t *data = dr_lookup_module_by_name("ntdll.dll");
     DR_ASSERT(data != NULL);
     entry = (byte *)dr_get_proc_address(data->handle, "NtReadFile");

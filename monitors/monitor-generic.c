@@ -29,7 +29,7 @@ static inline void dump_args(shm_stream *stream, shm_event_generic *ev,
         if (o != signature)
             printf(", ");
         if (*o == 'S' || *o == 'L' || *o == 'M') {
-            const char  *str = shm_stream_get_str(stream, (*(uint64_t *)p));
+            const char *str = shm_stream_get_str(stream, (*(uint64_t *)p));
             const size_t len = strlen(str);
             printf("S[%lu, %lu]('%.*s%s)", (*(uint64_t *)p) >> 32,
                    (*(uint64_t *)p) & 0xffffffff, len > 6 ? 6 : (int)len, str,
@@ -47,17 +47,17 @@ static inline void dump_args(shm_stream *stream, shm_event_generic *ev,
             printf("\033[31m%lu\033[0m", *((uint64_t *)p));
         } else {
             switch (size) {
-            case 1:
-                printf("%c", *((char *)p));
-                break;
-            case 4:
-                printf("%d", *((int *)p));
-                break;
-            case 8:
-                printf("%ld", *((long int *)p));
-                break;
-            default:
-                printf("?");
+                case 1:
+                    printf("%c", *((char *)p));
+                    break;
+                case 4:
+                    printf("%d", *((int *)p));
+                    break;
+                case 8:
+                    printf("%ld", *((long int *)p));
+                    break;
+                default:
+                    printf("?");
             }
         }
         p += size;
@@ -103,7 +103,7 @@ int main(int argc, char *argv[]) {
     }
 
     shm_event *ev = NULL;
-    shmn          = shamon_create(NULL, NULL);
+    shmn = shamon_create(NULL, NULL);
     assert(shmn);
 
     setup_signals();
@@ -138,22 +138,21 @@ int main(int argc, char *argv[]) {
     memset(dropped_sum_count, 0, argc * sizeof(uint64_t));
 #endif
 
-    shm_kind    kind;
-    size_t      n = 0, drp = 0, drpn = 0;
-    size_t      id;
+    shm_kind kind;
+    size_t n = 0, drp = 0, drpn = 0;
+    size_t id;
     shm_stream *stream;
 
 #ifdef CHECK_IDS
     size_t stream_id;
     size_t next_id[argc];
-    for (int i = 1; i < argc; ++i)
-        next_id[i] = 1;
+    for (int i = 1; i < argc; ++i) next_id[i] = 1;
 #endif
-    size_t               spinned = 0;
-    size_t               old_n;
+    size_t spinned = 0;
+    size_t old_n;
     struct event_record *rec;
-    struct event_record  unknown_rec = {
-         .size = 0, .name = "unknown", .signature = "", .kind = 0};
+    struct event_record unknown_rec = {
+        .size = 0, .name = "unknown", .signature = "", .kind = 0};
 
     while (__run && shamon_is_ready(shmn)) {
         old_n = n;
@@ -162,12 +161,15 @@ int main(int argc, char *argv[]) {
             ++n;
 
             int ind = 5 * shm_stream_id(stream);
-            id   = shm_event_id(ev);
+            id = shm_event_id(ev);
             kind = shm_event_kind(ev);
 
             if (shm_event_is_hole(ev)) {
                 printf("%*s%s: ", ind, "", shm_stream_get_name(stream));
-                printf("\033[0;31mhole\033[0m(\033[0;34mid: %lu, kind: %lu\033[0m, ...)\n", id, kind);
+                printf(
+                    "\033[0;31mhole\033[0m(\033[0;34mid: %lu, kind: "
+                    "%lu\033[0m, ...)\n",
+                    id, kind);
                 ++drp;
                 continue;
             }
@@ -248,19 +250,20 @@ int main(int argc, char *argv[]) {
     }
     fflush(stdout);
     fflush(stderr);
-    printf("Processed %lu events, %lu dropped events (sum of args: %lu)... "
-           "totally came: %lu\n",
-           n, drp, drpn, n + drpn - drp);
+    printf(
+        "Processed %lu events, %lu dropped events (sum of args: %lu)... "
+        "totally came: %lu\n",
+        n, drp, drpn, n + drpn - drp);
 
 #ifdef DUMP_STATS
-    size_t       streams_num;
-    size_t       evs_num;
-    size_t       totally_came = 0;
-    shm_stream **streams      = shamon_get_streams(shmn, &streams_num);
-    shm_vector  *buffers      = shamon_get_buffers(shmn);
+    size_t streams_num;
+    size_t evs_num;
+    size_t totally_came = 0;
+    shm_stream **streams = shamon_get_streams(shmn, &streams_num);
+    shm_vector *buffers = shamon_get_buffers(shmn);
     for (size_t i = 0; i < streams_num; ++i) {
         shm_stream *stream = streams[i];
-        stream_id          = shm_stream_id(stream);
+        stream_id = shm_stream_id(stream);
         assert(stream_id < (size_t)argc && "OOB access");
 
         printf("-- Stream '%s':\n", shm_stream_get_name(stream));

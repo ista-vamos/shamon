@@ -4,26 +4,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define _MM_EVACCESS(n, ilen, istrt, bstrt)                                    \
+#define _MM_EVACCESS(n, ilen, istrt, bstrt) \
     (ilen > n ? istrt + n : bstrt + (n - ilen))
-#define __MM_BUFDROP(buf, n, tlen, flen, ilen, istrt, blen, bstrt)             \
-    do {                                                                       \
-        shm_arbiter_buffer_drop(buf, n);                                       \
-        tlen -= n;                                                             \
-        flen -= n;                                                             \
-        if (ilen >= n) {                                                       \
-            ilen -= n;                                                         \
-            istrt += n;                                                        \
-        } else {                                                               \
-            ilen  = blen - (n - ilen);                                         \
-            istrt = bstrt + (n - ilen);                                        \
-        }                                                                      \
+#define __MM_BUFDROP(buf, n, tlen, flen, ilen, istrt, blen, bstrt) \
+    do {                                                           \
+        shm_arbiter_buffer_drop(buf, n);                           \
+        tlen -= n;                                                 \
+        flen -= n;                                                 \
+        if (ilen >= n) {                                           \
+            ilen -= n;                                             \
+            istrt += n;                                            \
+        } else {                                                   \
+            ilen = blen - (n - ilen);                              \
+            istrt = bstrt + (n - ilen);                            \
+        }                                                          \
     } while (0)
 
 typedef int _mm_type_int;
 typedef struct __mm_gco {
     size_t refcount;
-    char   data[];
+    char data[];
 } * _mm_gco;
 
 static inline _mm_gco _mm_decref(_mm_gco o) {
@@ -47,9 +47,9 @@ static inline _mm_gco _mm_alloc(size_t size) {
 
 #define _MM_NUMBUFSIZE 128
 
-static char           _MM_NUMBUF[_MM_NUMBUFSIZE];
+static char _MM_NUMBUF[_MM_NUMBUFSIZE];
 static inline _mm_gco _mm_lib_int_to_string(_mm_type_int n) {
-    int     len = snprintf(_MM_NUMBUF, _MM_NUMBUFSIZE, "%i", n);
+    int len = snprintf(_MM_NUMBUF, _MM_NUMBUFSIZE, "%i", n);
     _mm_gco ret = _mm_alloc(len + 1);
     if (len >= _MM_NUMBUFSIZE) {
         snprintf(ret->data, len + 1, "%i", n);
@@ -60,9 +60,9 @@ static inline _mm_gco _mm_lib_int_to_string(_mm_type_int n) {
 }
 
 static inline _mm_gco _mm_lib_string_concat(_mm_gco left, _mm_gco right) {
-    size_t leftlen  = strlen(left->data);
+    size_t leftlen = strlen(left->data);
     size_t rightlen = strlen(right->data);
-    size_t newlen   = leftlen + rightlen + 1;
+    size_t newlen = leftlen + rightlen + 1;
     assert(((newlen > leftlen) && (newlen > rightlen)) &&
            "Not enough space for new strings!");
     _mm_gco ret = _mm_alloc(newlen);
@@ -101,7 +101,7 @@ static inline _mm_type_int _mm_lib_string_compare(_mm_gco left, _mm_gco right) {
 
 static inline _mm_gco _mm_lib_substring(_mm_gco str, _mm_type_int start,
                                         _mm_type_int len) {
-    size_t slen   = strlen(str->data);
+    size_t slen = strlen(str->data);
     size_t newlen = (size_t)len;
 
     if (start < 0) {
@@ -129,7 +129,7 @@ static inline _mm_gco _mm_lib_substring(_mm_gco str, _mm_type_int start,
 }
 
 static inline _mm_gco _mm_lib_make_string(const char *str) {
-    size_t  len = strlen(str) + 1;
+    size_t len = strlen(str) + 1;
     _mm_gco ret = _mm_alloc(len);
     memcpy(ret->data, str, len);
     return ret;

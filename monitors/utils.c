@@ -8,12 +8,11 @@
 #include "streams.h"
 
 shm_stream *create_stream(int argc, char *argv[], int arg_i,
-                          const char                     *expected_stream_name,
+                          const char *expected_stream_name,
                           const shm_stream_hole_handling *hole_handling) {
-
     assert(arg_i < argc && "Index too large");
 
-    char        streamname[256];
+    char streamname[256];
     const char *dc = strchr(argv[arg_i], ':');
     if (!dc) {
         fprintf(stderr, "Failed to parse the name of stream.");

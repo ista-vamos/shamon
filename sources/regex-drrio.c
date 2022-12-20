@@ -25,8 +25,8 @@ static void usage_and_exit(int ret) {
 // #define WITH_STDOUT
 
 #ifndef WITH_STDOUT
-#define printf(...)                                                            \
-    do {                                                                       \
+#define printf(...) \
+    do {            \
     } while (0)
 #endif
 
@@ -38,27 +38,27 @@ struct event {
     unsigned char args[];
 };
 
-int    monitoring_active = 1;
-int    do_print          = 0;
-size_t processed_bytes   = 0;
+int monitoring_active = 1;
+int do_print = 0;
+size_t processed_bytes = 0;
 
 typedef struct msgbuf {
     struct msgbuf *next;
     struct msgbuf *prev;
-    char          *textbuf;
-    size_t         offset;
+    char *textbuf;
+    size_t offset;
 } msgbuf;
 
 void insert_message(msgbuf *buf, char *text) {
     if (buf->textbuf == NULL) {
         buf->textbuf = text;
-        buf->offset  = sizeof(size_t) + sizeof(int64_t);
+        buf->offset = sizeof(size_t) + sizeof(int64_t);
     } else {
-        msgbuf *newbuf     = (msgbuf *)malloc(sizeof(msgbuf));
-        newbuf->textbuf    = text;
-        newbuf->offset     = sizeof(size_t) + sizeof(int64_t);
-        newbuf->next       = buf;
-        newbuf->prev       = buf->prev;
+        msgbuf *newbuf = (msgbuf *)malloc(sizeof(msgbuf));
+        newbuf->textbuf = text;
+        newbuf->offset = sizeof(size_t) + sizeof(int64_t);
+        newbuf->next = buf;
+        newbuf->prev = buf->prev;
         newbuf->next->prev = newbuf;
         newbuf->prev->next = newbuf;
     }
@@ -66,7 +66,7 @@ void insert_message(msgbuf *buf, char *text) {
 
 char *buf_get_upto(msgbuf *buf, char *delim) {
     msgbuf *current = buf;
-    size_t  size    = 0;
+    size_t size = 0;
     if (current->textbuf == NULL) {
         return NULL;
     }
@@ -78,16 +78,16 @@ char *buf_get_upto(msgbuf *buf, char *delim) {
             char *ret = (char *)malloc(size + len + 1);
             memcpy(ret + size, current->textbuf, len);
             ret[size + len] = 0;
-            size_t curlen   = strlen(current->textbuf);
+            size_t curlen = strlen(current->textbuf);
             if (curlen == len) {
                 free(current->textbuf - current->offset);
                 current->textbuf = NULL;
                 if (current == buf) {
                     if (current->next != current) {
                         current->textbuf = current->next->textbuf;
-                        current->offset  = current->next->offset;
-                        msgbuf *newnext  = current->next->next;
-                        newnext->prev    = current;
+                        current->offset = current->next->offset;
+                        msgbuf *newnext = current->next->next;
+                        newnext->prev = current;
                         free(current->next);
                         current->next = newnext;
                     }
@@ -116,9 +116,9 @@ char *buf_get_upto(msgbuf *buf, char *delim) {
                 if (current == buf) {
                     if (current->next != current) {
                         current->textbuf = current->next->textbuf;
-                        current->offset  = current->next->offset;
-                        msgbuf *newnext  = current->next->next;
-                        newnext->prev    = current;
+                        current->offset = current->next->offset;
+                        msgbuf *newnext = current->next->next;
+                        newnext->prev = current;
                         free(current->next);
                         current->next = newnext;
                     }
@@ -138,42 +138,40 @@ char *buf_get_upto(msgbuf *buf, char *delim) {
     return NULL;
 }
 
-char *buf_get_line(msgbuf *buf) {
-    return buf_get_upto(buf, "\n");
-}
+char *buf_get_line(msgbuf *buf) { return buf_get_upto(buf, "\n"); }
 
 static size_t waiting_for_buffer = 0;
 
 typedef struct _parsedata {
-    size_t               exprs_num;
-    char               **exprs;
-    char               **signatures;
-    char               **names;
-    struct buffer       *shm;
+    size_t exprs_num;
+    char **exprs;
+    char **signatures;
+    char **names;
+    struct buffer *shm;
     struct event_record *events;
-    regex_t              re[];
+    regex_t re[];
 } parsedata;
 parsedata *pd;
 
 int monitoring_thread(void *arg) {
-    size_t               exprs_num  = pd->exprs_num;
-    struct event_record *events     = pd->events;
-    char               **signatures = pd->signatures;
-    struct buffer       *shm        = pd->shm;
-    regmatch_t           matches[MAXMATCH + 1];
+    size_t exprs_num = pd->exprs_num;
+    struct event_record *events = pd->events;
+    char **signatures = pd->signatures;
+    struct buffer *shm = pd->shm;
+    regmatch_t matches[MAXMATCH + 1];
 
-    int     status;
+    int status;
     ssize_t len;
     // size_t line_len;
-    char             *tmpline     = NULL;
-    size_t            tmpline_len = 0;
+    char *tmpline = NULL;
+    size_t tmpline_len = 0;
     signature_operand op;
 
     struct event ev;
     memset(&ev, 0, sizeof(ev));
 
     monitor_buffer buffer = (monitor_buffer)arg;
-    buffer_entry   buffer_buffer[32];
+    buffer_entry buffer_buffer[32];
     // msgbuf read_msg;
     msgbuf write_msg;
     // read_msg.next = &read_msg;
@@ -229,7 +227,7 @@ int monitoring_thread(void *arg) {
                     continue;
                 }
                 printf("{");
-                int   m = 1;
+                int m = 1;
                 void *addr;
                 while (!(addr = buffer_start_push(shm))) {
                     ++waiting_for_buffer;
@@ -237,7 +235,7 @@ int monitoring_thread(void *arg) {
                 /* push the base info about event */
                 ++ev.base.id;
                 ev.base.kind = events[i].kind;
-                addr         = buffer_partial_push(shm, addr, &ev, sizeof(ev));
+                addr = buffer_partial_push(shm, addr, &ev, sizeof(ev));
 
                 /* push the arguments of the event */
                 for (const char *o = signatures[i]; *o && m <= MAXMATCH;
@@ -286,44 +284,44 @@ int monitoring_thread(void *arg) {
                     }
 
                     switch (*o) {
-                    case 'c':
-                        assert(len == 1);
-                        printf("%c", *(char *)(line + matches[m].rm_eo));
-                        addr = buffer_partial_push(
-                            shm, addr, (char *)(line + matches[m].rm_eo),
-                            sizeof(op.c));
-                        break;
-                    case 'i':
-                        op.i = atoi(tmpline);
-                        printf("%d", op.i);
-                        addr =
-                            buffer_partial_push(shm, addr, &op.i, sizeof(op.i));
-                        break;
-                    case 'l':
-                        op.l = atol(tmpline);
-                        printf("%ld", op.l);
-                        addr =
-                            buffer_partial_push(shm, addr, &op.l, sizeof(op.l));
-                        break;
-                    case 'f':
-                        op.f = atof(tmpline);
-                        printf("%lf", op.f);
-                        addr =
-                            buffer_partial_push(shm, addr, &op.f, sizeof(op.f));
-                        break;
-                    case 'd':
-                        op.d = strtod(tmpline, NULL);
-                        printf("%lf", op.d);
-                        addr =
-                            buffer_partial_push(shm, addr, &op.d, sizeof(op.d));
-                        break;
-                    case 'S':
-                        printf("'%s'", tmpline);
-                        addr = buffer_partial_push_str(shm, addr, ev.base.id,
-                                                       tmpline);
-                        break;
-                    default:
-                        assert(0 && "Invalid signature");
+                        case 'c':
+                            assert(len == 1);
+                            printf("%c", *(char *)(line + matches[m].rm_eo));
+                            addr = buffer_partial_push(
+                                shm, addr, (char *)(line + matches[m].rm_eo),
+                                sizeof(op.c));
+                            break;
+                        case 'i':
+                            op.i = atoi(tmpline);
+                            printf("%d", op.i);
+                            addr = buffer_partial_push(shm, addr, &op.i,
+                                                       sizeof(op.i));
+                            break;
+                        case 'l':
+                            op.l = atol(tmpline);
+                            printf("%ld", op.l);
+                            addr = buffer_partial_push(shm, addr, &op.l,
+                                                       sizeof(op.l));
+                            break;
+                        case 'f':
+                            op.f = atof(tmpline);
+                            printf("%lf", op.f);
+                            addr = buffer_partial_push(shm, addr, &op.f,
+                                                       sizeof(op.f));
+                            break;
+                        case 'd':
+                            op.d = strtod(tmpline, NULL);
+                            printf("%lf", op.d);
+                            addr = buffer_partial_push(shm, addr, &op.d,
+                                                       sizeof(op.d));
+                            break;
+                        case 'S':
+                            printf("'%s'", tmpline);
+                            addr = buffer_partial_push_str(shm, addr,
+                                                           ev.base.id, tmpline);
+                            break;
+                        default:
+                            assert(0 && "Invalid signature");
                     }
                 }
                 buffer_finish_push(shm);
@@ -365,13 +363,13 @@ int main(int argc, char **argv) {
 
     pd = (parsedata *)alloca(sizeof(parsedata) + (sizeof(regex_t) * exprs_num));
     const char *shmkey = argv[1];
-    char       *exprs[exprs_num];
-    char       *signatures[exprs_num];
-    char       *names[exprs_num];
-    pd->exprs      = exprs;
+    char *exprs[exprs_num];
+    char *signatures[exprs_num];
+    char *names[exprs_num];
+    pd->exprs = exprs;
     pd->signatures = signatures;
-    pd->names      = names;
-    pd->exprs_num  = exprs_num;
+    pd->names = names;
+    pd->exprs_num = exprs_num;
 
     int arg_i = 2;
     for (int i = 0; i < (int)exprs_num; ++i) {
@@ -396,8 +394,8 @@ int main(int argc, char **argv) {
     struct source_control *control = source_control_define_pairwise(
         exprs_num, (const char **)names, (const char **)signatures);
     assert(control);
-    const size_t   capacity = 256;
-    struct buffer *shm      = create_shared_buffer(shmkey, capacity, control);
+    const size_t capacity = 256;
+    struct buffer *shm = create_shared_buffer(shmkey, capacity, control);
     assert(shm);
     free(control);
 

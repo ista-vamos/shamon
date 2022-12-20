@@ -41,13 +41,11 @@
 #ifdef SHOW_SYMBOLS
 #include "drsyms.h"
 #endif
-#include "utils.h"
-
 #include "buffer.h"
 #include "client.h"
-
 #include "event.h" /* shm_event_dropped */
 #include "events.h"
+#include "utils.h"
 
 static void event_exit(void);
 /*
@@ -60,14 +58,14 @@ static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
                                              instrlist_t *bb, instr_t *instr,
                                              bool for_trace, bool translating,
                                              void *user_data);
-static int             tls_idx;
+static int tls_idx;
 
 static client_id_t my_id;
 
-static struct buffer          *shm;
+static struct buffer *shm;
 static struct call_event_spec *events;
-static size_t                  events_num;
-size_t                         max_event_size;
+static size_t events_num;
+size_t max_event_size;
 
 static uint64_t waiting_for_buffer = 0;
 
@@ -188,28 +186,28 @@ static inline void *call_get_arg_ptr(dr_mcontext_t *mc, int i, char o) {
     }
     DR_ASSERT(i < 6);
     switch (i) {
-    case 0:
-        return &mc->xdi;
-    case 1:
-        return &mc->xsi;
-    case 2:
-        return &mc->xdx;
-    case 3:
-        return &mc->xcx;
-    case 4:
-        return &mc->r8;
-    case 5:
-        return &mc->r9;
+        case 0:
+            return &mc->xdi;
+        case 1:
+            return &mc->xsi;
+        case 2:
+            return &mc->xdx;
+        case 3:
+            return &mc->xcx;
+        case 4:
+            return &mc->r8;
+        case 5:
+            return &mc->r9;
     }
 }
 
 #ifdef SHOW_SYMBOLS
 #define MAX_SYM_RESULT 256
 static void print_address(file_t f, app_pc addr, const char *prefix) {
-    drsym_error_t  symres;
-    drsym_info_t   sym;
-    char           name[MAX_SYM_RESULT];
-    char           file[MAXIMUM_PATH];
+    drsym_error_t symres;
+    drsym_info_t sym;
+    char name[MAX_SYM_RESULT];
+    char file[MAXIMUM_PATH];
     module_data_t *data;
     data = dr_lookup_module(addr);
     if (data == NULL) {
@@ -217,10 +215,10 @@ static void print_address(file_t f, app_pc addr, const char *prefix) {
         return;
     }
     sym.struct_size = sizeof(sym);
-    sym.name        = name;
-    sym.name_size   = MAX_SYM_RESULT;
-    sym.file        = file;
-    sym.file_size   = MAXIMUM_PATH;
+    sym.name = name;
+    sym.name_size = MAX_SYM_RESULT;
+    sym.file = file;
+    sym.file_size = MAXIMUM_PATH;
     symres = drsym_lookup_address(data->full_path, addr - data->start, &sym,
                                   DRSYM_DEFAULT_FLAGS);
     if (symres == DRSYM_SUCCESS || symres == DRSYM_ERROR_LINE_NOT_AVAILABLE) {

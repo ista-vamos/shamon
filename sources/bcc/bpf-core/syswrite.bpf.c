@@ -2,16 +2,17 @@
 // Copyright (c) 2020 Anton Protopopov
 //
 // Based on syscount(8) from BCC by Sasha Goldshtein
-#include <vmlinux.h>
-
-#include "maps.bpf.h"
 #include "syswrite.h"
+
 #include <bpf/bpf_core_read.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
+#include <vmlinux.h>
+
+#include "maps.bpf.h"
 
 const volatile pid_t filter_pid = 0;
-size_t               dropped    = 0;
+size_t dropped = 0;
 
 struct {
     __uint(type, BPF_MAP_TYPE_RINGBUF);
@@ -19,8 +20,8 @@ struct {
 } buffer SEC(".maps");
 
 struct loop_data {
-    int         fd;
-    size_t      count;
+    int fd;
+    size_t count;
     const char *user_buf;
 };
 
@@ -38,9 +39,9 @@ static long submit_events(u32 index, struct loop_data *ctx) {
         size_t dtmp = dropped;
         if (dtmp > 0) {
             event->count = dtmp;
-            event->len   = -2;
-            event->off   = 0;
-            dropped      = 0;
+            event->len = -2;
+            event->off = 0;
+            dropped = 0;
             bpf_ringbuf_submit(event, 0);
             return 1;
         }
@@ -54,9 +55,9 @@ static long submit_events(u32 index, struct loop_data *ctx) {
         return 1;
     } else {
         event->count = ctx->count - off;
-        event->fd    = ctx->fd;
-        event->len   = len;
-        event->off   = off;
+        event->fd = ctx->fd;
+        event->len = len;
+        event->off = off;
         bpf_ringbuf_submit(event, 0);
     }
 
@@ -65,7 +66,7 @@ static long submit_events(u32 index, struct loop_data *ctx) {
 
 SEC("tracepoint/syscalls/sys_enter_write")
 int sys_write(struct trace_event_raw_sys_enter *ctx) {
-    pid_t pid     = bpf_get_current_pid_tgid() >> 32;
+    pid_t pid = bpf_get_current_pid_tgid() >> 32;
     pid_t req_pid = filter_pid;
 
     if (req_pid > 0 && pid != req_pid) {
@@ -74,7 +75,7 @@ int sys_write(struct trace_event_raw_sys_enter *ctx) {
 
     int fd = ctx->args[0];
     if (fd != 1) {
-        return 0; // not interested
+        return 0;  // not interested
     }
 
     size_t count = ctx->args[2];
