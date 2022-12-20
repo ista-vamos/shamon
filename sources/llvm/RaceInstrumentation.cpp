@@ -120,7 +120,7 @@ void RaceInstrumentation::instrumentThreadCreate(CallInst *call, Value *data) {
     load->insertAfter(call);
 }
 
-static void insertMutexLockOrUnlock(CallInst *call, Value *mtx, const std::string& fun) {
+static void insertMutexLockOrUnlock(CallInst *call, Value *mtx, const std::string& fun, bool isunlock=false) {
     Module *module = call->getModule();
     LLVMContext &ctx = module->getContext();
     const FunctionCallee &instr_fun = module->getOrInsertFunction(fun,
@@ -128,8 +128,14 @@ static void insertMutexLockOrUnlock(CallInst *call, Value *mtx, const std::strin
                                                                   Type::getInt8PtrTy(ctx));
     CastInst *cast = CastInst::CreatePointerCast(mtx, Type::getInt8PtrTy(ctx));
     std::vector<Value *> args = {cast};
-    auto *new_call = CallInst::Create(instr_fun, args, "", call);
+    auto *new_call = CallInst::Create(instr_fun, args, "");
     new_call->setDebugLoc(call->getDebugLoc());
+
+    if (isunlock) {
+        new_call->insertBefore(call);
+    } else {
+        new_call->insertAfter(call);
+    }
     cast->insertBefore(new_call);
 }
 
@@ -255,7 +261,7 @@ bool RaceInstrumentation::runOnBasicBlock(BasicBlock& block) {
             if (auto *mtx = getMutexLock(calledfun, call)) {
                 insertMutexLockOrUnlock(call, mtx, "__vrd_mutex_lock");
             } else if (auto *mtx = getMutexUnlock(calledfun, call)) {
-                insertMutexLockOrUnlock(call, mtx, "__vrd_mutex_unlock");
+                insertMutexLockOrUnlock(call, mtx, "__vrd_mutex_unlock", /* isunlock */true);
             } else if (auto *data = getThreadCreateData(calledfun, call)) {
                 instrumentThreadCreate(call, data);
             } else if (isTSanFuncEntry(calledfun)) {
