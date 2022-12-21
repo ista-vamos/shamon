@@ -16,12 +16,16 @@ SHAMON_LIBS="$SHAMONDIR/core/libshamon-arbiter.a\
              $SHAMONDIR/core/signatures.c\
              $SHAMONDIR/streams/libshamon-streams.a"
 
+OPT=opt
+CLANG=clang
+LINK=llvm-link
+DIS=llvm-dis
 
-clang $CFLAGS -emit-llvm -S -fsanitize=thread $@ -o code.ll
-opt-12 -enable-new-pm=0 -load $LLVM_PASS_DIR/race-instrumentation.so -vamos-race-instrumentation code.ll -o code-instr.bc
+$CLANG $CFLAGS -emit-llvm -S -fsanitize=thread $@ -o code.ll
+$OPT -enable-new-pm=0 -load $LLVM_PASS_DIR/race-instrumentation.so -vamos-race-instrumentation code.ll -o code-instr.bc
 
-clang $CFLAGS $SHAMON_INCLUDES -std=c11 -emit-llvm -S tsan_impl.c
-llvm-link-12 tsan_impl.ll code-instr.bc -o code-linked.bc
-llvm-dis-12 code-linked.bc
+$CLANG $CFLAGS $SHAMON_INCLUDES -std=c11 -emit-llvm -S tsan_impl.c
+$LINK tsan_impl.ll code-instr.bc -o code-linked.bc
+$DIS code-linked.bc || echo "llvm-dis does not work, ignoring"
 
-clang -pthread $CFLAGS code-linked.ll $SHAMON_LIBS
+clang -pthread $CFLAGS code-linked.bc $SHAMON_LIBS
