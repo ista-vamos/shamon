@@ -26,6 +26,46 @@ typedef union {
 	struct { int threadid; } join;
 } Action;
 
+void print_action(ActionType type, Action &act)
+{
+	switch(type)
+	{
+		case ActionType::ATRead:
+		printf("read(%li)",act.read.addr);
+		break;
+		case ActionType::ATWrite:
+		printf("write(%li)",act.write.addr);
+		break;
+		case ActionType::ATLock:
+		printf("lock(%li)",act.lock.addr);
+		break;
+		case ActionType::ATUnlock:
+		printf("unlock(%li)",act.unlock.addr);
+		break;
+		case ActionType::ATAlloc:
+		printf("alloc(%li, %lu)",act.alloc.addr, act.alloc.size);
+		break;
+		case ActionType::ATFree:
+		printf("free(%li)",act.free.addr);
+		break;
+		case ActionType::ATFork:
+		printf("fork(%i)",act.fork.newthreadid);
+		break;
+		case ActionType::ATJoin:
+		printf("join(%i)",act.join.threadid);
+		break;
+		case ActionType::ATSkipStart:
+		printf("skipstart()");
+		break;
+		case ActionType::ATSkipEnd:
+		printf("skipend()");
+		break;
+		case ActionType::ATDone:
+		printf("done()");
+		break;
+	}
+}
+
 class Cell {
 	public:
 	Cell * next;
@@ -69,6 +109,72 @@ unordered_map<intptr_t, map<int, Info>> Reads;
 unordered_map<intptr_t, int> LockThreads;
 map<int, set<intptr_t>> ThreadLocks;
 
+void print_lockset(Lockset &ls, bool printNewline=true)
+{
+	printf("Lockset %p = (addrs : {");
+	bool seenfirst=false;
+	for(auto addr : ls.addrs)
+	{
+		if(seenfirst)
+		{
+			printf(", ");
+		}
+		printf("%p", addr);
+		seenfirst=true;
+	}
+	printf("}, threads: {");
+	seenfirst=false;
+	for(auto thrd : ls.threads)
+	{
+		if(seenfirst)
+		{
+			printf(", ");
+		}
+		printf("%i", thrd);
+		seenfirst=true;
+	}
+	printf("})");
+	if(printNewline)
+	{
+		printf("\n");
+	}
+}
+
+void print_cell(Cell &cell, bool printRest=false)
+{
+	printf("Cell %p = (ts : %lu, thrd: %i, act: ", (intptr_t)&cell, cell.timestamp, cell.threadid);
+	print_action(cell.type, cell.action);
+	printf(")");
+	if(printRest&&cell.next!=0&&cell.next!=tail)
+	{
+		printf("; ");
+		print_cell(*cell.next, true);
+	}
+	else
+	{
+		printf("\n");
+	}
+}
+
+void print_info(Info &info, bool printCells=false)
+{
+	printf("Info %p = (owner: %i, alock: %li, ",(intptr_t)&info, info.owner, info.alock);
+	print_lockset(info.lockset,false);
+	printf(")");
+	if(printCells)
+	{
+		printf("; ");
+		if(info.pos!=0&&info.pos!=tail)
+		{
+			print_cell(*info.pos,true);
+		}
+	}
+	else
+	{
+		printf("\n");
+	}
+}
+
 inline void enqueue_sync_event(int thrd, ActionType tp, Action &a)
 {
 	tail->threadid=thrd;
@@ -91,7 +197,7 @@ inline bool thread_holds_lock(int thrd, intptr_t lock)
 
 void apply_lockset_rules(Lockset &ls, Cell *pos1, Cell *pos2, int owner2)
 {
-	do
+	while(1)
 	{
 		switch(pos1->type)
 		{
@@ -147,6 +253,10 @@ void apply_lockset_rules(Lockset &ls, Cell *pos1, Cell *pos2, int owner2)
 				{
 					printf("Found data race: Thread %i read from %li without synchronization\n", pos1->threadid, pos1->action.read.addr);
 				}
+				else
+				{
+					printf("read is fine\n");
+				}
 				ls.addrs.clear();
 				if(ls.threads.size()!=1||(*ls.threads.begin())!=pos1->threadid)
 				{
@@ -161,6 +271,10 @@ void apply_lockset_rules(Lockset &ls, Cell *pos1, Cell *pos2, int owner2)
 				if((!ls.addrs.empty())&&ls.addrs.find(pos1->action.write.addr)==ls.addrs.end()&&ls.skipthreads.find(pos1->threadid)==ls.skipthreads.end()&&ls.skippedthreads.find(pos1->threadid)==ls.skippedthreads.end())
 				{
 					printf("Found data race: Thread %i wrote to %li without synchronization\n", pos1->threadid, pos1->action.write.addr);
+				}
+				else
+				{
+					printf("write is fine\n");
 				}
 				ls.addrs.clear();
 				if(ls.threads.size()!=1||(*ls.threads.begin())!=pos1->threadid)
@@ -183,17 +297,23 @@ void apply_lockset_rules(Lockset &ls, Cell *pos1, Cell *pos2, int owner2)
 			}
 			break;
 		}
+		if(pos1==pos2)
+		{
+			break;
+		}
 		pos1=pos1->next;
-	} while(pos1!=pos2);
+	}
 }
 
 void check_happens_before(Info &info1, Info &info2)
 {
+	print_info(info1);
+	print_info(info2);
 	// if(info1->xact&&info2->xact)
 	// {
 	// 	return;
 	// }
-	if((info1.owner!=info2.owner)&&(thread_holds_lock(info2.owner,info1.alock)))
+	if((info1.owner!=info2.owner)&&(!thread_holds_lock(info2.owner,info1.alock)))
 	{
 		apply_lockset_rules(info1.lockset, info1.pos, info2.pos, info2.owner);
 		info2.alock=0;

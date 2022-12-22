@@ -716,7 +716,8 @@ int PERF_LAYER_forward_{stream_type} (shm_arbiter_buffer *buffer) {"{"}
         
         shm_stream_consume(stream, 1);
     {"}"}  
-    atomic_fetch_add(&count_event_streams, -1);   
+    atomic_fetch_add(&count_event_streams, -1);
+    return 0;   
 {"}"}
         '''
     for (stream_processor, data) in TypeChecker.stream_processors_data.items():
@@ -759,6 +760,7 @@ int PERF_LAYER_forward_{stream_type} (shm_arbiter_buffer *buffer) {"{"}
         shm_stream_consume(stream, 1);
     {"}"}  
     atomic_fetch_add(&count_event_streams, -1);   
+    return 0;
 {"}"}
 '''
     return answer
@@ -813,6 +815,7 @@ def arbiter_code(tree, components):
     {rule_set_invocations}
         {"}"}
         shm_monitor_set_finished(monitor_buffer);
+        return 0;
     {"}"}
         '''
     else:
@@ -822,6 +825,7 @@ def arbiter_code(tree, components):
 
     {"}"}
     shm_monitor_set_finished(monitor_buffer);
+    return 0;
 {"}"}
     '''
 
@@ -1500,6 +1504,7 @@ const char *get_event_name(int ev_src_index, int event_index) {"{"}
     
     {code}
     printf("Invalid event source! this should not happen, please report!\\n");
+    return 0;
 {"}"}
     '''
 
