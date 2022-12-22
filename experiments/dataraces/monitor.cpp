@@ -79,6 +79,9 @@ class Cell {
 Cell * head=new Cell();
 Cell * tail=head;
 size_t cellcount=0;
+uint64_t racecount=0;
+
+extern "C" uint64_t GetRaceCount() { return racecount; }
 
 class Lockset
 {
@@ -111,7 +114,7 @@ map<int, set<intptr_t>> ThreadLocks;
 
 void print_lockset(Lockset &ls, bool printNewline=true)
 {
-	printf("Lockset %p = (addrs : {");
+	printf("Lockset %p = (addrs : {", (void*)&ls);
 	bool seenfirst=false;
 	for(auto addr : ls.addrs)
 	{
@@ -119,7 +122,7 @@ void print_lockset(Lockset &ls, bool printNewline=true)
 		{
 			printf(", ");
 		}
-		printf("%p", addr);
+		printf("%p", (void*)addr);
 		seenfirst=true;
 	}
 	printf("}, threads: {");
@@ -142,7 +145,7 @@ void print_lockset(Lockset &ls, bool printNewline=true)
 
 void print_cell(Cell &cell, bool printRest=false)
 {
-	printf("Cell %p = (ts : %lu, thrd: %i, act: ", (intptr_t)&cell, cell.timestamp, cell.threadid);
+	printf("Cell %p = (ts : %lu, thrd: %i, act: ", (void*)&cell, cell.timestamp, cell.threadid);
 	print_action(cell.type, cell.action);
 	printf(")");
 	if(printRest&&cell.next!=0&&cell.next!=tail)
@@ -158,7 +161,7 @@ void print_cell(Cell &cell, bool printRest=false)
 
 void print_info(Info &info, bool printCells=false)
 {
-	printf("Info %p = (owner: %i, alock: %li, ",(intptr_t)&info, info.owner, info.alock);
+	printf("Info %p = (owner: %i, alock: %li, ",(void*)&info, info.owner, info.alock);
 	print_lockset(info.lockset,false);
 	printf(")");
 	if(printCells)
@@ -167,6 +170,10 @@ void print_info(Info &info, bool printCells=false)
 		if(info.pos!=0&&info.pos!=tail)
 		{
 			print_cell(*info.pos,true);
+		}
+		else
+		{
+			printf("\n");
 		}
 	}
 	else
@@ -195,9 +202,9 @@ inline bool thread_holds_lock(int thrd, intptr_t lock)
 	return false;
 }
 
-void apply_lockset_rules(Lockset &ls, Cell *pos1, Cell *pos2, int owner2)
+void apply_lockset_rules(Lockset &ls, Cell *pos1, Cell *pos2, int owner2, ActionType action, intptr_t addr)
 {
-	while(1)
+	while(pos1!=pos2)
 	{
 		switch(pos1->type)
 		{
@@ -247,44 +254,44 @@ void apply_lockset_rules(Lockset &ls, Cell *pos1, Cell *pos2, int owner2)
 			{
 			}
 			break;
-			case ActionType::ATRead:
-			{
-				if((!ls.addrs.empty())&&ls.addrs.find(pos1->action.read.addr)==ls.addrs.end()&&ls.skipthreads.find(pos1->threadid)==ls.skipthreads.end()&&ls.skippedthreads.find(pos1->threadid)==ls.skippedthreads.end())
-				{
-					printf("Found data race: Thread %i read from %li without synchronization\n", pos1->threadid, pos1->action.read.addr);
-				}
-				else
-				{
-					printf("read is fine\n");
-				}
-				ls.addrs.clear();
-				if(ls.threads.size()!=1||(*ls.threads.begin())!=pos1->threadid)
-				{
-					ls.threads.clear();
-					ls.threads.insert(pos1->threadid);
-				}
-				ls.skippedthreads.clear();
-			}
-			break;
-			case ActionType::ATWrite:
-			{
-				if((!ls.addrs.empty())&&ls.addrs.find(pos1->action.write.addr)==ls.addrs.end()&&ls.skipthreads.find(pos1->threadid)==ls.skipthreads.end()&&ls.skippedthreads.find(pos1->threadid)==ls.skippedthreads.end())
-				{
-					printf("Found data race: Thread %i wrote to %li without synchronization\n", pos1->threadid, pos1->action.write.addr);
-				}
-				else
-				{
-					printf("write is fine\n");
-				}
-				ls.addrs.clear();
-				if(ls.threads.size()!=1||(*ls.threads.begin())!=pos1->threadid)
-				{
-					ls.threads.clear();
-					ls.threads.insert(pos1->threadid);
-				}
-				ls.skippedthreads.clear();
-			}
-			break;
+			// case ActionType::ATRead:
+			// {
+			// 	if((!ls.addrs.empty())&&ls.addrs.find(pos1->action.read.addr)==ls.addrs.end()&&ls.skipthreads.find(pos1->threadid)==ls.skipthreads.end()&&ls.skippedthreads.find(pos1->threadid)==ls.skippedthreads.end())
+			// 	{
+			// 		printf("Found data race: Thread %i read from %li without synchronization\n", pos1->threadid, pos1->action.read.addr);
+			// 	}
+			// 	else
+			// 	{
+			// 		printf("read is fine\n");
+			// 	}
+			// 	ls.addrs.clear();
+			// 	if(ls.threads.size()!=1||(*ls.threads.begin())!=pos1->threadid)
+			// 	{
+			// 		ls.threads.clear();
+			// 		ls.threads.insert(pos1->threadid);
+			// 	}
+			// 	ls.skippedthreads.clear();
+			// }
+			// break;
+			// case ActionType::ATWrite:
+			// {
+			// 	if((!ls.addrs.empty())&&ls.addrs.find(pos1->action.write.addr)==ls.addrs.end()&&ls.skipthreads.find(pos1->threadid)==ls.skipthreads.end()&&ls.skippedthreads.find(pos1->threadid)==ls.skippedthreads.end())
+			// 	{
+			// 		printf("Found data race: Thread %i wrote to %li without synchronization\n", pos1->threadid, pos1->action.write.addr);
+			// 	}
+			// 	else
+			// 	{
+			// 		printf("write is fine\n");
+			// 	}
+			// 	ls.addrs.clear();
+			// 	if(ls.threads.size()!=1||(*ls.threads.begin())!=pos1->threadid)
+			// 	{
+			// 		ls.threads.clear();
+			// 		ls.threads.insert(pos1->threadid);
+			// 	}
+			// 	ls.skippedthreads.clear();
+			// }
+			// break;
 			case ActionType::ATSkipStart:
 			{
 				ls.skipthreads.insert(pos1->threadid);
@@ -297,25 +304,64 @@ void apply_lockset_rules(Lockset &ls, Cell *pos1, Cell *pos2, int owner2)
 			}
 			break;
 		}
-		if(pos1==pos2)
-		{
-			break;
-		}
 		pos1=pos1->next;
+	}
+	switch(action)
+	{		
+		case ActionType::ATRead:
+		{
+			if((!(ls.addrs.empty()&&ls.threads.empty()))&&ls.threads.find(owner2)==ls.threads.end()&&ls.skipthreads.find(pos1->threadid)==ls.skipthreads.end()&&ls.skippedthreads.find(pos1->threadid)==ls.skippedthreads.end())
+			{
+				printf("Found data race: Thread %i read from %p without synchronization\n", owner2, (void*)addr);
+				racecount++;
+			}
+			// else
+			// {
+			// 	printf("read is fine\n");
+			// }
+			ls.addrs.clear();
+			if(ls.threads.size()!=1||(*ls.threads.begin())!=pos1->threadid)
+			{
+				ls.threads.clear();
+				ls.threads.insert(pos1->threadid);
+			}
+			ls.skippedthreads.clear();
+		}
+		break;
+		case ActionType::ATWrite:
+		{
+			if((!(ls.addrs.empty()&&ls.threads.empty()))&&ls.threads.find(owner2)==ls.threads.end()&&ls.skipthreads.find(pos1->threadid)==ls.skipthreads.end()&&ls.skippedthreads.find(pos1->threadid)==ls.skippedthreads.end())
+			{
+				printf("Found data race: Thread %i wrote to %p without synchronization\n", owner2, (void*)addr);
+				racecount++;
+			}
+			// else
+			// {
+			// 	printf("write is fine\n");
+			// }
+			ls.addrs.clear();
+			if(ls.threads.size()!=1||(*ls.threads.begin())!=pos1->threadid)
+			{
+				ls.threads.clear();
+				ls.threads.insert(pos1->threadid);
+			}
+			ls.skippedthreads.clear();
+		}
+		break;
 	}
 }
 
-void check_happens_before(Info &info1, Info &info2)
+void check_happens_before(Info &info1, Info &info2, ActionType action, intptr_t addr)
 {
-	print_info(info1);
-	print_info(info2);
+	// print_info(info1, true);
+	// print_info(info2, true);
 	// if(info1->xact&&info2->xact)
 	// {
 	// 	return;
 	// }
 	if((info1.owner!=info2.owner)&&(!thread_holds_lock(info2.owner,info1.alock)))
 	{
-		apply_lockset_rules(info1.lockset, info1.pos, info2.pos, info2.owner);
+		apply_lockset_rules(info1.lockset, info1.pos, info2.pos, info2.owner, action, addr);
 		info2.alock=0;
 		auto posn=ThreadLocks.find(info1.owner);
 		if(posn!=ThreadLocks.end())
@@ -373,7 +419,7 @@ extern "C" void monitor_handle_read(int tid, uint64_t timestamp, intptr_t addr)
 	auto wentry=Writes.find(addr);
 	if(wentry!=Writes.end())
 	{
-		check_happens_before(wentry->second,entry->second);
+		check_happens_before(wentry->second,entry->second, ActionType::ATRead, addr);
 	}
 }
 extern "C" void monitor_handle_read_many(int tid, uint64_t timestamp, intptr_t addr, size_t bytes)
@@ -386,8 +432,10 @@ extern "C" void monitor_handle_read_many(int tid, uint64_t timestamp, intptr_t a
 
 extern "C" void monitor_handle_write(int tid, uint64_t timestamp, intptr_t addr)
 {
+	// printf("MWRITE! %p\n", addr);
 	Info info(tid);
 	cell_rc_inc(tail);
+	// print_cell(*head,true);
 	auto rinfo = Reads.find(addr);
 	if(rinfo!=Reads.end())
 	{
@@ -396,20 +444,25 @@ extern "C" void monitor_handle_write(int tid, uint64_t timestamp, intptr_t addr)
 			auto trinfo = rinfo->second.find(tlp->first);
 			if(trinfo!=rinfo->second.end())
 			{
-				check_happens_before(trinfo->second, info);
+				check_happens_before(trinfo->second, info, ActionType::ATWrite, addr);
 			}
 		}
 	}
+	// else
+	// {
+	// 	printf("MWRITE: no reads found, %p\n", addr);
+	// }
 	auto winfo = Writes.find(addr);
 	if(winfo!=Writes.end())
 	{
-		check_happens_before(winfo->second, info);
+		check_happens_before(winfo->second, info, ActionType::ATWrite, addr);
 		cell_rc_dec(winfo->second.pos);
 		winfo->second=std::move(info);
 	}
 	else
 	{
 		Writes.insert_or_assign(addr, tid);
+		// printf("MWRITE: no writes found, %p\n", addr);
 	}
 	if(rinfo!=Reads.end())
 	{
