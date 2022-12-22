@@ -140,7 +140,7 @@ int main(int argc, char**argv)
     }
 	thrd_create(&thread1,Thread1,0);
 	thrd_create(&thread2,Thread2,0);
-	test(10000,10);
+	test(10000,100);
 	running=0;
 	thrd_join(thread1,0);
 	thrd_join(thread2,0);

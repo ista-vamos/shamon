@@ -58,13 +58,19 @@ $$
     #define max(a, b) __vamos_max(a, b)
 $$
 
+cleanup
+$$
+    printf("Dropped %lu events\n", skipcount);
+    printf("Found %lu races\n", GetRaceCount());
+$$
+
 arbiter : GlobalEvent
 {
     choose first 5 T from Threads where $$ $T.nextts; <= nextts && ($T.nonecount; < nonebarrier || $T.nonets; < nextts) $$
     {
         on T : | read(ts,addr)
         $$
-            printf("read! %lu/%lu\n",ts,nextts);
+            //printf("read! %lu/%lu\n",ts,nextts);
             if(ts==nextts)
             {
                 $yield read(T.threadid, ts, addr);
@@ -79,13 +85,13 @@ arbiter : GlobalEvent
             }
             else
             {
-                printf("%lu/%lu\n",ts,nextts);
+                //printf("%lu/%lu\n",ts,nextts);
                 $drop 1 from T;
             }
         $$
         on T : | write(ts,addr)
         $$
-            printf("write! %lu/%lu\n",ts,nextts);
+            //printf("write! %lu/%lu\n",ts,nextts);
             if(ts==nextts)
             {
                 $yield write(T.threadid, ts, addr);
@@ -257,7 +263,7 @@ arbiter : GlobalEvent
         $$
         on T : | my_hole(n, mints, maxts)
         $$
-            printf("\033[36m[a] my_hole(n=%lu, mints=%lu, maxts=%lu)\033[0m\n", n, mints, maxts);
+            //printf("\033[36m[a] my_hole(n=%lu, mints=%lu, maxts=%lu)\033[0m\n", n, mints, maxts);
             if(mints<=nextts)
             {
                 skipcount+=n;
@@ -315,7 +321,7 @@ arbiter : GlobalEvent
                 {
                     skipcount-=(leastts-nextts);
                 }
-                printf("forward: %lu\n",leastts);
+                //printf("forward: %lu\n",leastts);
                 nextts=leastts;
             }
             else
@@ -325,7 +331,7 @@ arbiter : GlobalEvent
                     skipcount-=1;
                 }
                 nextts++;
-                printf("inc: %lu\n",nextts);
+                //printf("inc: %lu\n",nextts);
             }
             nonebarrier=1;
             nonecycles=0;
@@ -342,46 +348,62 @@ arbiter : GlobalEvent
 monitor {
     on read(tid, timestamp, addr) where $$ true $$
     $$
-        monitor_handle_read(tid, timestamp, addr);
+        #ifdef DEBUGPRINT
         printf("read(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
+        #endif
+        monitor_handle_read(tid, timestamp, addr);
     $$
     on read_sized(tid, timestamp, addr, size) where $$ true $$
     $$
-        monitor_handle_read_many(tid, timestamp, addr, size);
+        #ifdef DEBUGPRINT
         printf("read_sized(tid=%lu, ts=%lu, addr=%p, size=%lu)\n", tid, timestamp, addr, size);
+        #endif
+        monitor_handle_read_many(tid, timestamp, addr, size);
     $$
 
     on write(tid, timestamp, addr) where $$ true $$
     $$
-        monitor_handle_write(tid, timestamp, addr);
+        #ifdef DEBUGPRINT
         printf("write(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
+        #endif
+        monitor_handle_write(tid, timestamp, addr);
     $$
     on write_sized(tid, timestamp, addr, size) where $$ true $$
     $$
-        monitor_handle_write_many(tid, timestamp, addr, size);
+        #ifdef DEBUGPRINT
         printf("write_sized(tid=%lu, ts=%lu, addr=%li, size=%lu)\n", tid, timestamp, addr,size);
+        #endif
+        monitor_handle_write_many(tid, timestamp, addr, size);
     $$
 
     on atomicread(tid, timestamp, addr , mode) where $$ true $$
     $$
+        #ifdef DEBUGPRINT
         printf("atomicread(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
+        #endif
     $$
 
     on atomicwrite(tid, timestamp, addr , mode) where $$ true $$
     $$
+        #ifdef DEBUGPRINT
         printf("atomicwrite(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
+        #endif
     $$
 
     on lock(tid, timestamp, addr) where $$ true $$
     $$
-        monitor_handle_lock(tid, timestamp, addr);
+        #ifdef DEBUGPRINT
         printf("lock(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
+        #endif
+        monitor_handle_lock(tid, timestamp, addr);
     $$
 
     on unlock(tid, timestamp, addr) where $$ true $$
     $$
-        monitor_handle_unlock(tid, timestamp, addr);
+        #ifdef DEBUGPRINT
         printf("unlock(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
+        #endif
+        monitor_handle_unlock(tid, timestamp, addr);
     $$
 
 
@@ -390,38 +412,52 @@ monitor {
 
     on alloc(tid, timestamp , addr, size) where $$ true $$
     $$ 
-        monitor_handle_alloc(tid, timestamp, addr, size);
+        #ifdef DEBUGPRINT
         printf("ALLOC\n");
+        #endif
+        monitor_handle_alloc(tid, timestamp, addr, size);
     $$
     on free(tid, timestamp, addr ) where $$ true $$
     $$ 
-        monitor_handle_free(tid, timestamp, addr);
+        #ifdef DEBUGPRINT
         printf("FREE\n");
+        #endif
+        monitor_handle_free(tid, timestamp, addr);
     $$
     on fork(tid, timestamp, newthreadid) where $$ true $$
     $$
-        monitor_handle_fork(tid, timestamp, newthreadid);
+        #ifdef DEBUGPRINT
         printf("fork(tid=%lu, ts=%lu, newtid=%lu\n", tid, timestamp, newthreadid);
+        #endif
+        monitor_handle_fork(tid, timestamp, newthreadid);
     $$
     on join(tid, timestamp, threadid) where $$ true $$
     $$
-        monitor_handle_join(tid, timestamp, threadid);
+        #ifdef DEBUGPRINT
         printf("join(tid=%lu, ts=%lu, jointid=%lu\n", tid, timestamp, threadid);
+        #endif
+        monitor_handle_join(tid, timestamp, threadid);
     $$
     on skipstart(tid, timestamp) where $$ true $$
     $$
-        monitor_handle_skip_start(tid, timestamp);
+        #ifdef DEBUGPRINT
         printf("skipstart(tid=%lu, ts=%lu)\n", tid, timestamp);
+        #endif
+        monitor_handle_skip_start(tid, timestamp);
     $$
     on skipend(tid, timestamp) where $$ true $$
     $$
-        monitor_handle_skip_end(tid, timestamp);
+        #ifdef DEBUGPRINT
         printf("skipend(tid=%lu, ts=%lu)\n", tid, timestamp);
+        #endif
+        monitor_handle_skip_end(tid, timestamp);
     $$
     on done_(tid, timestamp) where $$ true $$
     $$
-        monitor_handle_done(tid, timestamp);
+        #ifdef DEBUGPRINT
         printf("DONE\n");
+        #endif
+        monitor_handle_done(tid, timestamp);
     $$
 
 }
