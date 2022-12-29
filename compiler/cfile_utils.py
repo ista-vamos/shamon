@@ -864,12 +864,12 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
                     {"}"}'''
                 elif tree[PPBUFFER_MATCH_ARG1][1] == "done":
                     if stream_name not in TypeChecker.event_sources_data.keys():
-                        return f'''if (count_{stream_name} == 0 && is_stream_done({stream_name})) {"{"}
+                        return f'''if (count_{stream_name} == 0 && is_buffer_done(BUFFER_{stream_name})) {"{"}
                             {inner_code}
                         {"}"}
                         '''
                     else:
-                        return f'''if (count_{stream_name} == 0 && is_stream_done(EV_SOURCE_{stream_name})) {"{"}
+                        return f'''if (count_{stream_name} == 0 && is_buffer_done(BUFFER_{stream_name})) {"{"}
                             {inner_code}
                         {"}"}
                         '''
@@ -1789,8 +1789,8 @@ static inline bool are_streams_done() {"{"}
     return (count_event_streams == 0 && are_buffers_done()) || __work_done;
 {"}"}
 
-static inline bool is_stream_done(shm_stream *s) {"{"}
-    return !shm_stream_is_ready(s);
+static inline bool is_buffer_done(shm_arbiter_buffer *b) {"{"}
+    return shm_arbiter_buffer_is_done(b);
 {"}"}
 
 
