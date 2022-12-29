@@ -52,6 +52,7 @@ $$
     uint64_t skipcount=0;
     uint16_t nonebarrier=1;
     uint64_t nonecycles=0;
+    uint64_t dropcount=0;
     int seenNone=0;
 
     #define min(a, b) __vamos_min(a, b)
@@ -60,7 +61,7 @@ $$
 
 cleanup
 $$
-    printf("Dropped %lu events\n", skipcount);
+    printf("Dropped %lu events\n", dropcount);
     printf("Found %lu races\n", GetRaceCount());
 $$
 
@@ -267,6 +268,7 @@ arbiter : GlobalEvent
             if(mints<=nextts)
             {
                 skipcount+=n;
+                dropcount+=n;
                 $yield skipstart(T.threadid, nextts);
                 $T.nextts;=maxts;
                 leastts=maxts;
@@ -317,7 +319,7 @@ arbiter : GlobalEvent
         {
             if(leastts!=ULLONG_MAX)
             {
-                if(!seenNone)
+                if(seenNone)
                 {
                     skipcount-=(leastts-nextts);
                 }
@@ -326,7 +328,7 @@ arbiter : GlobalEvent
             }
             else
             {
-                if(!seenNone)
+                if(seenNone)
                 {
                     skipcount-=1;
                 }
