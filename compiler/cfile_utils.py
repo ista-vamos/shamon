@@ -387,6 +387,9 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 }};\n
                 """
                 answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
+                answer += f"\tif (!EV_SOURCE_{name}) {{\n"
+                ansser += f"\t\tfprintf(stderr, \"Failed creating stream {name}\\n\");"
+                answer +=  "\tabort();}\n"
                 answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
                 if min_size_uninterrupt is not None:
                     answer += f"\tshm_arbiter_buffer_set_drop_space_threshold(BUFFER_{stream_name}{i},{min_size_uninterrupt});\n"
@@ -778,20 +781,20 @@ def declare_rule_sets(tree):
     return rule_set_declarations
 
 
-def are_buffers_empty():
-    code = "\tint c = 0;\n"
+def are_buffers_done():
+    code = ""
     for (event_source, data) in TypeChecker.event_sources_data.items():
         copies = data['copies']
         if copies:
             for i in range(copies):
-                code += f"\tc += are_there_events(BUFFER_{event_source}{i});\n"
+                code += f"\tif (!shm_arbiter_buffer_is_done(BUFFER_{event_source}{i})) return 0;\n"
         else:
-            code += f"\tc += are_there_events(BUFFER_{event_source});\n"
+            code += f"\tif (!shm_arbiter_buffer_is_done(BUFFER_{event_source})) return 0;\n"
 
     return f'''
-bool are_buffers_empty() {"{"}
+bool are_buffers_done() {"{"}
 {code}
-    return c == 0;
+    return 1;
 {"}"}
     '''
 
@@ -1770,10 +1773,10 @@ long unsigned no_consecutive_matches_limit = 1UL<<35;
 int no_matches_count = 0;
 
 bool are_there_events(shm_arbiter_buffer * b) {"{"}
-  return shm_arbiter_buffer_size(b) > 0;
+  return shm_arbiter_buffer_is_done(b) > 0;
 {"}"}
 
-{are_buffers_empty()}
+{are_buffers_done()}
 
 static int __work_done = 0;
 /* TODO: make a keywork from this */
@@ -1783,7 +1786,7 @@ void done() {{
 
 static inline bool are_streams_done() {"{"}
     assert(count_event_streams >=0);
-    return count_event_streams == 0 && are_buffers_empty() || __work_done;
+    return (count_event_streams == 0 && are_buffers_done()) || __work_done;
 {"}"}
 
 static inline bool is_stream_done(shm_stream *s) {"{"}
