@@ -263,10 +263,11 @@ arbiter : GlobalEvent
         $$
         on T : | my_hole(n, mints, maxts)
         $$
-            //printf("\033[36m[a] my_hole(n=%lu, mints=%lu, maxts=%lu)\033[0m\n", n, mints, maxts);
+            printf("\033[36m[a] my_hole(n=%lu, mints=%lu, maxts=%lu)\033[0m\n", n, mints, maxts);
             if(mints<=nextts)
             {
                 skipcount+=n;
+                printf("%d: new skipcount: %lu\n", __LINE__, skipcount);
                 $yield skipstart(T.threadid, nextts);
                 $T.nextts;=maxts;
                 leastts=maxts;
@@ -320,8 +321,8 @@ arbiter : GlobalEvent
                 if(!seenNone)
                 {
                     skipcount-=(leastts-nextts);
+                    printf("%d: new skipcount: %lu\n", __LINE__, skipcount);
                 }
-                //printf("forward: %lu\n",leastts);
                 nextts=leastts;
             }
             else
@@ -329,6 +330,7 @@ arbiter : GlobalEvent
                 if(!seenNone)
                 {
                     skipcount-=1;
+                    printf("%d: new skipcount: %lu\n", __LINE__, skipcount);
                 }
                 nextts++;
                 //printf("inc: %lu\n",nextts);
