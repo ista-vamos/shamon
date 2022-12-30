@@ -179,8 +179,10 @@ int main(int argc, char *argv[]) {
 #endif
 #ifdef DUMP_STATS
             assert(kind < total_events_num && "OOB access");
+#ifdef CHECK_IDS
             assert(stream_id < (size_t)argc && "OOB access");
             ++kinds_count[kind][stream_id];
+#endif
 #endif
 
             rec = shm_stream_get_event_record(stream, kind);
@@ -207,9 +209,11 @@ int main(int argc, char *argv[]) {
                 *)ev)->n); drpn += ((shm_event_dropped *)ev)->n;
                 */
 #ifdef DUMP_STATS
+#ifdef CHECK_IDS
                 assert(stream_id < (size_t)argc && "OOB access");
                 dropped_sum_count[stream_id] += ((shm_event_dropped *)ev)->n;
                 ++dropped_count[stream_id];
+#endif
 #endif
 #ifdef CHECK_IDS
 #error "Not implemented"
@@ -256,12 +260,16 @@ int main(int argc, char *argv[]) {
         n, drp, drpn, n + drpn - drp);
 
 #ifdef DUMP_STATS
-    size_t streams_num;
-    size_t evs_num;
     size_t totally_came = 0;
-    shm_stream **streams = shamon_get_streams(shmn, &streams_num);
+    size_t streams_num;
+#ifdef CHECK_IDS
+    size_t evs_num;
+    shm_stream **streams =
+#endif
+        shamon_get_streams(shmn, &streams_num);
     shm_vector *buffers = shamon_get_buffers(shmn);
     for (size_t i = 0; i < streams_num; ++i) {
+#ifdef CHECK_IDS
         shm_stream *stream = streams[i];
         stream_id = shm_stream_id(stream);
         assert(stream_id < (size_t)argc && "OOB access");
@@ -282,6 +290,7 @@ int main(int argc, char *argv[]) {
                    kinds_count[kind][stream_id]);
             totally_came += kinds_count[kind][stream_id];
         }
+#endif
 
         shm_arbiter_buffer *buff =
             (shm_arbiter_buffer *)shm_vector_at(buffers, i);
