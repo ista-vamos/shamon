@@ -51,7 +51,7 @@ def run_measurement(source_freq, buffsize):
     monitor = ParseMonitor()
     shmname = mktemp(prefix="/vamos.ev-")
     duration =\
-    measure(f"[SHM {BS} pgs] source waits {source_freq} cyc., arbiter buffer has size {buffsize}",
+    measure(f"[SHM {BS} elems] source waits {source_freq} cyc., arbiter buffer has size {buffsize}",
             [Command(SOURCE_EXE, shmname, BS, str(source_freq), NUM).withparser(source)],
             [Command(MONITOR_EXE, f"Src:generic:{shmname}",
                      stdout=PIPE).withparser(monitor)],
