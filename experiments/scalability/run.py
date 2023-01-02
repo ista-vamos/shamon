@@ -18,7 +18,6 @@ if len(argv) > 1:
         NUM=argv[2]
 else:
     print(f"args: shm-buffer-size [max-number (default: {NUM})]")
-    print("shm-buffer-size is the compiled (!) size, it does not set the size.")
     exit(1)
 
 DIR=f"{SHAMONPATH}/experiments/scalability/"
@@ -53,7 +52,7 @@ def run_measurement(source_freq, buffsize):
     shmname = mktemp(prefix="/vamos.ev-")
     duration =\
     measure(f"[SHM {BS} pgs] source waits {source_freq} cyc., arbiter buffer has size {buffsize}",
-            [Command(SOURCE_EXE, shmname, str(source_freq), NUM).withparser(source)],
+            [Command(SOURCE_EXE, shmname, BS, str(source_freq), NUM).withparser(source)],
             [Command(MONITOR_EXE, f"Src:generic:{shmname}",
                      stdout=PIPE).withparser(monitor)],
             timeout=TIMEOUT)
