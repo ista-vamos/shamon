@@ -21,7 +21,7 @@ COMPILER_PATH = f"{CURRENT_PATH}/../../compiler/main.py"
 
 # compile shamon programs into c programs
 for buffsize in arbiter_buffer_sizes:
-    run(["python3", COMPILER_PATH, f"{CURRENT_PATH}/programs/primes_{buffsize}.txt", f"{CURRENT_PATH}/programs/monitor_{buffsize}.c"], check=True)
+    run(["python3", COMPILER_PATH, f"{CURRENT_PATH}/programs/primes_{buffsize}.txt", "-o",f"{CURRENT_PATH}/programs/monitor_{buffsize}.c"], check=True)
 
 
 # generate oject file of intmap
