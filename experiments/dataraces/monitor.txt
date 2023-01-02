@@ -1,19 +1,19 @@
 stream type ThreadEvent(threadid: int, tstate : int16_t, nonecount : uint16_t, nextts: uint64_t, nonets: uint64_t, optskipstart : uint64_t)
 {
-    read(timestamp: uint64_t, addr : uint64_t);
-    write(timestamp: uint64_t, addr : uint64_t);
-    atomicread(timestamp: uint64_t, addr : uint64_t, mode : int);
-    atomicwrite(timestamp: uint64_t, addr : uint64_t, mode : int);
-    lock(timestamp: uint64_t, addr : uint64_t);
-    unlock(timestamp: uint64_t, addr : uint64_t);
-    alloc(timestamp : uint64_t, addr : uint64_t, size : uint64_t);
-    free(timestamp: uint64_t, addr : uint64_t);
+    read(timestamp: uint64_t, addr : intptr_t);
+    write(timestamp: uint64_t, addr : intptr_t);
+    atomicread(timestamp: uint64_t, addr : intptr_t, mode : int);
+    atomicwrite(timestamp: uint64_t, addr : intptr_t, mode : int);
+    lock(timestamp: uint64_t, addr : intptr_t);
+    unlock(timestamp: uint64_t, addr : intptr_t);
+    alloc(timestamp : uint64_t, addr : intptr_t, size : size_t);
+    free(timestamp: uint64_t, addr : intptr_t);
     fork(timestamp: uint64_t, newthreadid: uint64_t) creates ThreadEvent;
     join(timestamp: uint64_t, threadid: uint64_t);
 }
 stream processor TEProcessor(threadid : int) : ThreadEvent(threadid, 0, 0, 0, 0, 0) -> ThreadEvent(threadid, 0, 0, 0, 0, 0) extends FORWARD
 {
-    on fork(ts, ntid) creates ThreadEvent process using TEProcessor(ntid) to autodrop(@BUFSIZE) include in Threads forward;
+    on fork(ts, ntid) creates ThreadEvent process using TEProcessor(ntid) to autodrop(@BUFSIZE,256) include in Threads forward;
     my_hole
     {
         int n = COUNT(*);
@@ -23,36 +23,46 @@ stream processor TEProcessor(threadid : int) : ThreadEvent(threadid, 0, 0, 0, 0,
 }
 
 buffer group Threads : ThreadEvent order by nextts
-event source Program : ThreadEvent process using TEProcessor(0) to autodrop(@BUFSIZE) include in Threads
+event source Program : ThreadEvent process using TEProcessor(0) to autodrop(@BUFSIZE,256) include in Threads
 
 stream type GlobalEvent
 {
-    read(tid: int, timestamp: uint64_t, addr : uint64_t);
-    write(tid: int, timestamp: uint64_t, addr : uint64_t);
-    atomicread(tid: int, timestamp: uint64_t, addr : uint64_t, mode : int);
-    atomicwrite(tid: int, timestamp: uint64_t, addr : uint64_t, mode : int);
-    lock(tid: int, timestamp: uint64_t, addr : uint64_t);
-    unlock(tid: int, timestamp: uint64_t, addr : uint64_t);
-    alloc(tid: int, timestamp : uint64_t, addr : uint64_t, size : uint64_t);
-    free(tid: int, timestamp: uint64_t, addr : uint64_t);
+    read(tid: int, timestamp: uint64_t, addr : intptr_t);
+    write(tid: int, timestamp: uint64_t, addr : intptr_t);
+    read_sized(tid: int, timestamp: uint64_t, addr : intptr_t, size: size_t);
+    write_sized(tid: int, timestamp: uint64_t, addr : intptr_t, size: size_t);
+    atomicread(tid: int, timestamp: uint64_t, addr : intptr_t, mode : int);
+    atomicwrite(tid: int, timestamp: uint64_t, addr : intptr_t, mode : int);
+    lock(tid: int, timestamp: uint64_t, addr : intptr_t);
+    unlock(tid: int, timestamp: uint64_t, addr : intptr_t);
+    alloc(tid: int, timestamp : uint64_t, addr : intptr_t, size : size_t);
+    free(tid: int, timestamp: uint64_t, addr : intptr_t);
     fork(tid: int, timestamp: uint64_t, newthreadid: int);
     join(tid: int, timestamp: uint64_t, threadid: int);
     skipstart(tid: int, timestamp : uint64_t);
     skipend(tid: int, timestamp : uint64_t);
-    done_(tid: int);
+    done_(tid: int, timestamp : uint64_t);
 }
 globals
 $$
     #include <limits.h>
+    #include "monitor.h"
     uint64_t nextts=1;
     uint64_t leastts=ULLONG_MAX;
     uint64_t skipcount=0;
     uint16_t nonebarrier=1;
     uint64_t nonecycles=0;
+    uint64_t dropcount=0;
     int seenNone=0;
 
     #define min(a, b) __vamos_min(a, b)
     #define max(a, b) __vamos_max(a, b)
+$$
+
+cleanup
+$$
+    printf("Dropped %lu events\n", dropcount);
+    printf("Found %lu races\n", GetRaceCount());
 $$
 
 arbiter : GlobalEvent
@@ -61,6 +71,7 @@ arbiter : GlobalEvent
     {
         on T : | read(ts,addr)
         $$
+            //printf("read! %lu/%lu\n",ts,nextts);
             if(ts==nextts)
             {
                 $yield read(T.threadid, ts, addr);
@@ -75,11 +86,13 @@ arbiter : GlobalEvent
             }
             else
             {
+                //printf("%lu/%lu\n",ts,nextts);
                 $drop 1 from T;
             }
         $$
         on T : | write(ts,addr)
         $$
+            //printf("write! %lu/%lu\n",ts,nextts);
             if(ts==nextts)
             {
                 $yield write(T.threadid, ts, addr);
@@ -255,6 +268,7 @@ arbiter : GlobalEvent
             if(mints<=nextts)
             {
                 skipcount+=n;
+                dropcount+=n;
                 $yield skipstart(T.threadid, nextts);
                 $T.nextts;=maxts;
                 leastts=maxts;
@@ -284,7 +298,7 @@ arbiter : GlobalEvent
         $$
         on T : done
         $$
-            $yield done_(T.threadid);
+            $yield done_(T.threadid, nextts);
             $remove T from Threads;
         $$
         on T : nothing
@@ -301,23 +315,26 @@ arbiter : GlobalEvent
 
     always
     $$
-        if((!seenNone) || (nonecycles>1000 && skipcount >= leastts - nextts))
+        if((!seenNone) || (nonecycles>1000000 && skipcount >= leastts - nextts))
         {
             if(leastts!=ULLONG_MAX)
             {
-                if(!seenNone)
+                if(seenNone)
                 {
                     skipcount-=(leastts-nextts);
+                    printf("%d: new skipcount: %lu\n", __LINE__, skipcount);
                 }
                 nextts=leastts;
             }
             else
             {
-                if(!seenNone)
+                if(seenNone)
                 {
                     skipcount-=1;
+                    printf("%d: new skipcount: %lu\n", __LINE__, skipcount);
                 }
                 nextts++;
+                //printf("inc: %lu\n",nextts);
             }
             nonebarrier=1;
             nonecycles=0;
@@ -334,52 +351,116 @@ arbiter : GlobalEvent
 monitor {
     on read(tid, timestamp, addr) where $$ true $$
     $$
+        #ifdef DEBUGPRINT
         printf("read(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
+        #endif
+        monitor_handle_read(tid, timestamp, addr);
+    $$
+    on read_sized(tid, timestamp, addr, size) where $$ true $$
+    $$
+        #ifdef DEBUGPRINT
+        printf("read_sized(tid=%lu, ts=%lu, addr=%p, size=%lu)\n", tid, timestamp, addr, size);
+        #endif
+        monitor_handle_read_many(tid, timestamp, addr, size);
     $$
 
     on write(tid, timestamp, addr) where $$ true $$
     $$
+        #ifdef DEBUGPRINT
         printf("write(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
+        #endif
+        monitor_handle_write(tid, timestamp, addr);
+    $$
+    on write_sized(tid, timestamp, addr, size) where $$ true $$
+    $$
+        #ifdef DEBUGPRINT
+        printf("write_sized(tid=%lu, ts=%lu, addr=%li, size=%lu)\n", tid, timestamp, addr,size);
+        #endif
+        monitor_handle_write_many(tid, timestamp, addr, size);
     $$
 
     on atomicread(tid, timestamp, addr , mode) where $$ true $$
     $$
+        #ifdef DEBUGPRINT
         printf("atomicread(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
+        #endif
     $$
 
     on atomicwrite(tid, timestamp, addr , mode) where $$ true $$
     $$
+        #ifdef DEBUGPRINT
         printf("atomicwrite(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
+        #endif
     $$
 
     on lock(tid, timestamp, addr) where $$ true $$
     $$
+        #ifdef DEBUGPRINT
         printf("lock(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
+        #endif
+        monitor_handle_lock(tid, timestamp, addr);
     $$
 
     on unlock(tid, timestamp, addr) where $$ true $$
     $$
+        #ifdef DEBUGPRINT
         printf("unlock(tid=%lu, ts=%lu, addr=%p)\n", tid, timestamp, addr);
+        #endif
+        monitor_handle_unlock(tid, timestamp, addr);
     $$
 
-    on alloc(tid, timestamp , addr, size) where $$ true $$ $$ printf("ALLOC\n"); $$
-    on free(tid, timestamp, addr ) where $$ true $$        $$ printf("FREE\n"); $$
+
+
+
+
+    on alloc(tid, timestamp , addr, size) where $$ true $$
+    $$ 
+        #ifdef DEBUGPRINT
+        printf("ALLOC\n");
+        #endif
+        monitor_handle_alloc(tid, timestamp, addr, size);
+    $$
+    on free(tid, timestamp, addr ) where $$ true $$
+    $$ 
+        #ifdef DEBUGPRINT
+        printf("FREE\n");
+        #endif
+        monitor_handle_free(tid, timestamp, addr);
+    $$
     on fork(tid, timestamp, newthreadid) where $$ true $$
     $$
+        #ifdef DEBUGPRINT
         printf("fork(tid=%lu, ts=%lu, newtid=%lu\n", tid, timestamp, newthreadid);
+        #endif
+        monitor_handle_fork(tid, timestamp, newthreadid);
     $$
     on join(tid, timestamp, threadid) where $$ true $$
     $$
+        #ifdef DEBUGPRINT
         printf("join(tid=%lu, ts=%lu, jointid=%lu\n", tid, timestamp, threadid);
+        #endif
+        monitor_handle_join(tid, timestamp, threadid);
     $$
-    on skipstart(tid, timestamp ) where $$ true $$
+    on skipstart(tid, timestamp) where $$ true $$
     $$
+        #ifdef DEBUGPRINT
         printf("skipstart(tid=%lu, ts=%lu)\n", tid, timestamp);
+        #endif
+        monitor_handle_skip_start(tid, timestamp);
     $$
-    on skipend(tid, timestamp ) where $$ true $$
+    on skipend(tid, timestamp) where $$ true $$
     $$
+        #ifdef DEBUGPRINT
         printf("skipend(tid=%lu, ts=%lu)\n", tid, timestamp);
+        #endif
+        monitor_handle_skip_end(tid, timestamp);
     $$
-    on done_(tid) where $$ true $$                         $$ printf("DONE\n"); $$
+    on done_(tid, timestamp) where $$ true $$
+    $$
+        #ifdef DEBUGPRINT
+        printf("DONE\n");
+        #endif
+        monitor_handle_done(tid, timestamp);
+    $$
 
 }

@@ -4,7 +4,7 @@
 
 struct event {
     __u32 pid;
-    char  filename[16];
+    char filename[16];
 };
 
 static int buf_process_sample(void *ctx, void *data, size_t len) {
@@ -15,9 +15,9 @@ static int buf_process_sample(void *ctx, void *data, size_t len) {
 }
 
 int main(int argc, char *argv[]) {
-    int                 prog_fd, map;
-    const char         *bpf_file = "program.bpf";
-    struct bpf_object  *obj;
+    int prog_fd, map;
+    const char *bpf_file = "program.bpf";
+    struct bpf_object *obj;
     struct bpf_program *prog;
     struct ring_buffer *ring_buffer;
 

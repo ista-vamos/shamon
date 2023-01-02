@@ -90,9 +90,13 @@ def get_processor_rules(tree, result):
             event, event_args = get_name_with_args(tree[1])
             stream_type = tree[3]
             process_using, process_using_args = get_name_with_args(tree[4])
+            connection_kind_threshold = 2
+            if len(tree[5]) >= 4:
+                connection_kind_threshold = tree[5][3]
             connection_kind = {
                 'type': tree[5][1],
-                'size': tree[5][2]
+                'size': tree[5][2],
+                'threshold': connection_kind_threshold
             }
             if tree[5][1] != "autodrop":
                 print(f"connection kind {tree[5][1]} is not implemented")

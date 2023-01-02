@@ -1,3 +1,5 @@
+#include "syswrite.h"
+
 #include <assert.h>
 #include <bpf/bpf.h>
 #include <errno.h>
@@ -8,21 +10,20 @@
 
 #include "btf_helpers.h"
 #include "errno_helpers.h"
-#include "syswrite.h"
-#include "syswrite.skel.h"
-#include "trace_helpers.h"
-
 #include "shamon/core/event.h"
 #include "shamon/core/signatures.h"
 #include "shamon/core/source.h"
 #include "shamon/shmbuf/buffer.h"
 #include "shamon/shmbuf/client.h"
+#include "syswrite.skel.h"
+#include "trace_helpers.h"
 
 #define warn(...) fprintf(stderr, __VA_ARGS__)
 
 static void usage_and_exit(int ret) {
-    warn("Usage: syswrite shmkey name expr sig [name expr sig] ... -- [program "
-         "arg1 arg2... | -p PID]\n");
+    warn(
+        "Usage: syswrite shmkey name expr sig [name expr sig] ... -- [program "
+        "arg1 arg2... | -p PID]\n");
     exit(ret);
 }
 
@@ -31,12 +32,12 @@ static void usage_and_exit(int ret) {
 static size_t exprs_num;
 static size_t events_num;
 
-static char  *tmpline     = NULL;
+static char *tmpline = NULL;
 static size_t tmpline_len = 0;
 
-static char  *current_line           = NULL;
+static char *current_line = NULL;
 static size_t current_line_alloc_len = 0;
-static size_t current_line_idx       = 0;
+static size_t current_line_idx = 0;
 
 /*
 static int libbpf_print_fn(enum libbpf_print_level level, const char *format,
@@ -70,19 +71,19 @@ static size_t line_alloc_size(size_t x) {
     return n;
 }
 
-static regex_t      *re;
-static char        **signatures;
+static regex_t *re;
+static char **signatures;
 struct event_record *events;
-static size_t        waiting_for_buffer;
-static shm_event     ev;
+static size_t waiting_for_buffer;
+static shm_event ev;
 
 static struct buffer *shm;
 
 static void parse_line(bool iswrite, const struct event *e, char *line) {
-    int               status;
+    int status;
     signature_operand op;
-    ssize_t           len;
-    regmatch_t        matches[MAXMATCH + 1];
+    ssize_t len;
+    regmatch_t matches[MAXMATCH + 1];
 
     /* fprintf(stderr, "LINE: %s\n", line); */
 
@@ -94,7 +95,7 @@ static void parse_line(bool iswrite, const struct event *e, char *line) {
         if (status != 0) {
             continue;
         }
-        int   m = 1;
+        int m = 1;
         void *addr;
 
         while (!(addr = buffer_start_push(shm))) {
@@ -103,7 +104,7 @@ static void parse_line(bool iswrite, const struct event *e, char *line) {
         /* push the base info about event */
         ++ev.id;
         ev.kind = events[i].kind;
-        addr    = buffer_partial_push(shm, addr, &ev, sizeof(ev));
+        addr = buffer_partial_push(shm, addr, &ev, sizeof(ev));
 
         /* push the arguments of the event */
         for (const char *o = signatures[i]; *o && m <= MAXMATCH; ++o, ++m) {
@@ -142,32 +143,33 @@ static void parse_line(bool iswrite, const struct event *e, char *line) {
             }
 
             switch (*o) {
-            case 'c':
-                assert(len == 1);
-                addr = buffer_partial_push(
-                    shm, addr, (char *)(line + matches[m].rm_eo), sizeof(op.c));
-                break;
-            case 'i':
-                op.i = atoi(tmpline);
-                addr = buffer_partial_push(shm, addr, &op.i, sizeof(op.i));
-                break;
-            case 'l':
-                op.l = atol(tmpline);
-                addr = buffer_partial_push(shm, addr, &op.l, sizeof(op.l));
-                break;
-            case 'f':
-                op.f = atof(tmpline);
-                addr = buffer_partial_push(shm, addr, &op.f, sizeof(op.f));
-                break;
-            case 'd':
-                op.d = strtod(tmpline, NULL);
-                addr = buffer_partial_push(shm, addr, &op.d, sizeof(op.d));
-                break;
-            case 'S':
-                addr = buffer_partial_push_str(shm, addr, ev.id, tmpline);
-                break;
-            default:
-                assert(0 && "Invalid signature");
+                case 'c':
+                    assert(len == 1);
+                    addr = buffer_partial_push(
+                        shm, addr, (char *)(line + matches[m].rm_eo),
+                        sizeof(op.c));
+                    break;
+                case 'i':
+                    op.i = atoi(tmpline);
+                    addr = buffer_partial_push(shm, addr, &op.i, sizeof(op.i));
+                    break;
+                case 'l':
+                    op.l = atol(tmpline);
+                    addr = buffer_partial_push(shm, addr, &op.l, sizeof(op.l));
+                    break;
+                case 'f':
+                    op.f = atof(tmpline);
+                    addr = buffer_partial_push(shm, addr, &op.f, sizeof(op.f));
+                    break;
+                case 'd':
+                    op.d = strtod(tmpline, NULL);
+                    addr = buffer_partial_push(shm, addr, &op.d, sizeof(op.d));
+                    break;
+                case 'S':
+                    addr = buffer_partial_push_str(shm, addr, ev.id, tmpline);
+                    break;
+                default:
+                    assert(0 && "Invalid signature");
             }
         }
         buffer_finish_push(shm);
@@ -213,16 +215,12 @@ static int handle_event(void *ctx, void *data, size_t data_sz) {
     return 0;
 }
 
-static volatile sig_atomic_t running       = 1;
+static volatile sig_atomic_t running = 1;
 static volatile sig_atomic_t child_running = 1;
 
-void sig_int(int signo) {
-    running = 0;
-}
+void sig_int(int signo) { running = 0; }
 
-void sig_chld(int signo) {
-    child_running = 0;
-}
+void sig_chld(int signo) { child_running = 0; }
 
 int parse_args(int argc, char *argv[]) {
     int i = 1;
@@ -247,11 +245,11 @@ int main(int argc, char *argv[]) {
     }
 
     const char *shmkey = argv[1];
-    char       *exprs[exprs_num];
-    char       *names[exprs_num];
+    char *exprs[exprs_num];
+    char *names[exprs_num];
 
     signatures = malloc(sizeof(char *) * exprs_num);
-    re         = malloc(exprs_num * sizeof(regex_t));
+    re = malloc(exprs_num * sizeof(regex_t));
 
     int arg_i = 2;
     for (int i = 0; i < (int)exprs_num; ++i) {
@@ -285,8 +283,8 @@ int main(int argc, char *argv[]) {
     events = buffer_get_avail_events(shm, &events_num);
     free(control);
 
-    pid_t filter_pid   = 0;
-    int   fork_sync[2] = {-1, -1};
+    pid_t filter_pid = 0;
+    int fork_sync[2] = {-1, -1};
     if (strncmp(argv[prog_idx], "-p", 3) == 0) {
         if (argc <= prog_idx + 1) {
             usage_and_exit(1);
@@ -345,7 +343,7 @@ int main(int argc, char *argv[]) {
 
     LIBBPF_OPTS(bpf_object_open_opts, open_opts);
     struct syswrite_bpf *obj;
-    int                  err;
+    int err;
 
     libbpf_set_strict_mode(LIBBPF_STRICT_ALL);
     // libbpf_set_print(libbpf_print_fn);

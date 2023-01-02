@@ -19,13 +19,13 @@ static void usage_and_exit(int ret) {
 
 #define WITH_STDOUT
 #ifndef WITH_STDOUT
-#define printf(...)                                                            \
-    do {                                                                       \
+#define printf(...) \
+    do {            \
     } while (0)
 #endif
 
 struct event {
-    shm_event     base;
+    shm_event base;
     unsigned char args[];
 };
 
@@ -36,14 +36,14 @@ int main(int argc, char *argv[]) {
         usage_and_exit(1);
     }
     const char *shmkey = argv[1];
-    long        N      = atol(argv[2]);
+    long N = atol(argv[2]);
 
     /* Initialize the info about this source */
     struct source_control *control = source_control_define(1, "addr", "p");
     assert(control);
 
-    const size_t   capacity = 128;
-    struct buffer *shm      = create_shared_buffer(shmkey, capacity, control);
+    const size_t capacity = 128;
+    struct buffer *shm = create_shared_buffer(shmkey, capacity, control);
     assert(shm);
     free(control);
 
@@ -51,12 +51,12 @@ int main(int argc, char *argv[]) {
     buffer_wait_for_monitor(shm);
     fprintf(stderr, "done\n");
 
-    size_t               events_num;
+    size_t events_num;
     struct event_record *events = buffer_get_avail_events(shm, &events_num);
     assert(events_num == 1);
 
     struct event ev;
-    ev.base.id   = 0;
+    ev.base.id = 0;
     ev.base.kind = events[0].kind;
     void *addr, *p;
     while (--N > 0) {
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
             ++waiting_for_buffer;
         }
         ++ev.base.id;
-        p    = addr;
+        p = addr;
         addr = buffer_partial_push(shm, addr, &ev, sizeof(ev));
         buffer_partial_push(shm, addr, &p, sizeof(void *));
         buffer_finish_push(shm);

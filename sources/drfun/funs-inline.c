@@ -110,7 +110,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
 
     // TODO: use to instrument only main module:
     // dr_module_set_should_instrument()
-    main_module      = dr_get_main_module();
+    main_module = dr_get_main_module();
     drsym_error_t ok = drsym_lookup_symbol(main_module->full_path,
                                            events[0].name, &events[0].addr,
                                            /* flags = */ 0);
@@ -182,7 +182,6 @@ static void rotate_buffer(void) {
 static void rotate_if_needed(void *drcontext, instrlist_t *ilist,
                              instr_t *where, reg_id_t scratch,
                              reg_id_t reg_tmp) {
-
     /* reg_tmp now contains the offset into the buffer */
     compare_buf_off(drcontext, ilist, where, scratch, reg_tmp,
                     buffer_allocation_size(), /* len = */ 12);
@@ -275,7 +274,7 @@ static void update_buf_off(void *drcontext, instrlist_t *ilist, instr_t *where,
 
 /* adapted from instrcalls.c */
 static app_pc call_get_target(instr_t *instr) {
-    app_pc target   = 0;
+    app_pc target = 0;
     opnd_t targetop = instr_get_target(instr);
     if (opnd_is_pc(targetop)) {
         if (opnd_is_far_pc(targetop)) {

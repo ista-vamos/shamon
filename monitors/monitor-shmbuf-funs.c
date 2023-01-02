@@ -29,24 +29,24 @@ static inline void dump_args(shm_stream_funs *ss, shm_event_funcall *ev) {
 
         size_t size = signature_op_get_size(*o);
         switch (size) {
-        case 1:
-            printf(" %c", *((char *)p));
-            break;
-        case 4:
-            printf(" %d", *((int *)p));
-            break;
-        case 8:
-            printf(" %ld", *((long int *)p));
-            break;
-        default:
-            abort();
+            case 1:
+                printf(" %c", *((char *)p));
+                break;
+            case 4:
+                printf(" %d", *((int *)p));
+                break;
+            case 8:
+                printf(" %ld", *((long int *)p));
+                break;
+            default:
+                abort();
         }
         p += size;
     }
 }
 
 shm_stream *create_stream(int argc, char *argv[], int arg_i,
-                          const char             *expected_stream_name,
+                          const char *expected_stream_name,
                           struct source_control **control);
 
 int main(int argc, char *argv[]) {
@@ -55,8 +55,8 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    shm_event *ev   = NULL;
-    shamon    *shmn = shamon_create(NULL, NULL);
+    shm_event *ev = NULL;
+    shamon *shmn = shamon_create(NULL, NULL);
     assert(shmn);
     struct source_control *control;
     shm_stream *fstream = create_stream(argc, argv, 1, "funs-stream", &control);
@@ -64,9 +64,9 @@ int main(int argc, char *argv[]) {
     shamon_add_stream(shmn, fstream,
                       /* buffer capacity = */ 4 * 4096);
 
-    shm_kind    kind;
-    int         cur_arg, last_arg = 0;
-    size_t      n = 0;
+    shm_kind kind;
+    int cur_arg, last_arg = 0;
+    size_t n = 0;
     shm_stream *stream;
     while (shamon_is_ready(shmn)) {
         while ((ev = shamon_get_next_ev(shmn, &stream))) {

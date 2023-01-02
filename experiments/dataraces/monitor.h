@@ -20,3 +20,5 @@ void monitor_handle_fork(int tid, uint64_t timestamp, int otherthread);
 
 void monitor_handle_join(int tid, uint64_t timestamp, int otherthread);
 void monitor_handle_done(int tid, uint64_t timestamp);
+
+uint64_t GetRaceCount();

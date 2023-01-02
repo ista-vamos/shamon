@@ -8,11 +8,10 @@
 #include <stdatomic.h>
 #include <string.h> /* memset */
 
-#include "dr_api.h"
-#include "drmgr.h"
-
 #include "buffer.h"
 #include "client.h"
+#include "dr_api.h"
+#include "drmgr.h"
 #include "event.h"
 #include "signatures.h"
 #include "source.h"
@@ -41,8 +40,8 @@
 #define MAXMATCH 20
 
 typedef struct {
-    int    fd;
-    void  *buf;
+    int fd;
+    void *buf;
     size_t size;
     size_t thread;
 } per_thread_t;
@@ -57,15 +56,15 @@ static size_t thread_num = 0;
  writers
  * (multiple threads), so we must make sure they are seuqntialized somehow
    (until we have the implementation for multiple-writers) */
-static size_t        waiting_for_buffer = 0;
-static _Atomic(bool) _write_lock        = false;
+static size_t waiting_for_buffer = 0;
+static _Atomic(bool) _write_lock = false;
 
 // static struct event_record *events;
 // static size_t events_num;
 
 static inline void write_lock() {
     _Atomic bool *l = &_write_lock;
-    bool          unlocked;
+    bool unlocked;
     do {
         unlocked = false;
     } while (atomic_compare_exchange_weak(l, &unlocked, true));
@@ -83,8 +82,8 @@ static int write_sysnum, read_sysnum;
 #undef bool
 #define bool char
 
-static int  get_write_sysnum(void);
-static int  get_read_sysnum(void);
+static int get_write_sysnum(void);
+static int get_read_sysnum(void);
 static void event_exit(void);
 static bool event_filter_syscall(void *drcontext, int sysnum);
 static bool event_pre_syscall(void *drcontext, int sysnum);
@@ -109,15 +108,15 @@ struct event {
 };
 
 typedef struct _parsedata {
-    size_t               exprs_num;
-    const char         **exprs;
-    const char         **signatures;
-    const char         **names;
-    struct buffer       *shm;
+    size_t exprs_num;
+    const char **exprs;
+    const char **signatures;
+    const char **names;
+    struct buffer *shm;
     struct event_record *events;
-    struct event         ev;
-    const char          *delim;
-    regex_t              re[];
+    struct event ev;
+    const char *delim;
+    regex_t re[];
 } parsedata;
 parsedata *pd_out;
 parsedata *pd_in;
@@ -133,8 +132,8 @@ parsedata *pd_in;
 typedef struct msgbuf {
     struct msgbuf *next;
     struct msgbuf *prev;
-    char          *textbuf;
-    size_t         offset;
+    char *textbuf;
+    size_t offset;
 } msgbuf;
 
 msgbuf outbuf;
@@ -152,13 +151,13 @@ void insert_message(msgbuf *buf, char *textbuf, ssize_t slen) {
     text[len] = 0;
     if (buf->textbuf == NULL) {
         buf->textbuf = text;
-        buf->offset  = sizeof(size_t) + sizeof(int64_t);
+        buf->offset = sizeof(size_t) + sizeof(int64_t);
     } else {
-        msgbuf *newbuf     = (msgbuf *)malloc(sizeof(msgbuf));
-        newbuf->textbuf    = text;
-        newbuf->offset     = sizeof(size_t) + sizeof(int64_t);
-        newbuf->next       = buf;
-        newbuf->prev       = buf->prev;
+        msgbuf *newbuf = (msgbuf *)malloc(sizeof(msgbuf));
+        newbuf->textbuf = text;
+        newbuf->offset = sizeof(size_t) + sizeof(int64_t);
+        newbuf->next = buf;
+        newbuf->prev = buf->prev;
         newbuf->next->prev = newbuf;
         newbuf->prev->next = newbuf;
     }
@@ -166,7 +165,7 @@ void insert_message(msgbuf *buf, char *textbuf, ssize_t slen) {
 
 char *buf_get_upto(msgbuf *buf, const char *delim) {
     msgbuf *current = buf;
-    size_t  size    = 0;
+    size_t size = 0;
     if (current->textbuf == NULL) {
         return NULL;
     }
@@ -178,16 +177,16 @@ char *buf_get_upto(msgbuf *buf, const char *delim) {
             char *ret = (char *)malloc(size + len + 1);
             memcpy(ret + size, current->textbuf, len);
             ret[size + len] = 0;
-            size_t curlen   = strlen(current->textbuf);
+            size_t curlen = strlen(current->textbuf);
             if (curlen == len) {
                 free(current->textbuf - current->offset);
                 current->textbuf = NULL;
                 if (current == buf) {
                     if (current->next != current) {
                         current->textbuf = current->next->textbuf;
-                        current->offset  = current->next->offset;
-                        msgbuf *newnext  = current->next->next;
-                        newnext->prev    = current;
+                        current->offset = current->next->offset;
+                        msgbuf *newnext = current->next->next;
+                        newnext->prev = current;
                         free(current->next);
                         current->next = newnext;
                     }
@@ -216,9 +215,9 @@ char *buf_get_upto(msgbuf *buf, const char *delim) {
                 if (current == buf) {
                     if (current->next != current) {
                         current->textbuf = current->next->textbuf;
-                        current->offset  = current->next->offset;
-                        msgbuf *newnext  = current->next->next;
-                        newnext->prev    = current;
+                        current->offset = current->next->offset;
+                        msgbuf *newnext = current->next->next;
+                        newnext->prev = current;
                         free(current->next);
                         current->next = newnext;
                     }
@@ -238,25 +237,23 @@ char *buf_get_upto(msgbuf *buf, const char *delim) {
     return NULL;
 }
 
-char *buf_get_line(msgbuf *buf) {
-    return buf_get_upto(buf, "\n");
-}
+char *buf_get_line(msgbuf *buf) { return buf_get_upto(buf, "\n"); }
 
 static inline void process_messages(msgbuf *buf, parsedata *const pd) {
-    regmatch_t           matches[MAXMATCH + 1];
-    const char         **signatures  = pd->signatures;
-    struct event_record *events      = pd->events;
-    struct buffer       *shm         = pd->shm;
-    size_t               len         = 0;
-    char                *tmpline     = 0;
-    size_t               tmpline_len = 0;
-    int                  status      = 0;
-    const char          *delim       = pd->delim;
-    size_t               exprs_num   = pd->exprs_num;
-    struct event        *ev          = &pd->ev;
-    signature_operand    op;
+    regmatch_t matches[MAXMATCH + 1];
+    const char **signatures = pd->signatures;
+    struct event_record *events = pd->events;
+    struct buffer *shm = pd->shm;
+    size_t len = 0;
+    char *tmpline = 0;
+    size_t tmpline_len = 0;
+    int status = 0;
+    const char *delim = pd->delim;
+    size_t exprs_num = pd->exprs_num;
+    struct event *ev = &pd->ev;
+    signature_operand op;
     for (char *line = buf_get_upto(buf, delim); line != NULL;
-         line       = (free(line), buf_get_upto(buf, delim))) {
+         line = (free(line), buf_get_upto(buf, delim))) {
         len = strlen(line);
 
 #ifdef WITH_LINES
@@ -275,7 +272,7 @@ static inline void process_messages(msgbuf *buf, parsedata *const pd) {
                 continue;
             }
             printf("{");
-            int   m = 1;
+            int m = 1;
             void *addr;
             while (!(addr = buffer_start_push(shm))) {
                 ++waiting_for_buffer;
@@ -331,40 +328,44 @@ static inline void process_messages(msgbuf *buf, parsedata *const pd) {
                 }
 
                 switch (*o) {
-                case 'c':
-                    assert(len == 1);
-                    printf("%c", *(char *)(line + matches[m].rm_eo));
-                    addr = buffer_partial_push(
-                        shm, addr, (char *)(line + matches[m].rm_eo),
-                        sizeof(op.c));
-                    break;
-                case 'i':
-                    op.i = atoi(tmpline);
-                    printf("%d", op.i);
-                    addr = buffer_partial_push(shm, addr, &op.i, sizeof(op.i));
-                    break;
-                case 'l':
-                    op.l = atol(tmpline);
-                    printf("%ld", op.l);
-                    addr = buffer_partial_push(shm, addr, &op.l, sizeof(op.l));
-                    break;
-                case 'f':
-                    op.f = atof(tmpline);
-                    printf("%lf", op.f);
-                    addr = buffer_partial_push(shm, addr, &op.f, sizeof(op.f));
-                    break;
-                case 'd':
-                    op.d = strtod(tmpline, NULL);
-                    printf("%lf", op.d);
-                    addr = buffer_partial_push(shm, addr, &op.d, sizeof(op.d));
-                    break;
-                case 'S':
-                    printf("'%s'", tmpline);
-                    addr = buffer_partial_push_str(shm, addr, ev->base.id,
-                                                   tmpline);
-                    break;
-                default:
-                    assert(0 && "Invalid signature");
+                    case 'c':
+                        assert(len == 1);
+                        printf("%c", *(char *)(line + matches[m].rm_eo));
+                        addr = buffer_partial_push(
+                            shm, addr, (char *)(line + matches[m].rm_eo),
+                            sizeof(op.c));
+                        break;
+                    case 'i':
+                        op.i = atoi(tmpline);
+                        printf("%d", op.i);
+                        addr =
+                            buffer_partial_push(shm, addr, &op.i, sizeof(op.i));
+                        break;
+                    case 'l':
+                        op.l = atol(tmpline);
+                        printf("%ld", op.l);
+                        addr =
+                            buffer_partial_push(shm, addr, &op.l, sizeof(op.l));
+                        break;
+                    case 'f':
+                        op.f = atof(tmpline);
+                        printf("%lf", op.f);
+                        addr =
+                            buffer_partial_push(shm, addr, &op.f, sizeof(op.f));
+                        break;
+                    case 'd':
+                        op.d = strtod(tmpline, NULL);
+                        printf("%lf", op.d);
+                        addr =
+                            buffer_partial_push(shm, addr, &op.d, sizeof(op.d));
+                        break;
+                    case 'S':
+                        printf("'%s'", tmpline);
+                        addr = buffer_partial_push_str(shm, addr, ev->base.id,
+                                                       tmpline);
+                        break;
+                    default:
+                        assert(0 && "Invalid signature");
                 }
             }
             buffer_finish_push(shm);
@@ -393,7 +394,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
                        "http://...");
     drmgr_init();
     write_sysnum = get_write_sysnum();
-    read_sysnum  = get_read_sysnum();
+    read_sysnum = get_read_sysnum();
     dr_register_filter_syscall_event(event_filter_syscall);
     drmgr_register_pre_syscall_event(event_pre_syscall);
     drmgr_register_post_syscall_event(event_post_syscall);
@@ -418,9 +419,9 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     }
 
     // pid_t process_id = atoi(argv[1]);
-    outdelim             = argv[3];
+    outdelim = argv[3];
     size_t exprs_num_out = 0;
-    size_t exprs_num_in  = 0;
+    size_t exprs_num_in = 0;
 
     int argpos = 4;
     while (argpos < argc && strncmp(argv[argpos], "-/-", 4) != 0) {
@@ -435,38 +436,38 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         exprs_num_in++;
     }
 
-    pd_out                      = (parsedata *)alloca(sizeof(parsedata) +
-                                                      (sizeof(regex_t) * exprs_num_out));
-    pd_in                       = (parsedata *)alloca(sizeof(parsedata) +
-                                                      (sizeof(regex_t) * exprs_num_in));
-    const char *shmkey          = argv[2];
-    char       *shmkey_name_out = alloca(sizeof(char) * (strlen(shmkey) + 5));
-    char       *shmkey_name_in  = alloca(sizeof(char) * (strlen(shmkey) + 4));
+    pd_out = (parsedata *)alloca(sizeof(parsedata) +
+                                 (sizeof(regex_t) * exprs_num_out));
+    pd_in = (parsedata *)alloca(sizeof(parsedata) +
+                                (sizeof(regex_t) * exprs_num_in));
+    const char *shmkey = argv[2];
+    char *shmkey_name_out = alloca(sizeof(char) * (strlen(shmkey) + 5));
+    char *shmkey_name_in = alloca(sizeof(char) * (strlen(shmkey) + 4));
     strncpy(shmkey_name_out, shmkey, strlen(shmkey));
     strncpy(shmkey_name_in, shmkey, strlen(shmkey));
     strncpy(shmkey_name_out + strlen(shmkey), "_out", 5);
     strncpy(shmkey_name_in + strlen(shmkey), "_in", 5);
     *(shmkey_name_out + strlen(shmkey) + 4) = 0;
-    *(shmkey_name_in + strlen(shmkey) + 3)  = 0;
+    *(shmkey_name_in + strlen(shmkey) + 3) = 0;
     const char *exprs_out[exprs_num_out];
     const char *signatures_out[exprs_num_out];
     const char *names_out[exprs_num_out];
     const char *exprs_in[exprs_num_in];
     const char *signatures_in[exprs_num_in];
     const char *names_in[exprs_num_in];
-    pd_out->exprs      = exprs_out;
+    pd_out->exprs = exprs_out;
     pd_out->signatures = signatures_out;
-    pd_out->names      = names_out;
-    pd_out->exprs_num  = exprs_num_out;
-    pd_in->exprs       = exprs_in;
-    pd_in->signatures  = signatures_in;
-    pd_in->names       = names_in;
-    pd_in->exprs_num   = exprs_num_in;
+    pd_out->names = names_out;
+    pd_out->exprs_num = exprs_num_out;
+    pd_in->exprs = exprs_in;
+    pd_in->signatures = signatures_in;
+    pd_in->names = names_in;
+    pd_in->exprs_num = exprs_num_in;
 
     argpos = 4;
     for (int i = 0; i < (int)exprs_num_out; i++) {
-        names_out[i]      = argv[argpos++];
-        exprs_out[i]      = argv[argpos++];
+        names_out[i] = argv[argpos++];
+        exprs_out[i] = argv[argpos++];
         signatures_out[i] = argv[argpos++];
 
         /* compile the regex, use extended RE */
@@ -480,8 +481,8 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     argpos++;
     argpos++;
     for (int i = 0; i < (int)exprs_num_in; i++) {
-        names_in[i]      = argv[argpos++];
-        exprs_in[i]      = argv[argpos++];
+        names_in[i] = argv[argpos++];
+        exprs_in[i] = argv[argpos++];
         signatures_in[i] = argv[argpos++];
 
         /* compile the regex, use extended RE */
@@ -501,7 +502,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         exprs_num_out, (const char **)names_out, (const char **)signatures_out);
     assert(control_out);
 
-    const size_t   capacity = 256;
+    const size_t capacity = 256;
     struct buffer *shm_out =
         create_shared_buffer(shmkey_name_out, capacity, control_out);
     struct buffer *shm_in =
@@ -510,12 +511,12 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     assert(shm_in);
     free(control_out);
     free(control_in);
-    pd_out->shm        = shm_out;
-    pd_out->delim      = outdelim;
+    pd_out->shm = shm_out;
+    pd_out->delim = outdelim;
     pd_out->ev.base.id = 3;
-    pd_in->shm         = shm_in;
-    pd_in->delim       = indelim;
-    pd_in->ev.base.id  = 3;
+    pd_in->shm = shm_in;
+    pd_in->delim = indelim;
+    pd_in->ev.base.id = 3;
     fprintf(stderr, "info: waiting for the monitor to attach\n");
     buffer_wait_for_monitor(shm_out);
     buffer_wait_for_monitor(shm_in);
@@ -552,7 +553,7 @@ static void event_thread_context_init(void *drcontext, bool new_depth) {
     if (new_depth) {
         data = (per_thread_t *)dr_thread_alloc(drcontext, sizeof(per_thread_t));
         drmgr_set_cls_field(drcontext, tcls_idx, data);
-        data->fd     = -1;
+        data->fd = -1;
         data->thread = thread_num++;
         // FIXME: typo in the name
         // intialize_thread_buffer(1, 2);
@@ -581,13 +582,13 @@ static bool event_pre_syscall(void *drcontext, int sysnum) {
         return true;
     }
 
-    reg_t         fd   = dr_syscall_get_param(drcontext, 0);
-    reg_t         buf  = dr_syscall_get_param(drcontext, 1);
-    reg_t         size = dr_syscall_get_param(drcontext, 2);
+    reg_t fd = dr_syscall_get_param(drcontext, 0);
+    reg_t buf = dr_syscall_get_param(drcontext, 1);
+    reg_t size = dr_syscall_get_param(drcontext, 2);
     per_thread_t *data =
         (per_thread_t *)drmgr_get_cls_field(drcontext, tcls_idx);
-    data->fd   = fd; /* store the fd for post-event */
-    data->buf  = (void *)buf;
+    data->fd = fd; /* store the fd for post-event */
+    data->buf = (void *)buf;
     data->size = size;
     return true; /* execute normally */
 }
@@ -620,7 +621,7 @@ static int get_write_sysnum(void) {
 #ifdef UNIX
     return SYS_write;
 #else
-    byte          *entry;
+    byte *entry;
     module_data_t *data = dr_lookup_module_by_name("ntdll.dll");
     DR_ASSERT(data != NULL);
     entry = (byte *)dr_get_proc_address(data->handle, "NtWriteFile");
@@ -634,7 +635,7 @@ static int get_read_sysnum(void) {
 #ifdef UNIX
     return SYS_read;
 #else
-    byte          *entry;
+    byte *entry;
     module_data_t *data = dr_lookup_module_by_name("ntdll.dll");
     DR_ASSERT(data != NULL);
     entry = (byte *)dr_get_proc_address(data->handle, "NtReadFile");

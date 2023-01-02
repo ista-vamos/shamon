@@ -10,7 +10,7 @@
 #include "shmbuf/client.h"
 
 static void usage_and_exit(int ret) {
-    fprintf(stderr, "Usage: source shmkey freq  [num of events] ...\n");
+    fprintf(stderr, "Usage: ./source shmkey shm-buffer-capacity freq [num of events]\n");
     exit(ret);
 }
 
@@ -27,25 +27,29 @@ static size_t waiting_for_buffer = 0;
 
 int main(int argc, char *argv[]) {
     size_t events_num = ~0UL;
-    size_t freq;
-    if (argc < 3) {
+    size_t freq = 0;
+    if (argc < 4 || argc > 5) {
         usage_and_exit(1);
     }
 
     const char *shmkey = argv[1];
+    size_t shm_buffer_capacity = atoll(argv[2]);
 
-    if (argc >= 3) {
-        freq = atoll(argv[2]);
-        if (argc == 4) {
-            events_num = atoll(argv[3]);
-        } else if (argc != 3) {
+    if (argc >= 4) {
+        freq = atoll(argv[3]);
+        if (argc == 5) {
+            events_num = atoll(argv[4]);
+        } else if (argc != 4) {
             usage_and_exit(1);
         }
+    } else {
+        usage_and_exit(1);
     }
+
     /* Initialize the info about this source */
     struct source_control *control = source_control_define(1, "E", "l");
     assert(control);
-    struct buffer *shm = create_shared_buffer(shmkey, control);
+    struct buffer *shm = create_shared_buffer(shmkey, shm_buffer_capacity, control);
     assert(shm);
     free(control);
     fprintf(stderr, "info: waiting for the monitor to attach... ");

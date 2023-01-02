@@ -1090,7 +1090,8 @@ def p_field_access(p):
         field = p[3]
     p[0] = ('field_access', stream, index, field)
 
-
+def p_error(p):
+  print("Syntax error at %s"%p.value)
 
 # public interface
 def parse_program(s: str):

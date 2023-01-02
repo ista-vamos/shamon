@@ -1,16 +1,16 @@
-#include "vmlinux.h"
-
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
+
+#include "vmlinux.h"
 
 #define BUF_SIZE 255
 
 struct event {
     char buf[BUF_SIZE];
-    int  count;
-    int  len;
-    int  off;
-    int  fd;
+    int count;
+    int len;
+    int off;
+    int fd;
 };
 
 struct {
@@ -41,7 +41,7 @@ static int handle_dropping(void) {
 
 struct syscall_enter_write_args {
     unsigned long long unused;
-    long               __syscall_nr;
+    long __syscall_nr;
     unsigned long long fd;
     unsigned long long buf;
     unsigned long long count;
@@ -50,8 +50,8 @@ struct syscall_enter_write_args {
 SEC("tracepoint/syscalls/sys_enter_write")
 int tracepoint__syscalls__sys_enter_write(
     struct trace_event_raw_sys_enter *ctx) {
-    int          ret;
-    int          zero = 0;
+    int ret;
+    int zero = 0;
     unsigned int len, off = 0;
 
     bpf_printk("BPF triggered\n");

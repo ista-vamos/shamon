@@ -80,16 +80,16 @@ static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
 static void event_thread_context_init(void *drcontext, bool new_depth);
 static void event_thread_context_exit(void *drcontext, bool process_exit);
 
-static struct buffer         *top_shmbuffer;
+static struct buffer *top_shmbuffer;
 static struct source_control *top_control;
-static struct event_record   *events;
-unsigned long                *addresses;
-static size_t                 events_num;
+static struct event_record *events;
+unsigned long *addresses;
+static size_t events_num;
 
 typedef struct {
-    size_t         thread;
+    size_t thread;
     struct buffer *shm;
-    size_t         waiting_for_buffer;
+    size_t waiting_for_buffer;
 } per_thread_t;
 
 /* Thread-context-local storage index from drmgr */
@@ -149,7 +149,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     }
 
     const char *shmkey = argv[1];
-    events_num         = argc - 2;
+    events_num = argc - 2;
     dr_fprintf(STDERR, "shmkey: %s\n", shmkey);
     dr_fprintf(STDERR, "number of events: %lu\n", events_num);
     addresses = dr_global_alloc(events_num * sizeof(unsigned long));
@@ -159,10 +159,10 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     const char *signatures[events_num];
 
     for (size_t i = 0; i < events_num; ++i) {
-        names[i]    = argv[i + 2];
+        names[i] = argv[i + 2];
         char *colon = strchr(names[i], ':');
         if (colon) {
-            *colon        = 0;
+            *colon = 0;
             signatures[i] = colon + 1;
         } else {
             signatures[i] = "";
@@ -204,7 +204,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     drmgr_register_bb_instrumentation_event(NULL, (void *)event_app_instruction,
                                             0);
 
-    const size_t   capacity = 256;
+    const size_t capacity = 256;
     top_shmbuffer = create_shared_buffer(shmkey, capacity, top_control);
     DR_ASSERT(top_shmbuffer);
 
@@ -247,7 +247,6 @@ static void event_thread_context_exit(void *drcontext, bool thread_exit) {
 }
 
 static void event_exit(void) {
-
 #ifdef SHOW_SYMBOLS
     if (drsym_exit() != DRSYM_SUCCESS) {
         dr_log(NULL, DR_LOG_ALL, 1,
@@ -261,7 +260,7 @@ static void event_exit(void) {
 
 /* adapted from instrcalls.c */
 static app_pc call_get_target(instr_t *instr) {
-    app_pc target   = 0;
+    app_pc target = 0;
     opnd_t targetop = instr_get_target(instr);
     if (opnd_is_pc(targetop)) {
         if (opnd_is_far_pc(targetop)) {
@@ -284,18 +283,18 @@ static inline void *call_get_arg_ptr(dr_mcontext_t *mc, int i, char o) {
     }
     DR_ASSERT(i < 6);
     switch (i) {
-    case 0:
-        return &mc->xdi;
-    case 1:
-        return &mc->xsi;
-    case 2:
-        return &mc->xdx;
-    case 3:
-        return &mc->xcx;
-    case 4:
-        return &mc->r8;
-    case 5:
-        return &mc->r9;
+        case 0:
+            return &mc->xdi;
+        case 1:
+            return &mc->xsi;
+        case 2:
+            return &mc->xdx;
+        case 3:
+            return &mc->xcx;
+        case 4:
+            return &mc->r8;
+        case 5:
+            return &mc->r9;
     }
     DR_ASSERT(0 && "Not implemented");
     return NULL;
@@ -304,21 +303,21 @@ static inline void *call_get_arg_ptr(dr_mcontext_t *mc, int i, char o) {
 static size_t last_event_id = 0;
 
 static void at_call_generic(size_t fun_idx, const char *sig) {
-    dr_mcontext_t mc        = {sizeof(mc), DR_MC_INTEGER};
-    void         *drcontext = dr_get_current_drcontext();
+    dr_mcontext_t mc = {sizeof(mc), DR_MC_INTEGER};
+    void *drcontext = dr_get_current_drcontext();
     dr_get_mcontext(drcontext, &mc);
 
     per_thread_t *data =
         (per_thread_t *)drmgr_get_cls_field(drcontext, tcls_idx);
     struct buffer *shm = data->shm;
-    void          *shmaddr;
+    void *shmaddr;
     while (!(shmaddr = buffer_start_push(shm))) {
         ++data->waiting_for_buffer;
     }
     DR_ASSERT(fun_idx < events_num);
     shm_event_funcall *ev = (shm_event_funcall *)shmaddr;
-    ev->base.kind         = events[fun_idx].kind;
-    ev->base.id           = ++last_event_id;
+    ev->base.kind = events[fun_idx].kind;
+    ev->base.id = ++last_event_id;
     memcpy(ev->signature, events[fun_idx].signature, sizeof(ev->signature));
     shmaddr = ev->args;
     DR_ASSERT(shmaddr && "Failed partial push");
@@ -326,20 +325,21 @@ static void at_call_generic(size_t fun_idx, const char *sig) {
     int i = 0;
     for (const char *o = sig; *o; ++o) {
         switch (*o) {
-        case '_':
-            break;
-        case 'S':
-            shmaddr = buffer_partial_push_str(
-                shm, shmaddr, last_event_id,
-                *(const char **)call_get_arg_ptr(&mc, i, *o));
-            break;
-        default:
-            shmaddr =
-                buffer_partial_push(shm, shmaddr, call_get_arg_ptr(&mc, i, *o),
-                                    signature_op_get_size(*o));
-            /* printf(" arg %d=%ld", i, *(size_t*)call_get_arg_ptr(&mc, i, *o));
-             */
-            break;
+            case '_':
+                break;
+            case 'S':
+                shmaddr = buffer_partial_push_str(
+                    shm, shmaddr, last_event_id,
+                    *(const char **)call_get_arg_ptr(&mc, i, *o));
+                break;
+            default:
+                shmaddr = buffer_partial_push(shm, shmaddr,
+                                              call_get_arg_ptr(&mc, i, *o),
+                                              signature_op_get_size(*o));
+                /* printf(" arg %d=%ld", i, *(size_t*)call_get_arg_ptr(&mc, i,
+                 * *o));
+                 */
+                break;
         }
         ++i;
     }
@@ -367,7 +367,7 @@ static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag,
                 if (events[i].kind == 0) {
                     dr_printf("Found a call of %s, but skipping\n",
                               events[i].name);
-                    continue; // monitor has no interest in this event
+                    continue;  // monitor has no interest in this event
                 }
                 dr_printf("Found a call of %s\n", events[i].name);
                 dr_insert_clean_call_ex(
