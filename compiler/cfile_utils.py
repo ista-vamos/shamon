@@ -1715,14 +1715,14 @@ struct _EVENT_hole
   uint64_t n;
 {"}"};
 typedef struct _EVENT_hole EVENT_hole;
-static void init_hole(shm_event *hev) {"{"}
+static void init_hole_hole(shm_event *hev) {"{"}
     EVENT_hole *h = (EVENT_hole *) hev;
     h->head.kind = shm_get_hole_kind();
     h->n = 0;
 
 {"}"}
 
-static void update_hole(shm_event *h, shm_event *ev) {"{"}
+static void update_hole_hole(shm_event *h, shm_event *ev) {"{"}
     ((EVENT_hole *)h)->n++;
 {"}"}
 {events_enum_kinds(components["event_source"], streams_to_events_map)}
