@@ -85,7 +85,7 @@ try:
     for buffsize in (4, 8, 16, 128, 1024, 2048):
         compile_monitor_txt(buffsize)
 
-        for source_freq in (40, 90):
+        for source_freq in (0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200):
             try:
                 run_measurement(source_freq, buffsize)
             except TimeoutExpired:
