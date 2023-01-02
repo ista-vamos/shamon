@@ -250,6 +250,30 @@ void __tsan_read8(void *addr) {
 #endif
 }
 
+void __tsan_write1(void *addr) {
+    struct buffer *shm = thread_data.shmbuf;
+    void *mem = start_event(shm, EV_WRITE);
+    buffer_partial_push(shm, mem, &addr, sizeof(addr));
+    buffer_finish_push(shm);
+
+#ifdef DEBUG_STDOUT
+    printf("[%lu] thread %lu: write2(%p)\n", rt_timestamp(),
+           thread_data.thread_id, addr);
+#endif
+}
+
+void __tsan_write2(void *addr) {
+    struct buffer *shm = thread_data.shmbuf;
+    void *mem = start_event(shm, EV_WRITE);
+    buffer_partial_push(shm, mem, &addr, sizeof(addr));
+    buffer_finish_push(shm);
+
+#ifdef DEBUG_STDOUT
+    printf("[%lu] thread %lu: write2(%p)\n", rt_timestamp(),
+           thread_data.thread_id, addr);
+#endif
+}
+
 void __tsan_write4(void *addr) {
     struct buffer *shm = thread_data.shmbuf;
     void *mem = start_event(shm, EV_WRITE);
