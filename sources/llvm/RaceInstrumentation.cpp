@@ -277,6 +277,7 @@ void RaceInstrumentation::instrumentThreadFunExit(Function *fun) {
 }
 
 bool RaceInstrumentation::runOnBasicBlock(BasicBlock &block) {
+    std::vector<CallInst *> remove;
     for (auto &I : block) {
         if (CallInst *call = dyn_cast<CallInst>(&I)) {
             auto *calledop =
@@ -289,9 +290,13 @@ bool RaceInstrumentation::runOnBasicBlock(BasicBlock &block) {
             }
 
             if (calledfun->getName().startswith("__tsan_")) {
-                /* __tsan_* functions may not have dbgloc, workaround that */
+                // __tsan_* functions may not have dbgloc, workaround that.
+                // We must set it also when we will remove the call,
+                // becase our methods copy dbgloc from this call
                 if (!call->getDebugLoc())
                     call->setDebugLoc(findFirstDbgLoc(call));
+
+                remove.push_back(call);
             }
 
             if (auto *mtx = getMutexLock(calledfun, call)) {
@@ -307,7 +312,13 @@ bool RaceInstrumentation::runOnBasicBlock(BasicBlock &block) {
         }
     }
 
-    return false;
+    /*
+    for (CallInst *call : remove) {
+        call->eraseFromParent();
+    }
+    */
+
+    return remove.size() > 0;
 }
 
 }  // namespace

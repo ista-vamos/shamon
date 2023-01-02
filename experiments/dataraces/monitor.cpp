@@ -277,7 +277,7 @@ void apply_lockset_rules(Lockset &ls, Cell *pos1, Cell *pos2, int owner2, Action
 			// {
 			// 	if((!ls.addrs.empty())&&ls.addrs.find(pos1->action.write.addr)==ls.addrs.end()&&ls.skipthreads.find(pos1->threadid)==ls.skipthreads.end()&&ls.skippedthreads.find(pos1->threadid)==ls.skippedthreads.end())
 			// 	{
-			// 		printf("Found data race: Thread %i wrote to %li without synchronization\n", pos1->threadid, pos1->action.write.addr);
+			// 		fprintf(stderr, "Found data race: Thread %i wrote to %li without synchronization\n", pos1->threadid, pos1->action.write.addr);
 			// 	}
 			// 	else
 			// 	{
@@ -312,7 +312,7 @@ void apply_lockset_rules(Lockset &ls, Cell *pos1, Cell *pos2, int owner2, Action
 		{
 			if((!(ls.addrs.empty()&&ls.threads.empty()))&&ls.threads.find(owner2)==ls.threads.end()&&ls.skipthreads.find(pos1->threadid)==ls.skipthreads.end()&&ls.skippedthreads.find(pos1->threadid)==ls.skippedthreads.end())
 			{
-				printf("Found data race: Thread %i read from %p without synchronization\n", owner2, (void*)addr);
+				fprintf(stderr, "Found data race: Thread %i read from %p without synchronization\n", owner2, (void*)addr);
 				racecount++;
 			}
 			// else
@@ -332,7 +332,7 @@ void apply_lockset_rules(Lockset &ls, Cell *pos1, Cell *pos2, int owner2, Action
 		{
 			if((!(ls.addrs.empty()&&ls.threads.empty()))&&ls.threads.find(owner2)==ls.threads.end()&&ls.skipthreads.find(pos1->threadid)==ls.skipthreads.end()&&ls.skippedthreads.find(pos1->threadid)==ls.skippedthreads.end())
 			{
-				printf("Found data race: Thread %i wrote to %p without synchronization\n", owner2, (void*)addr);
+				fprintf(stderr, "Found data race: Thread %i wrote to %p without synchronization\n", owner2, (void*)addr);
 				racecount++;
 			}
 			// else

@@ -29,6 +29,7 @@ link = "llvm-link"
 class CompileOptions:
     def __init__(self):
         self.files = []
+        self.files_noinst = []
         self.cc = "clang"
         self.output = "a.out"
         self.cflags = []
@@ -57,6 +58,9 @@ def get_opts(argv):
         elif argv[i] == "-I":
             i += 1
             opts.cflags.append(f"-I{argv[i]}")
+        elif argv[i] == "-noinst":
+            i += 1
+            opts.files_noinst.append(argv[i])
         elif argv[i] == "-omp":
             i += 1
             opts.link_and_instrument.append(argv[i])
@@ -120,9 +124,17 @@ def main(argv):
         + CFLAGS
         + SHAMON_INCLUDES
     )
+    compiled_files_link = [f"{file}.bc" for file in opts.files_noinst]
+    for f, out in zip(opts.files_noinst, compiled_files_link):
+        cmd(
+            [opts.cc, "-emit-llvm", "-c", "-g", "-o", f"{out}", f]
+            + CFLAGS
+            + opts.cflags
+        )
     cmd(
         [link, f"{DIR}/tsan_impl.bc", f"{output}.tmp3.bc", "-o", f"{output}.tmp4.bc"]
         + opts.link
+        + compiled_files_link
     )
 
     cmd([opt, "-O3", f"{output}.tmp4.bc", "-o", f"{output}.tmp5.bc"])

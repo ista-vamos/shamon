@@ -1,3 +1,4 @@
+import sys
 from random import getrandbits
 
 nondets = {
@@ -10,22 +11,6 @@ nondets = {
     "char" : "char",
     "uchar" : "unsigned char",
 }
-
-
-def parse_yml_input(path):
-    try:
-        from yaml import safe_load as yaml_safe_load, YAMLError
-    except ImportError:
-        warn("Cannot import from YAML package")
-        return None
-
-    with open(path, "r") as stream:
-        try:
-            spec = yaml_safe_load(stream)
-        except YAMLError as exc:
-            warn(exc)
-            return None
-    return spec
 
 def get_rand_byte():
     return getrandbits(8)
@@ -53,15 +38,24 @@ def gen_verifier_nondet(stream, name):
 def gen_header(stream):
     stream.write("#include <unistd.h>\n")
 
+def gen_harness(stream, n):
+    gen_header(stream)
+    gen_random_bytes(stream, n)
+    gen_verifier_nondet(stream, "int")
+    gen_verifier_nondet(stream, "uint")
+    gen_verifier_nondet(stream, "long")
+    gen_verifier_nondet(stream, "ulong")
+    gen_verifier_nondet(stream, "char")
+    gen_verifier_nondet(stream, "uchar")
+    gen_verifier_nondet(stream, "bool")
+    gen_verifier_nondet(stream, "_Bool")
+
 if __name__ == "__main__":
-    from sys import stdout
-    gen_header(stdout)
-    gen_random_bytes(stdout, 100)
-    gen_verifier_nondet(stdout, "int")
-    gen_verifier_nondet(stdout, "uint")
-    gen_verifier_nondet(stdout, "long")
-    gen_verifier_nondet(stdout, "ulong")
-    gen_verifier_nondet(stdout, "char")
-    gen_verifier_nondet(stdout, "uchar")
-    gen_verifier_nondet(stdout, "bool")
-    gen_verifier_nondet(stdout, "_Bool")
+    N = 100
+    if "-o" in sys.argv:
+        out_idx = sys.argv.index("-o")
+        with open(sys.argv[out_idx + 1], "w") as stream:
+            gen_harness(stream, N)
+    else:
+        gen_harness(sys.stdout, N)
+
