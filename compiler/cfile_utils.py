@@ -374,14 +374,14 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             min_size_uninterrupt = connection_kind[3]
 
         stream_type = stream_type_from_ev_source(event_source)
-        in_event = f"STREAM_{stream_type}_in"
+        out_event = f"STREAM_{stream_type}_out"
         if copies:
             for i in range(copies):
                 name = f"{stream_name}_{i}"
                 answer += f"\t// connect to event source {name}\n"
                 answer += f"""
                 shm_stream_hole_handling hh = {{
-                  .hole_event_size = sizeof({in_event}),
+                  .hole_event_size = sizeof({out_event}),
                   .init = &init_hole_{processor_name},
                   .update = &update_hole_{processor_name}
                 }};\n
@@ -406,7 +406,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             answer += f"\t// connect to event source {name}\n"
             answer += f"""
                 shm_stream_hole_handling hh = {{
-                  .hole_event_size = sizeof({in_event}),
+                  .hole_event_size = sizeof({out_event}),
                   .init = &init_hole_{hole_name},
                   .update = &update_hole_{hole_name}
                 }};\n
@@ -629,10 +629,6 @@ case {mapping_in[event_name]["enum"]}:
             event_name, event_args = case['event'], case['event_args']
             buffer_group = case['buff_group']
             stream_processor_name = case['process_using']
-            if  stream_processor_name == 'forward' or TypeChecker.stream_processors_data[stream_processor_name]["special_hole"] is None:
-                hole_size = "sizeof(EVENT_hole)"
-            else:
-                hole_size = f"sizeof(EVENT_{TypeChecker.stream_processors_data[stream_processor_name]['hole_name']}_hole)"
             if buffer_kind != 'autodrop':
                 raise Exception("implement of non-autodrop buffer missing!")
             buff_size = case['connection_kind']['size']
@@ -661,10 +657,10 @@ mtx_unlock(&LOCK_{buffer_group});
                 stream_threshold_code = f"\tshm_arbiter_buffer_set_drop_space_threshold(temp_buffer,{min_size_uninterrupt});\n"
 
             hole_name = TypeChecker.stream_processors_data[stream_processor_name]['hole_name']
-            in_event = f"STREAM_{stream_type}_in"
+            out_event = f"STREAM_{stream_type}_out"
             creates_code = f'''
             shm_stream_hole_handling hole_handling = {{
-              .hole_event_size = sizeof({in_event}),
+              .hole_event_size = sizeof({out_event}),
               .init = &init_hole_{hole_name},
               .update = &update_hole_{hole_name}
             }};
@@ -1711,19 +1707,27 @@ def outside_main_code(components, streams_to_events_map, stream_types, ast, arbi
 
 struct _EVENT_hole
 {"{"}
-  shm_event head;
   uint64_t n;
 {"}"};
 typedef struct _EVENT_hole EVENT_hole;
-static void init_hole_hole(shm_event *hev) {"{"}
-    EVENT_hole *h = (EVENT_hole *) hev;
-    h->head.kind = shm_get_hole_kind();
-    h->n = 0;
 
+struct _EVENT_hole_wrapper {"{"}
+    shm_event head;
+    union {"{"}
+        EVENT_hole hole;
+    {"}"}cases;
+{"}"};
+
+static void init_hole_hole(shm_event *hev) {"{"}
+    struct _EVENT_hole_wrapper *h = (struct _EVENT_hole_wrapper *) hev;
+    h->head.kind = shm_get_hole_kind();
+    h->cases.hole.n = 0;
 {"}"}
 
-static void update_hole_hole(shm_event *h, shm_event *ev) {"{"}
-    ((EVENT_hole *)h)->n++;
+static void update_hole_hole(shm_event *hev, shm_event *ev) {"{"}
+    (void)ev;
+    struct _EVENT_hole_wrapper *h = (struct _EVENT_hole_wrapper *) hev;
+    ++h->cases.hole.n;
 {"}"}
 {events_enum_kinds(components["event_source"], streams_to_events_map)}
 {special_hole_structs()}
