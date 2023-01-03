@@ -158,6 +158,10 @@ def main(argv):
         for line in err_mon.splitlines():
             if line.startswith(b"Found data race"):
                 result["vamos"]["verdict"] = "yes"
+            elif b"Dropped" in line and b"holes" in line:
+                words = line.split()
+                result["vamos"]["dropped"] = int(words[1])
+                result["vamos"]["holes"] = int(words[4])
         for line in err_proc.splitlines():
             if b"elapsed" in line and b"maxresident" in line:
                 words = line.split()
@@ -167,22 +171,31 @@ def main(argv):
                 result["vamos"]["maxmem"] = int(
                     words[5][0 : words[5].find(b"maxresident")]
                 )
+            if b"info: number of emitted events" in line:
+                result["vamos"]["eventsnum"] = int(line.split()[5])
     except TimeoutExpired:
         result["vamos"]["verdict"] = "to"
     finally:
         proc.kill()
         mon.kill()
 
+    # the output is:
+    # benchmark,
+    # tsan-{verdict, usertime, systime, time, maxmem},
+    # helgrind-{verdict, usertime, systime, time, maxmem},
+    # vamos-{verdict, usertime, systime, time, maxmem}, vamos-{eventsnum, dropped, holes}
     print("RESULT", basename(infile), end="")
     for tool in "tsan", "helgrind", "vamos":
         res = result[tool]
         print(
             ",",
             ",".join(
-                str(res.get(k)) for k in ("usertime", "systime", "time", "maxmem")
+                str(res.get(k)) for k in ("verdict", "usertime", "systime", "time", "maxmem")
             ),
             end="",
         )
+        if tool == "vamos":
+            print(f", {res.get('eventsnum')}, {res.get('dropped')}, {res.get('holes')}")
     print()
 
 

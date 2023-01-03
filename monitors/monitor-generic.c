@@ -260,9 +260,9 @@ int main(int argc, char *argv[]) {
         n, drp, drpn, n + drpn - drp);
 
 #ifdef DUMP_STATS
-    size_t totally_came = 0;
     size_t streams_num;
 #ifdef CHECK_IDS
+    size_t totally_came = 0;
     size_t evs_num;
     shm_stream **streams =
 #endif
@@ -296,7 +296,9 @@ int main(int argc, char *argv[]) {
             (shm_arbiter_buffer *)shm_vector_at(buffers, i);
         shm_arbiter_buffer_dump_stats(buff);
     }
+#ifdef CHECK_IDS
     assert(totally_came == n);
+#endif
 #endif
 
     shamon_destroy(shmn);
