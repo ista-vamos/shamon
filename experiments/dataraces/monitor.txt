@@ -53,6 +53,7 @@ $$
     uint16_t nonebarrier=1;
     uint64_t nonecycles=0;
     uint64_t dropcount=0;
+    uint64_t holescount=0;
     int seenNone=0;
 
     #define min(a, b) __vamos_min(a, b)
@@ -61,7 +62,7 @@ $$
 
 cleanup
 $$
-    fprintf(stderr, "Dropped %lu events\n", dropcount);
+    fprintf(stderr, "Dropped %lu events in %lu holes\n", dropcount, holescount);
     fprintf(stderr, "Found %lu races\n", GetRaceCount());
 $$
 
@@ -276,6 +277,7 @@ arbiter : GlobalEvent
                 {
                     $yield skipend(T.threadid, nextts);
                     $drop 1 from T;
+        	    ++holescount;
                     leastts=ULLONG_MAX;
                 }
                 if(mints==nextts)
@@ -287,6 +289,7 @@ arbiter : GlobalEvent
             {
                 $yield skipend(T.threadid, maxts);
                 $drop 1 from T;
+        	++holescount;
                 nextts++;
                 leastts=ULLONG_MAX;
             }

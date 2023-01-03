@@ -18,17 +18,6 @@ struct RaceInstrumentation : public FunctionPass {
 
     RaceInstrumentation() : FunctionPass(ID) {}
 
-    /*
-    StructType *getThreadDataTy(LLVMContext& ctx) {
-      if (!thread_data_ty) {
-        thread_data_ty = StructType::create("struct.__vrd_thread_data",
-                                            Type::getInt8PtrTy(ctx),
-                                            Type::getInt64Ty(ctx));
-      }
-      return thread_data_ty;
-    }
-    */
-
     void getAnalysisUsage(AnalysisUsage &Info) const override {
         Info.setPreservesAll();
     }

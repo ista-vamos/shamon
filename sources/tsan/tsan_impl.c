@@ -24,7 +24,6 @@
 
 static CACHELINE_ALIGNED _Atomic size_t last_thread_id = 1;
 static CACHELINE_ALIGNED _Atomic size_t timestamp = 1;
-// static CACHELINE_ALIGNED _Thread_local size_t thread_id;
 
 static struct buffer *top_shmbuf;
 static struct source_control *top_control;
@@ -82,6 +81,11 @@ void __tsan_init() {
         event_kinds[i] = events[i].kind;
     }
     fprintf(stderr, "done\n");
+}
+
+static void __vrd_fini(void) __attribute__((destructor));
+void __vrd_fini(void) {
+	fprintf(stderr, "info: number of emitted events: %lu\n", timestamp - 1);
 }
 
 static inline void *start_event(struct buffer *shm, int type) {
@@ -190,7 +194,11 @@ void __vrd_thrd_exit(void) {
     sizeof(thread_data.thread_id)); buffer_finish_push(shm);
     */
 
-    destroy_shared_sub_buffer(shm);
+    if (shm == top_shmbuf) {
+        destroy_shared_buffer(shm);
+    } else {
+        destroy_shared_sub_buffer(shm);
+    }
 
 #ifdef DEBUG_STDOUT
     printf("[%lu] exitting thread %lu\n", rt_timestamp(),
