@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <threads.h>
 #include <time.h>
+#include <signal.h>
 
 /* RDTSC */
 #ifdef _MSC_VER
@@ -79,6 +80,42 @@ uint64_t event_kinds[EVENTS_NUM];
 
 shm_list_embedded data_list = {&data_list, &data_list};
 
+static void (*old_sigabrt_handler)(int);
+static void (*old_sigiot_handler)(int);
+static void (*old_sigsegv_handler)(int);
+
+static void sig_handler(int sig) {
+    printf("signal %d caught...\n", sig);
+    if (top_shmbuf) {
+        destroy_shared_buffer(top_shmbuf);
+        top_shmbuf = NULL;
+    }
+
+    if (sig == SIGABRT)
+        signal(sig, old_sigabrt_handler);
+    if (sig == SIGIOT)
+        signal(sig, old_sigiot_handler);
+    if (sig == SIGSEGV)
+        signal(sig, old_sigsegv_handler);
+}
+
+static void setup_signals() {
+    old_sigabrt_handler = signal(SIGABRT, sig_handler);
+    if (old_sigabrt_handler == SIG_ERR) {
+        perror("failed setting SIGABRT handler");
+    }
+
+    old_sigiot_handler = signal(SIGIOT, sig_handler);
+    if (old_sigiot_handler == SIG_ERR) {
+        perror("failed setting SIGIOT handler");
+    }
+
+    old_sigsegv_handler = signal(SIGSEGV, sig_handler);
+    if (old_sigsegv_handler == SIG_ERR) {
+        perror("failed setting SIGSEGV handler");
+    }
+}
+
 void __tsan_init() {
     /* Initialize the info about this source */
     top_control = source_control_define(
@@ -89,6 +126,8 @@ void __tsan_init() {
 
     top_shmbuf = create_shared_buffer(shmkey, 512, top_control);
     assert(top_shmbuf);
+
+    setup_signals();
 
     fprintf(stderr, "info: waiting for the monitor to attach... ");
     buffer_wait_for_monitor(top_shmbuf);
