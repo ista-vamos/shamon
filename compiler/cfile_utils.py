@@ -1289,10 +1289,22 @@ def buffer_peeks(tree, existing_buffers):
 def print_dll_node_code(buffer_group_name, buffer_to_src_idx):
     buffer_group_type = TypeChecker.buffer_group_data[buffer_group_name]['in_stream']
     assert(buffer_group_type in buffer_to_src_idx.keys())
+
+    print_args_code = ""
+    
+    for arg_data in TypeChecker.stream_types_data[buffer_group_type]['arg_types']:
+        iterpol_code = ""
+        if arg_data['type'] in ['int', 'uint16_t', 'int16_t'] :
+            interpol_code = "%d"
+        elif arg_data['type'] in ['uint64_t']:
+            interpol_code = "%ull"
+        else:
+            raise Exception(f"implement interpolation code {arg_data['type']}")
+        print_args_code+= f'\tprintf("{arg_data["name"]} = {interpol_code}\\n", ((STREAM_{buffer_group_type}_ARGS *) current->args)->{arg_data["name"]})\n' 
     
     return f'''
     printf(\'{buffer_group_name}[%d].ARGS{"{"}\', i);
-
+{print_args_code}
     printf(\'{"}"}\\n\');
     char* e1_BG; size_t i1_BG; char* e2_BG; size_t i2_BG;
     int COUNT_BG_TEMP_ = shm_arbiter_buffer_peek(current->buffer, 5, (void**)&e1_BG, &i1_BG, (void**)&e2_BG, &i2_BG);
@@ -1319,12 +1331,7 @@ def check_progress(rule_set_name, tree, existing_buffers):
 
     buffer_to_src_idx = { bn : -1 for bn in existing_buffers}
     for (event_source_index, stream_type )in enumerate(TypeChecker.stream_types_data.keys()):
-
-        if stream_type in existing_buffers:
-            buffer_to_src_idx[stream_type] = event_source_index
-        else:
-            buffer_to_src_idx[stream_type] = -1
-
+        buffer_to_src_idx[stream_type] = event_source_index
 
     for (ev_source, data) in TypeChecker.event_sources_data.items():
         src_idx = buffer_to_src_idx[data['output_stream_type']]
