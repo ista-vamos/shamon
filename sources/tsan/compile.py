@@ -14,11 +14,13 @@ CFLAGS = [
 SHAMON_INCLUDES = [f"-I{DIR}/../../"]
 SHAMON_LIBS = [
     f"{SHAMONDIR}/core/libshamon-arbiter.a",
-    f"{SHAMONDIR}/shmbuf/libshamon-shmbuf.a",
-    f"{SHAMONDIR}/core/libshamon-utils.a",
     f"{SHAMONDIR}/core/libshamon-stream.a",
     f"{SHAMONDIR}/core/libshamon-parallel-queue.a",
-    f"{SHAMONDIR}/core/signatures.c",
+    f"{SHAMONDIR}/shmbuf/libshamon-shmbuf.a",
+    f"{SHAMONDIR}/core/libshamon-list.a",
+    f"{SHAMONDIR}/core/libshamon-source.a",
+    f"{SHAMONDIR}/core/libshamon-signature.a",
+    f"{SHAMONDIR}/core/libshamon-event.a",
     f"{SHAMONDIR}/streams/libshamon-streams.a",
 ]
 

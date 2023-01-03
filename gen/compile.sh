@@ -26,13 +26,12 @@ fi
 LDFLAGS=-lpthread
 LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
            $SHAMONDIR/core/libshamon-monitor.a\
-           $SHAMONDIR/core/libshamon-utils.a\
            $SHAMONDIR/core/libshamon-stream.a\
            $SHAMONDIR/shmbuf/libshamon-shmbuf.a\
            $SHAMONDIR/core/libshamon-parallel-queue.a\
-           $SHAMONDIR/core/libshamon-signature.a\
            $SHAMONDIR/core/libshamon-event.a\
            $SHAMONDIR/core/libshamon-source.a\
+           $SHAMONDIR/core/libshamon-signature.a\
            $SHAMONDIR/core/libshamon-list.a\
            $SHAMONDIR/streams/libshamon-streams.a"
 

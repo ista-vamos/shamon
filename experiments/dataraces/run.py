@@ -101,13 +101,14 @@ def run_once():
     result = {}
 
     # ---- run TSAN
-    result.setdefault("tsan", {})["verdict"] = "no"
+    result.setdefault("tsan", {})["races"] = 0
+
     try:
         proc = Popen([timecmd, "./a.tsan.out"], stderr=PIPE, stdout=DEVNULL)
         _, err = proc.communicate(timeout=TIMEOUT)
         for line in err.splitlines():
             if b"WARNING: ThreadSanitizer: data race" in line:
-                result["tsan"]["verdict"] = "yes"
+                result["tsan"]["races"] += 1
             if b"elapsed" in line and b"maxresident" in line:
                 words = line.split()
                 result["tsan"]["usertime"] = float(words[0][:-4])
@@ -117,11 +118,11 @@ def run_once():
                     words[5][0 : words[5].find(b"maxresident")]
                 )
     except TimeoutExpired:
-        result["tsan"]["verdict"] = "to"
+        result["tsan"]["races"] = None
         proc.kill()
 
     # --- run HELGRIND
-    result.setdefault("helgrind", {})["verdict"] = "no"
+    result.setdefault("helgrind", {})["races"] = 0
     try:
         proc = Popen(
             [timecmd, "valgrind", "--tool=helgrind", "./a.helgrind.out"],
@@ -131,7 +132,7 @@ def run_once():
         _, err = proc.communicate(timeout=TIMEOUT)
         for line in err.splitlines():
             if b"Possible data race" in line:
-                result["helgrind"]["verdict"] = "yes"
+                result["helgrind"]["races"] += 1
             if b"elapsed" in line and b"maxresident" in line:
                 words = line.split()
                 result["helgrind"]["usertime"] = float(words[0][:-4])
@@ -141,12 +142,13 @@ def run_once():
                     words[5][0 : words[5].find(b"maxresident")]
                 )
     except TimeoutExpired:
-        result["helgrind"]["verdict"] = "to"
+        result["helgrind"]["races"] = None
         proc.kill()
 
     # --- run VAMOS
-    result.setdefault("vamos", {})["verdict"] = "no"
+    result.setdefault("vamos", {})["races"] = 0
     try:
+        cmd(["rm", "-f", "/dev/shm/vrd*"])
         proc = Popen([timecmd, "./a.vamos.out"], stderr=PIPE, stdout=DEVNULL)
         mon = Popen(["./monitor", "Program:generic:/vrd"], stderr=PIPE, stdout=DEVNULL)
         _, err_proc = proc.communicate(timeout=TIMEOUT)
@@ -154,7 +156,7 @@ def run_once():
 
         for line in err_mon.splitlines():
             if line.startswith(b"Found data race"):
-                result["vamos"]["verdict"] = "yes"
+                result["vamos"]["races"] += 1
             elif b"Dropped" in line and b"holes" in line:
                 words = line.split()
                 result["vamos"]["dropped"] = int(words[1])
@@ -171,21 +173,21 @@ def run_once():
             if b"info: number of emitted events" in line:
                 result["vamos"]["eventsnum"] = int(line.split()[5])
     except TimeoutExpired:
-        result["vamos"]["verdict"] = "to"
+        result["vamos"]["races"] = None
     finally:
         proc.kill()
         mon.kill()
 
     # the output is:
     # benchmark,
-    # tsan-{verdict, usertime, systime, time, maxmem},
-    # helgrind-{verdict, usertime, systime, time, maxmem},
-    # vamos-{verdict, usertime, systime, time, maxmem}, vamos-{eventsnum, dropped, holes}
+    # tsan-{races, usertime, systime, time, maxmem},
+    # helgrind-{races, usertime, systime, time, maxmem},
+    # vamos-{races, usertime, systime, time, maxmem}, vamos-{eventsnum, dropped, holes}
     ret = []
     for tool in "tsan", "helgrind", "vamos":
         res = result[tool]
         ret += [
-            res.get(k) for k in ("verdict", "usertime", "systime", "time", "maxmem")
+            res.get(k) for k in ("races", "usertime", "systime", "time", "maxmem")
         ]
         if tool == "vamos":
             ret += [res.get(k) for k in ("eventsnum", "dropped", "holes")]
@@ -195,19 +197,12 @@ def run_once():
 
 def get_stats(results):
     assert len(results) > 0
-
-    def tonum(s):
-        if s in ("yes", "no", "to"):
-            return 1 if s == "yes" else 0
-        assert s is None or isinstance(s, (int, float)), f"{s}: {type(s)}"
-        return s
-
     retlen = len(results[0])
     ret = [0] * retlen
 
     for i in range(retlen):
         for result in results:
-            ret[i] += tonum(result[i])
+            ret[i] += result[i]
 
     return [x / len(results) for x in ret]
 
@@ -222,18 +217,19 @@ def run_rep(infile):
         if i > 2 * REPEAT_NUM:
             raise RuntimeError("Failed measuring")
         result = run_once()
-        print("#", basename(infile), ",".join((str(r) for r in result)))
-        if "to" in result or None in result:
-            continue
+        print("RESULT", basename(infile), ",".join((str(r) for r in result)))
+        sys.stdout.flush()
+       #if None in result:
+       #    continue
         assert len(result) == 18
         results.append(result)
         n += 1
         if n == REPEAT_NUM:
             break
 
-    stats = get_stats(results)
-    print("RESULT", basename(infile), ",".join((f"{r:.2f}" for r in stats)))
-    return stats
+    #stats = get_stats(results)
+    #print("RESULT", basename(infile), ",".join((f"{r:.2f}" for r in stats)))
+    return results
 
 def main(argv):
     if len(argv) != 2:
