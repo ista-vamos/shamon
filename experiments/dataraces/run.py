@@ -9,12 +9,19 @@ from randomharness import gen_harness
 opt = "opt"
 link = "llvm-link"
 
+# we expect output like this:
+# 0.01user 0.00system 0:00.03elapsed 48%CPU (0avgtext+0avgdata 25772maxresident)k
+# 0inputs+0outputs (0major+1946minor)pagefaults 0swaps
+timecmd = "/bin/time"
+
 DIR = abspath(dirname(sys.argv[0]))
-TIMEOUT=5
+TIMEOUT = 5
+
 
 def cmd(args):
     print("> ", " ".join(args))
     run(args, check=True)
+
 
 # def parse_yml_input(path):
 #     try:
@@ -32,6 +39,11 @@ def cmd(args):
 #     return spec
 
 
+def parse_time(tm):
+    parts = tm.split(":")
+    assert len(parts) == 2
+    return 60 * int(parts[0]) + float(parts[1])
+
 
 def main(argv):
 
@@ -47,63 +59,132 @@ def main(argv):
         gen_harness(out, 1024)
 
     # compile TSAN
-    cmd(["clang", infile, harness,  f"{DIR}/svcomp_atomic.c", "-g", "-fsanitize=thread", "-O3", "-o", "a.tsan.out"])
+    cmd(
+        [
+            "clang",
+            infile,
+            harness,
+            f"{DIR}/svcomp_atomic.c",
+            "-g",
+            "-fsanitize=thread",
+            "-O3",
+            "-o",
+            "a.tsan.out",
+        ]
+    )
 
     # compile HELGRIND
-    cmd(["gcc", infile, harness,  f"{DIR}/svcomp_atomic.c", "-g", "-O3", "-o", "a.helgrind.out"])
+    cmd(
+        [
+            "gcc",
+            infile,
+            harness,
+            f"{DIR}/svcomp_atomic.c",
+            "-g",
+            "-O3",
+            "-o",
+            "a.helgrind.out",
+        ]
+    )
 
     # compile VAMOS
-    cmd([f"{DIR}/../../sources/tsan/compile.py", infile, "-noinst", harness, "-noinst", f"{DIR}/svcomp_atomic.c", "-o", "a.vamos.out"])
+    cmd(
+        [
+            f"{DIR}/../../sources/tsan/compile.py",
+            infile,
+            "-noinst",
+            harness,
+            "-noinst",
+            f"{DIR}/svcomp_atomic.c",
+            "-o",
+            "a.vamos.out",
+        ]
+    )
 
     result = {}
 
     # ---- run TSAN
-    result["tsan"] = "no"
+    result.setdefault("tsan", {})["verdict"] = "no"
     try:
-        proc = Popen(["./a.tsan.out"], stderr=PIPE, stdout=DEVNULL)
+        proc = Popen([timecmd, "./a.tsan.out"], stderr=PIPE, stdout=DEVNULL)
         _, err = proc.communicate(timeout=TIMEOUT)
         for line in err.splitlines():
-            if b'WARNING: ThreadSanitizer: data race' in line:
-                result["tsan"] = "yes"
+            if b"WARNING: ThreadSanitizer: data race" in line:
+                result["tsan"]["verdict"] = "yes"
+            if b"elapsed" in line and b"maxresident" in line:
+                words = line.split()
+                result["tsan"]["usertime"] = float(words[0][:-4])
+                result["tsan"]["systime"] = float(words[1][:-6])
+                result["tsan"]["time"] = parse_time(words[2][:-7].decode("ascii"))
+                result["tsan"]["maxmem"] = int(
+                    words[5][0 : words[5].find(b"maxresident")]
+                )
     except TimeoutExpired:
-        result["tsan"] = "to"
+        result["tsan"]["verdict"] = "to"
         proc.kill()
 
     # --- run HELGRIND
-    result["helgrind"] = "no"
+    result.setdefault("helgrind", {})["verdict"] = "no"
     try:
-        proc = Popen(["valgrind", "--tool=helgrind", "./a.helgrind.out"], stderr=PIPE, stdout=DEVNULL)
+        proc = Popen(
+            [timecmd, "valgrind", "--tool=helgrind", "./a.helgrind.out"],
+            stderr=PIPE,
+            stdout=DEVNULL,
+        )
         _, err = proc.communicate(timeout=TIMEOUT)
         for line in err.splitlines():
-            if b'Possible data race' in line:
-                result["helgrind"] = "yes"
+            if b"Possible data race" in line:
+                result["helgrind"]["verdict"] = "yes"
+            if b"elapsed" in line and b"maxresident" in line:
+                words = line.split()
+                result["helgrind"]["usertime"] = float(words[0][:-4])
+                result["helgrind"]["systime"] = float(words[1][:-6])
+                result["helgrind"]["time"] = parse_time(words[2][:-7].decode("ascii"))
+                result["helgrind"]["maxmem"] = int(
+                    words[5][0 : words[5].find(b"maxresident")]
+                )
     except TimeoutExpired:
-        result["helgrind"] = "to"
+        result["helgrind"]["verdict"] = "to"
         proc.kill()
 
     # --- run VAMOS
-    result["vamos"] = "no"
+    result.setdefault("vamos", {})["verdict"] = "no"
     try:
-        proc = Popen(["./a.vamos.out"], stderr=PIPE, stdout=DEVNULL)
-        mon  = Popen(["./monitor", "Program:generic:/vrd"], stderr=PIPE, stdout=DEVNULL)
+        proc = Popen([timecmd, "./a.vamos.out"], stderr=PIPE, stdout=DEVNULL)
+        mon = Popen(["./monitor", "Program:generic:/vrd"], stderr=PIPE, stdout=DEVNULL)
         _, err_proc = proc.communicate(timeout=TIMEOUT)
-        _, err_mon  = mon.communicate(timeout=TIMEOUT)
+        _, err_mon = mon.communicate(timeout=TIMEOUT)
 
         for line in err_mon.splitlines():
-            if line.startswith(b'Found data race'):
-                print(line)
-                result["vamos"] = "yes"
+            if line.startswith(b"Found data race"):
+                result["vamos"]["verdict"] = "yes"
+        for line in err_proc.splitlines():
+            if b"elapsed" in line and b"maxresident" in line:
+                words = line.split()
+                result["vamos"]["usertime"] = float(words[0][:-4])
+                result["vamos"]["systime"] = float(words[1][:-6])
+                result["vamos"]["time"] = parse_time(words[2][:-7].decode("ascii"))
+                result["vamos"]["maxmem"] = int(
+                    words[5][0 : words[5].find(b"maxresident")]
+                )
     except TimeoutExpired:
-        result["vamos"] = "to"
+        result["vamos"]["verdict"] = "to"
     finally:
         proc.kill()
         mon.kill()
 
     print("RESULT", basename(infile), end="")
     for tool in "tsan", "helgrind", "vamos":
-        res = result.get(tool)
-        print(f", {res}", end="")
+        res = result[tool]
+        print(
+            ",",
+            ",".join(
+                str(res.get(k)) for k in ("usertime", "systime", "time", "maxmem")
+            ),
+            end="",
+        )
     print()
+
 
 if __name__ == "__main__":
     main(sys.argv)
