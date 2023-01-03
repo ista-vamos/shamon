@@ -46,13 +46,7 @@ def parse_time(tm):
     return 60 * int(parts[0]) + float(parts[1])
 
 
-def compile_file(argv):
-
-    if len(argv) != 2:
-        print("Usage: ./run.py file.c")
-        exit(1)
-
-    infile = argv[1]
+def compile_file(infile):
     harness = f"{DIR}/harness.tmp.c"
 
     # generate harness
@@ -101,8 +95,6 @@ def compile_file(argv):
             "a.vamos.out",
         ]
     )
-
-    return infile
 
 
 def run_once():
@@ -220,8 +212,8 @@ def get_stats(results):
     return [x / len(results) for x in ret]
 
 
-def main(argv):
-    infile = compile_file(argv)
+def run_rep(infile):
+    compile_file(infile)
     results = []
     i = 0
     n = 0
@@ -241,7 +233,14 @@ def main(argv):
 
     stats = get_stats(results)
     print("RESULT", basename(infile), ",".join((f"{r:.2f}" for r in stats)))
+    return stats
 
+def main(argv):
+    if len(argv) != 2:
+        print("Usage: ./run.py file.c")
+        exit(1)
+
+    run_rep(argv[1])
 
 if __name__ == "__main__":
     main(sys.argv)
