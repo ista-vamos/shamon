@@ -1320,7 +1320,7 @@ def check_progress(rule_set_name, tree, existing_buffers):
     answer = "_Bool ok = 1;\n"
     n = 0
     for (buffer_name, desired_count) in buffers_to_peek.items():
-        answer += f"if (count_{buffer_name} >= {desired_count}) {{"
+        answer += f"if (count_{buffer_name} >= {desired_count}) {'{'}"
         n += 1
         answer += "\tok = 0;\n"
         answer += "}" * n
@@ -1360,8 +1360,8 @@ def check_progress(rule_set_name, tree, existing_buffers):
         answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
 
     for (buffer_group, data) in TypeChecker.buffer_group_data.items():
-        answer += 'printf(\"***** BUFFER GROUPS *****\n\")\n'
-        answer += f'printf(\"***** {buffer_group} *****\n\")'
+        answer += 'printf(\"***** BUFFER GROUPS *****\\n\")\n'
+        answer += f'printf(\"***** {buffer_group} *****\\n\")'
         answer += f"dll_node *current = BG_{buffer_group}.head;\n"
         answer += f"{'{'}int i = 0; \n while (current){'{'} {print_dll_node_code(buffer_group, buffer_to_src_idx)} current = current->next;\n i+=1;\n{'}'}\n{'}'}"
 
