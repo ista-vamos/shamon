@@ -803,14 +803,15 @@ def arbiter_code(tree, components):
 
     rule_set_invocations = ""
     for name in rule_set_names:
-        rule_set_invocations += f"\t\tif (current_rule_set == SWITCH_TO_RULE_SET_{name}) {'{'} \n" \
-                                f"\t\t\tRULE_SET_{name}();\n" \
+        rule_set_invocations += f"\t\tif (!ARB_CHANGE_ && current_rule_set == SWITCH_TO_RULE_SET_{name}) {'{'} \n" \
+                                f"\t\t\tARB_CHANGE_ = RULE_SET_{name}();\n" \
                                 f"\t\t{'}'}\n"
 
     if len(rule_set_names) > 0:
         return f'''int arbiter() {"{"}
 
         while (!are_streams_done()) {"{"}
+            ARB_CHANGE_ = false;
     {rule_set_invocations}
         {"}"}
         shm_monitor_set_finished(monitor_buffer);
@@ -1763,6 +1764,7 @@ static void update_hole_hole(shm_event *hev, shm_event *ev) {"{"}
 
 {instantiate_stream_args()}
 int arbiter_counter;
+bool ARB_CHANGE_ = false;
 // monitor buffer
 shm_monitor_buffer *monitor_buffer;
 
@@ -1814,7 +1816,7 @@ void done() {{
 
 static inline bool are_streams_done() {"{"}
     assert(count_event_streams >=0);
-    return (count_event_streams == 0 && are_buffers_done()) || __work_done;
+    return (count_event_streams == 0 && are_buffers_done() && !ARB_CHANGE_) || __work_done;
 {"}"}
 
 static inline bool is_buffer_done(shm_arbiter_buffer *b) {"{"}
