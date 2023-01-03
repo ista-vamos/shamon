@@ -61,8 +61,8 @@ $$
 
 cleanup
 $$
-    printf("Dropped %lu events\n", dropcount);
-    printf("Found %lu races\n", GetRaceCount());
+    fprintf(stderr, "Dropped %lu events\n", dropcount);
+    fprintf(stderr, "Found %lu races\n", GetRaceCount());
 $$
 
 arbiter : GlobalEvent
