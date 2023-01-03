@@ -380,13 +380,13 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 name = f"{stream_name}_{i}"
                 answer += f"\t// connect to event source {name}\n"
                 answer += f"""
-                shm_stream_hole_handling hh = {{
+                shm_stream_hole_handling hh_{name} = {{
                   .hole_event_size = sizeof({out_event}),
                   .init = &init_hole_{processor_name},
                   .update = &update_hole_{processor_name}
                 }};\n
                 """
-                answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
+                answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh_{name});\n"
                 answer += f"\tif (!EV_SOURCE_{name}) {{\n"
                 answer += f"\t\tfprintf(stderr, \"Failed creating stream {name}\\n\");"
                 answer +=  "\tabort();}\n"
@@ -405,13 +405,13 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             name = f"{stream_name}"
             answer += f"\t// connect to event source {name}\n"
             answer += f"""
-                shm_stream_hole_handling hh = {{
+                shm_stream_hole_handling hh_{name} = {{
                   .hole_event_size = sizeof({out_event}),
                   .init = &init_hole_{hole_name},
                   .update = &update_hole_{hole_name}
                 }};\n
                 """
-            answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
+            answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh_{name});\n"
             answer += f"\tBUFFER_{stream_name} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
             if min_size_uninterrupt is not None:
                 answer += f"\tshm_arbiter_buffer_set_drop_space_threshold(BUFFER_{stream_name},{min_size_uninterrupt});\n"
