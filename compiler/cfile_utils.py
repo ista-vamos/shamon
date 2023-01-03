@@ -382,8 +382,8 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 answer += f"""
                 shm_stream_hole_handling hh_{name} = {{
                   .hole_event_size = sizeof({out_event}),
-                  .init = &init_hole_{processor_name},
-                  .update = &update_hole_{processor_name}
+                  .init = &init_hole_{hole_name},
+                  .update = &update_hole_{hole_name}
                 }};\n
                 """
                 answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh_{name});\n"
