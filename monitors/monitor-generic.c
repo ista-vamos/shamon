@@ -15,7 +15,6 @@
 #include "source.h"
 #include "stream-generic.h"
 #include "stream.h"
-#include "streams.h"
 #include "utils.h"
 #include "vector.h"
 
