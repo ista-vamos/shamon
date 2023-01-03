@@ -27,10 +27,29 @@ static CACHELINE_ALIGNED _Atomic size_t timestamp = 1;
 
 static struct buffer *top_shmbuf;
 static struct source_control *top_control;
+
+struct __vrd_thread_data {
+    /* The original data passed to thrd_create */
+    void *data;
+    /* Our internal unique thread ID */
+    uint64_t thread_id;
+    /* ID assigned by the thrd_create/ptrhead_create function
+     * (might not be uinque) */
+    uint64_t std_thread_id;
+    /* SHM buffer */
+    struct buffer *shmbuf;
+    /* the thread exited? */
+    bool exited;
+
+    shm_list_embedded list;
+};
+
+/* thread local data */
 static CACHELINE_ALIGNED _Thread_local struct _thread_data {
     size_t thread_id;
     shm_eventid last_id;
     struct buffer *shmbuf;
+    struct __vrd_thread_data *data;
     size_t waited_for_buffer;
 } thread_data;
 
@@ -57,6 +76,8 @@ enum {
 
 /* local cache */
 uint64_t event_kinds[EVENTS_NUM];
+
+shm_list_embedded data_list = {&data_list, &data_list};
 
 void __tsan_init() {
     /* Initialize the info about this source */
@@ -86,6 +107,17 @@ void __tsan_init() {
 static void __vrd_fini(void) __attribute__((destructor));
 void __vrd_fini(void) {
     fprintf(stderr, "info: number of emitted events: %lu\n", timestamp - 1);
+
+    struct __vrd_thread_data *data, *tmp;
+    shm_list_embedded_foreach_safe(data, tmp, &data_list, list) {
+        fprintf(stderr, "Thread %lu leaked\n", data->thread_id);
+        if (!data->exited) {
+            /* XXX: in this case we could get a race... */
+            fprintf(stderr, "Thread %lu still running\n", data->thread_id);
+            destroy_shared_sub_buffer(data->shmbuf);
+        }
+        free(data);
+    }
 }
 
 static inline void *start_event(struct buffer *shm, int type) {
@@ -108,22 +140,6 @@ static inline void *start_event(struct buffer *shm, int type) {
 void __tsan_func_entry(void *returnaddress) { (void)returnaddress; }
 void __tsan_func_exit(void) {}
 
-shm_list_embedded data_list = {&data_list, &data_list};
-
-struct __vrd_thread_data {
-    /* The original data passed to thrd_create */
-    void *data;
-    /* Our internal unique thread ID */
-    uint64_t thread_id;
-    /* ID assigned by the thrd_create/ptrhead_create function
-     * (might not be uinque) */
-    uint64_t std_thread_id;
-    /* SHM buffer */
-    struct buffer *shmbuf;
-
-    shm_list_embedded list;
-};
-
 /*
  * Called before thrd_create.
  *
@@ -139,6 +155,7 @@ void *__vrd_create_thrd(void *original_data) {
 
     data->data = original_data;
     data->thread_id = tid;
+    data->exited = false;
     data->shmbuf = create_shared_sub_buffer(top_shmbuf, 0, top_control);
     if (!data->shmbuf) {
         assert(data->shmbuf && "Failed creating buffer");
@@ -168,6 +185,7 @@ void *__vrd_thrd_entry(void *data) {
 
     thread_data.waited_for_buffer = 0;
     thread_data.last_id = 0;
+    thread_data.data = tdata;
 
     /* assign the SHM buffer to this thread */
     if (data == NULL) {
@@ -187,7 +205,11 @@ void *__vrd_thrd_entry(void *data) {
 }
 
 void __vrd_thrd_exit(void) {
-    struct buffer *shm = thread_data.shmbuf;
+    struct _thread_data *thr_data = &thread_data;
+    struct buffer *shm = thr_data->shmbuf;
+    if (thr_data->data) {
+        thr_data->data->exited = true;
+    }
     /*
     void *addr = start_event(shm, EV_THRD_EXIT);
     buffer_partial_push(shm, addr, &thread_data.thread_id,
