@@ -190,7 +190,8 @@ def main(argv):
         print(
             ",",
             ",".join(
-                str(res.get(k)) for k in ("verdict", "usertime", "systime", "time", "maxmem")
+                str(res.get(k))
+                for k in ("verdict", "usertime", "systime", "time", "maxmem")
             ),
             end="",
         )
