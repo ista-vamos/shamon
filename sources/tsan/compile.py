@@ -4,7 +4,7 @@ import sys
 from subprocess import run
 from os.path import dirname, abspath
 
-DIR = dirname(sys.argv[0])
+DIR = abspath(dirname(sys.argv[0]))
 SHAMONDIR = f"{DIR}/../.."
 LLVM_PASS_DIR = f"{DIR}/../llvm"
 CFLAGS = [

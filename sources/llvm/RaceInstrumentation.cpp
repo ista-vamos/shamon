@@ -90,6 +90,15 @@ static inline bool isTSanFuncEntry(Function *fun) {
     return fun->getName().equals("__tsan_func_entry");
 }
 
+static inline Value *getThreadJoinTid(Function *fun, CallInst *call) {
+    if (fun->getName().equals("thrd_join") ||
+        fun->getName().equals("pthread_join")) {
+        return call->getOperand(0);
+    }
+    return nullptr;
+}
+
+
 void RaceInstrumentation::instrumentThreadCreate(CallInst *call, Value *data) {
     Module *module = call->getModule();
     LLVMContext &ctx = module->getContext();
@@ -119,6 +128,17 @@ void RaceInstrumentation::instrumentThreadCreate(CallInst *call, Value *data) {
     created_call->setDebugLoc(call->getDebugLoc());
     created_call->insertAfter(call);
     load->insertAfter(call);
+}
+
+static void instrumentThreadJoin(CallInst *call, Value *tid) {
+    Module *module = call->getModule();
+    LLVMContext &ctx = module->getContext();
+    const FunctionCallee &instr_fun = module->getOrInsertFunction(
+        "__vrd_thrd_join", Type::getVoidTy(ctx), Type::getInt64Ty(ctx));
+    std::vector<Value *> args = {tid};
+    auto *new_call = CallInst::Create(instr_fun, args, "");
+    new_call->setDebugLoc(call->getDebugLoc());
+    new_call->insertBefore(call);
 }
 
 static void insertMutexLockOrUnlock(CallInst *call, Value *mtx,
@@ -306,6 +326,8 @@ bool RaceInstrumentation::runOnBasicBlock(BasicBlock &block) {
                                         /* isunlock */ true);
             } else if (auto *data = getThreadCreateData(calledfun, call)) {
                 instrumentThreadCreate(call, data);
+            } else if (auto *data = getThreadJoinTid(calledfun, call)) {
+                instrumentThreadJoin(call, data);
             } else if (isTSanFuncEntry(calledfun)) {
                 instrumentTSanFuncEntry(call);
             }

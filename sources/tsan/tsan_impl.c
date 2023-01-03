@@ -18,6 +18,7 @@
 
 #include "core/source.h"
 #include "core/utils.h"
+#include "core/list-embedded.h"
 #include "shmbuf/buffer.h"
 #include "shmbuf/client.h"
 
@@ -103,6 +104,8 @@ static inline void *start_event(struct buffer *shm, int type) {
 void __tsan_func_entry(void *returnaddress) { (void)returnaddress; }
 void __tsan_func_exit(void) {}
 
+shm_list_embedded data_list = {&data_list, &data_list};
+
 struct __vrd_thread_data {
     /* The original data passed to thrd_create */
     void *data;
@@ -113,6 +116,8 @@ struct __vrd_thread_data {
     uint64_t std_thread_id;
     /* SHM buffer */
     struct buffer *shmbuf;
+
+    shm_list_embedded list;
 };
 
 /*
@@ -135,6 +140,8 @@ void *__vrd_create_thrd(void *original_data) {
         assert(data->shmbuf && "Failed creating buffer");
         abort();
     }
+
+    shm_list_embedded_insert_after(&data_list, &data->list);
 
     return data;
 }
@@ -191,10 +198,26 @@ void __vrd_thrd_exit(void) {
 #endif
 }
 
-void __vrd_thread_join(uint64_t tid) {
+struct __vrd_thread_data *get_data(uint64_t std_tid) {
+    struct __vrd_thread_data *data;
+    shm_list_embedded_foreach(data, &data_list, list) {
+        if (data->std_thread_id == std_tid) {
+            return data;
+        }
+    }
+    return NULL;
+}
+
+void __vrd_thrd_join(uint64_t tid) {
     struct buffer *shm = thread_data.shmbuf;
+    /* we need our thread ID, not the STD thread ID */
+    struct __vrd_thread_data *data = get_data(tid);
+    if (!data) {
+        fprintf(stderr, "ERROR: Found no associated data for thread %lu\n", tid);
+        return;
+    }
     void *addr = start_event(shm, EV_JOIN);
-    buffer_partial_push(shm, addr, &tid, sizeof(tid));
+    buffer_partial_push(shm, addr, &data->thread_id, sizeof(&data->thread_id));
     buffer_finish_push(shm);
 
 #ifdef DEBUG_STDOUT
