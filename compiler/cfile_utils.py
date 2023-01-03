@@ -388,7 +388,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 """
                 answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
                 answer += f"\tif (!EV_SOURCE_{name}) {{\n"
-                ansser += f"\t\tfprintf(stderr, \"Failed creating stream {name}\\n\");"
+                answer += f"\t\tfprintf(stderr, \"Failed creating stream {name}\\n\");"
                 answer +=  "\tabort();}\n"
                 answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
                 if min_size_uninterrupt is not None:
