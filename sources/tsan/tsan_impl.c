@@ -194,7 +194,11 @@ void __vrd_thrd_exit(void) {
     sizeof(thread_data.thread_id)); buffer_finish_push(shm);
     */
 
-    destroy_shared_sub_buffer(shm);
+    if (shm == top_shmbuf) {
+        destroy_shared_buffer(shm);
+    } else {
+        destroy_shared_sub_buffer(shm);
+    }
 
 #ifdef DEBUG_STDOUT
     printf("[%lu] exitting thread %lu\n", rt_timestamp(),
