@@ -388,7 +388,7 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 """
                 answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
                 answer += f"\tif (!EV_SOURCE_{name}) {{\n"
-                ansser += f"\t\tfprintf(stderr, \"Failed creating stream {name}\\n\");"
+                answer += f"\t\tfprintf(stderr, \"Failed creating stream {name}\\n\");"
                 answer +=  "\tabort();}\n"
                 answer += f"\tBUFFER_{stream_name}{i} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
                 if min_size_uninterrupt is not None:
@@ -1179,8 +1179,8 @@ def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order,
                 answer += f"(void**)&e1_{name}, &i1_{name}, (void**)&e2_{name}, &i2_{name});\n"
                 
 
-            answer += f'''
-if({choose_code}) {"{"}
+        answer += f'''
+if({choose_code} ) {"{"}
     {inner_code}
 {"}"}
             '''
@@ -1286,6 +1286,20 @@ def buffer_peeks(tree, existing_buffers):
 
     return answer
 
+def print_dll_node_code(buffer_group_name, buffer_to_src_idx):
+    buffer_group_type = TypeChecker.buffer_group_data[buffer_group_name]['in_stream']
+    assert(buffer_group_type in buffer_to_src_idx.keys())
+    
+    return f'''
+    printf(\'{buffer_group_name}[%d].ARGS{"{"}\', i);
+
+    printf(\'{"}"}\\n\');
+    char* e1_BG; size_t i1_BG; char* e2_BG; size_t i2_BG;
+    int COUNT_BG_TEMP_ = shm_arbiter_buffer_peek(current->buffer, 5, (void**)&e1_BG, &i1_BG, (void**)&e2_BG, &i2_BG);
+    printf(\'{buffer_group_name}[%d].buffer{"{"}\\n\', i);
+    print_buffer_prefix(current->buffer, {buffer_to_src_idx[buffer_group_type]}, i1_BG + i2_BG, COUNT_BG_TEMP_, e1_BG, i1_BG, e2_BG, i2_BG);
+    printf(\'{"}"}\\n\');
+'''
 
 def check_progress(rule_set_name, tree, existing_buffers):
     buffers_to_peek = dict()  # maps buffer_name to the number of elements we want to retrieve from the buffer
@@ -1299,28 +1313,32 @@ def check_progress(rule_set_name, tree, existing_buffers):
         answer += "\tok = 0;\n"
         answer += "}" * n
 
+    answer += "\n"
+
     answer += "if (ok == 0) {\n"
 
     buffer_to_src_idx = { bn : -1 for bn in existing_buffers}
-    for (event_source_index, (event_source, data) )in enumerate(TypeChecker.event_sources_data.items()):
-        if data["copies"] is None:
-            if event_source in existing_buffers:
-                buffer_to_src_idx[event_source] = event_source_index
-            else:
-                buffer_to_src_idx[event_source] = -1
-        else:
-            for i in range(data["copies"]):
-                event_source_name = f"{event_source}{i}"
-                if event_source_name in existing_buffers:
-                    buffer_to_src_idx[event_source_name ] = event_source_index
-                else:
-                    buffer_to_src_idx[event_source_name ] = -1
+    for (event_source_index, stream_type )in enumerate(TypeChecker.stream_types_data.keys()):
 
-    for (buffer_name, desired_count) in buffers_to_peek.items():
-        src_idx = buffer_to_src_idx[buffer_name]
-        answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
-        answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, (void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
-        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
+        if stream_type in existing_buffers:
+            buffer_to_src_idx[stream_type] = event_source_index
+        else:
+            buffer_to_src_idx[stream_type] = -1
+
+
+    for (ev_source, data) in TypeChecker.event_sources_data.items():
+        src_idx = buffer_to_src_idx[data['output_stream_type']]
+        if data['copies']:
+            for i in range(data['copies']):
+                buffer_name = ev_source + str(i)
+                answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
+                answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, (void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
+                answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
+        else:
+            buffer_name = ev_source
+            answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
+            answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, (void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
+            answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
     answer += f"fprintf(stderr, \"No rule in rule set '{rule_set_name}' matched even though there was enough events, CYCLING WITH NO PROGRESS (exiting)!\\n\");"
     answer += "__work_done=1; abort();"
     answer += "}\n"
@@ -1328,11 +1346,18 @@ def check_progress(rule_set_name, tree, existing_buffers):
     answer += f"if (++RULE_SET_{rule_set_name}_nomatch_cnt > 8000000) {{\
         \tRULE_SET_{rule_set_name}_nomatch_cnt = 0;"
     answer += f"\tfprintf(stderr, \"\\033[31mRule set '{rule_set_name}' cycles long time without progress\\033[0m\\n\");"
-    for (buffer_name, desired_count) in buffers_to_peek.items():
-        src_idx = buffer_to_src_idx[buffer_name]
+    for (ev_source, data) in TypeChecker.event_sources_data.items():
+        src_idx = buffer_to_src_idx[data['output_stream_type']]
         answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
         answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, (void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
         answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
+
+    for (buffer_group, data) in TypeChecker.buffer_group_data.items():
+        answer += 'printf(\"***** BUFFER GROUPS *****\n\")\n'
+        answer += f'printf(\"***** {buffer_group} *****\n\")'
+        answer += f"dll_node *current = BG_{buffer_group}.head;\n"
+        answer += f"{'{'}int i = 0; \n while (current){'{'} {print_dll_node_code(buffer_group, buffer_to_src_idx)} current = current->next;\n i+=1;\n{'}'}\n{'}'}"
+
     answer += "fprintf(stderr, \"Seems all rules are waiting for some events that are not coming\\n\");"
     answer += "}\n"
 
@@ -1481,8 +1506,7 @@ def get_event_name(stream_types, mapping):
         return answer
 
     code = ""
-    for (event_source_index, (event_source, data) )in enumerate(TypeChecker.event_sources_data.items()):
-        output_type = stream_types[event_source][0]
+    for (event_source_index, output_type )in enumerate(TypeChecker.stream_types_data.keys()):
         code += f'''
     if(ev_src_index == {event_source_index}) {"{"}
         {local_build_if_from_events(mapping[output_type])}
