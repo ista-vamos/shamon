@@ -9,18 +9,12 @@
 
 #include "arbiter.h"
 #include "event.h"
+#include "monitors-utils.h"
 #include "signatures.h"
-#include "source.h"
 #include "stream.h"
-#include "utils.h"
 
-shm_stream *shm_stream_create_from_argv(const char *name, int argc,
-                                        char *argv[]);
 #define SLEEP_NS_INIT (50)
 #define SLEEP_THRESHOLD_NS (10000000)
-
-shm_stream *create_stream(int argc, char *argv[], int arg_i,
-                          const char *expected_stream_name);
 
 static int buffer_manager_thrd(void *data) {
     shm_arbiter_buffer *buffer = (shm_arbiter_buffer *)data;
@@ -60,7 +54,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    shm_stream *stream = create_stream(argc, argv, 1, NULL);
+    shm_stream *stream = create_stream(argc, argv, 1, NULL, NULL);
     assert(stream && "Creating stream failed");
 
     shm_stream_register_all_events(stream);

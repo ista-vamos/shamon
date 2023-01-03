@@ -25,8 +25,18 @@ SOURCE_EXE=f"{SHAMONPATH}/experiments/scalability/source"
 MONITOR_EXE=f"{SHAMONPATH}/experiments/scalability/monitor"
 MONITOR_TXT_IN=f"{SHAMONPATH}/experiments/scalability/monitor.txt.in"
 
+def bs_to_pages(bs):
+    # these numbers correspond with 1, 8, 16 and 32 pages
+    # 145 1340 2705 5436
+    if bs == "145":  return "1"
+    if bs == "1340": return "8"
+    if bs == "2750": return "16"
+    if bs == "5436": return "32"
+
+    raise RuntimeError(f"Invalid buffer size {bs =}")
+
 open_log()
-csv = open_csvlog(BS, NUM)
+csv = open_csvlog(bs_to_pages(BS), NUM)
 
 WORKINGDIR = mkdtemp(prefix="vamos.", dir="/tmp")
 chdir(WORKINGDIR)
@@ -51,7 +61,7 @@ def run_measurement(source_freq, buffsize):
     monitor = ParseMonitor()
     shmname = mktemp(prefix="/vamos.ev-")
     duration =\
-    measure(f"[SHM {BS} elems] source waits {source_freq} cyc., arbiter buffer has size {buffsize}",
+    measure(f"[SHM {bs_to_pages(BS)} pages] source waits {source_freq} cyc., arbiter buffer has size {buffsize}",
             [Command(SOURCE_EXE, shmname, BS, str(source_freq), NUM).withparser(source)],
             [Command(MONITOR_EXE, f"Src:generic:{shmname}",
                      stdout=PIPE).withparser(monitor)],
