@@ -16,9 +16,9 @@
 #include <stdio.h>
 #endif
 
+#include "core/list-embedded.h"
 #include "core/source.h"
 #include "core/utils.h"
-#include "core/list-embedded.h"
 #include "shmbuf/buffer.h"
 #include "shmbuf/client.h"
 
@@ -85,7 +85,7 @@ void __tsan_init() {
 
 static void __vrd_fini(void) __attribute__((destructor));
 void __vrd_fini(void) {
-	fprintf(stderr, "info: number of emitted events: %lu\n", timestamp - 1);
+    fprintf(stderr, "info: number of emitted events: %lu\n", timestamp - 1);
 }
 
 static inline void *start_event(struct buffer *shm, int type) {
@@ -216,20 +216,32 @@ struct __vrd_thread_data *get_data(uint64_t std_tid) {
     return NULL;
 }
 
-void __vrd_thrd_join(uint64_t tid) {
-    struct buffer *shm = thread_data.shmbuf;
-    /* we need our thread ID, not the STD thread ID */
+void *__vrd_thrd_join(uint64_t tid) {
+    /* we need our thread ID, not the POSIX thread ID. To avoid races and to get
+     * the right timestamp, get the associated data with information about the
+     * thread that is being joined before calling join() and pass them to
+     * __vrd_thrd_joined() that is called after joining. */
     struct __vrd_thread_data *data = get_data(tid);
     if (!data) {
-        fprintf(stderr, "ERROR: Found no associated data for thread %lu\n", tid);
-        return;
+        fprintf(stderr, "ERROR: Found no associated data for thread %lu\n",
+                tid);
+        return NULL;
     }
+    return data;
+}
+
+void __vrd_thrd_joined(void *dataptr) {
+    struct __vrd_thread_data *data = (struct __vrd_thread_data *)dataptr;
+    struct buffer *shm = thread_data.shmbuf;
     void *addr = start_event(shm, EV_JOIN);
     buffer_partial_push(shm, addr, &data->thread_id, sizeof(&data->thread_id));
     buffer_finish_push(shm);
 
+    shm_list_embedded_remove(&data->list);
+    free(data);
+
 #ifdef DEBUG_STDOUT
-    printf("[%lu] thread %lu exits\n", rt_timestamp(), thread_data.thread_id);
+    printf("[%lu] thread %lu joined\n", rt_timestamp(), thread_data.thread_id);
 #endif
 }
 
