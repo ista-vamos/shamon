@@ -6,11 +6,11 @@
 #include <regex.h>
 #include <string.h> /* memset */
 
-#include "../fastbuf/shm_monitored.h"
-#include "buffer.h"
-#include "client.h"
 #include "dr_api.h"
 #include "drmgr.h"
+
+#include "buffer.h"
+#include "client.h"
 #include "event.h"
 #include "signatures.h"
 #include "source.h"

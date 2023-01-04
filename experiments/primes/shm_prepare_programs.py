@@ -3,6 +3,10 @@ from subprocess import run, TimeoutExpired
 
 arbiter_buffer_sizes = [4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]
 # generate shamon programs with different buffer size
+
+if not os.path.exists("./programs"):
+    os.mkdir("./programs")
+
 for buffsize in arbiter_buffer_sizes:
         file = open("./primes.txt.in", "r")
         outfile = open(f"./programs/primes_{buffsize}.txt", "w")

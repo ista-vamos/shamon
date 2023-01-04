@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.1)
-project(Shamon C)
+cmake_minimum_required(VERSION 3.9)
+project(shamon LANGUAGES C VERSION 0.1)
 
 enable_testing()
 
@@ -15,6 +15,12 @@ if (NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 	include(CheckIPOSupported)
 	check_ipo_supported()
 	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+	if (NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
+		message(WARNING "IPO are used, but the compiler is not clang (compiler = ${CMAKE_C_COMPILER_ID})."
+			        "This may cause troubles when using compilation scripts "
+				"that are not based on cmake (e.g., gen/compile.sh).")
+	endif()
 endif()
 
 OPTION(DUMP_STATS "Collect and allow dumping statistics" OFF)
@@ -65,7 +71,7 @@ endif()
 
 
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wpedantic -Werror")
-add_compile_options(-Wall -Wextra -pedantic -Werror)
+add_compile_options(-Wall -Wextra -pedantic)
 
 if (DYNAMORIO_SOURCES)
         find_package(DynamoRIO)
@@ -86,3 +92,26 @@ add_subdirectory(monitors)
 add_subdirectory(experiments)
 add_subdirectory(tests)
 
+install(EXPORT shamonCore
+    FILE shamon.cmake
+    #NAMESPACE shmn::
+    DESTINATION lib/cmake/shamon)
+
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/shamonConfig.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/shamonConfig.cmake"
+  INSTALL_DESTINATION "lib/cmake/shamon"
+  NO_SET_AND_CHECK_MACRO
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+  )
+
+write_basic_package_version_file(
+    "shamonVersion.cmake"
+    VERSION ${shamon_VERSION}
+    COMPATIBILITY AnyNewerVersion)
+
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/shamonConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/shamonVersion.cmake"
+  DESTINATION lib/cmake/shamon)

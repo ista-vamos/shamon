@@ -2,35 +2,52 @@
 
 import sys
 from subprocess import run
-from os.path import dirname, abspath
+from os.path import dirname, abspath, basename
 
 DIR = abspath(dirname(sys.argv[0]))
 SHAMONDIR = f"{DIR}/../.."
 LLVM_PASS_DIR = f"{DIR}/../llvm"
 CFLAGS = [
-    "-DDEBUG_STDOUT",
-    "-g",  # "-O3"
+    "-DDEBUG_STDOUT",  "-std=c11"
 ]
 SHAMON_INCLUDES = [f"-I{DIR}/../../"]
 SHAMON_LIBS = [
     f"{SHAMONDIR}/core/libshamon-arbiter.a",
-    f"{SHAMONDIR}/shmbuf/libshamon-shmbuf.a",
-    f"{SHAMONDIR}/core/libshamon-utils.a",
     f"{SHAMONDIR}/core/libshamon-stream.a",
     f"{SHAMONDIR}/core/libshamon-parallel-queue.a",
-    f"{SHAMONDIR}/core/signatures.c",
+    f"{SHAMONDIR}/shmbuf/libshamon-shmbuf.a",
+    f"{SHAMONDIR}/core/libshamon-list.a",
+    f"{SHAMONDIR}/core/libshamon-source.a",
+    f"{SHAMONDIR}/core/libshamon-signature.a",
+    f"{SHAMONDIR}/core/libshamon-event.a",
     f"{SHAMONDIR}/streams/libshamon-streams.a",
 ]
 
 opt = "opt"
 link = "llvm-link"
 
+def get_build_type():
+    config = f"{SHAMONDIR}/shamonConfig.cmake"
+    with open(config, "r") as f:
+        for line in f:
+            if line.startswith("set( SHAMON_BUILD_TYPE"):
+                return line.split()[2]
+    return None
+
+def get_compiler():
+    config = f"{SHAMONDIR}/shamonConfig.cmake"
+    with open(config, "r") as f:
+        for line in f:
+            if line.startswith("set( SHAMON_C_COMPILER"):
+                return line.split()[2]
+    return None
 
 class CompileOptions:
     def __init__(self):
         self.files = []
         self.files_noinst = []
         self.cc = "clang"
+        self.llvm_cc = "clang"
         self.output = "a.out"
         self.cflags = []
         self.link = []
@@ -49,6 +66,9 @@ def get_opts(argv):
         elif argv[i] == "-cc":
             i += 1
             opts.cc = argv[i]
+        elif argv[i] == "-llvm-cc":
+            i += 1
+            opts.llvm_cc = argv[i]
         elif argv[i] == "-li":
             i += 1
             opts.link_and_instrument.append(argv[i])
@@ -88,11 +108,22 @@ def main(argv):
     opts = get_opts(argv)
     assert opts.files, "No input files given"
 
+    build_type = get_build_type()
+    if build_type is None or build_type == "Release":
+        CFLAGS.extend(("-g3", "-O3", "-flto", "-DNDEBUG",
+                       "-fno-fat-lto-objects", ))
+    else:
+        CFLAGS.append("-g")
+
+    if build_type == "Release" and basename(get_compiler()) != "clang":
+        print("WARNING: Shamon was build in Release mode but not with clang. "\
+              "It may cause troubles with linking.")
+
     output = opts.output
     compiled_files = [f"{file}.bc" for file in opts.files]
     for f, out in zip(opts.files, compiled_files):
         cmd(
-            [opts.cc, "-emit-llvm", "-c", "-fsanitize=thread", "-O0", "-o", f"{out}", f]
+            [opts.llvm_cc, "-emit-llvm", "-c", "-fsanitize=thread", "-O0", "-o", f"{out}", f]
             + CFLAGS
             + opts.cflags
         )
@@ -113,7 +144,7 @@ def main(argv):
 
     cmd(
         [
-            opts.cc,
+            opts.llvm_cc,
             "-std=c11",
             "-emit-llvm",
             "-c",
@@ -127,7 +158,7 @@ def main(argv):
     compiled_files_link = [f"{file}.bc" for file in opts.files_noinst]
     for f, out in zip(opts.files_noinst, compiled_files_link):
         cmd(
-            [opts.cc, "-emit-llvm", "-c", "-g", "-o", f"{out}", f]
+            [opts.llvm_cc, "-emit-llvm", "-c", "-g", "-o", f"{out}", f]
             + CFLAGS
             + opts.cflags
         )
@@ -138,9 +169,12 @@ def main(argv):
     )
 
     cmd([opt, "-O3", f"{output}.tmp4.bc", "-o", f"{output}.tmp5.bc"])
-    cmd(
-        [opts.cc, "-pthread", f"{output}.tmp5.bc", "-o", output]
+    cmd([opts.llvm_cc, f"{output}.tmp5.bc", "-c", "-o", f"{output}.tmp5.o"]
         + opts.link_asm
+        + opts.cflags
+        + CFLAGS)
+    cmd(
+        [opts.cc, "-pthread", f"{output}.tmp5.o", "-o", output]
         + opts.cflags
         + CFLAGS
         + SHAMON_LIBS

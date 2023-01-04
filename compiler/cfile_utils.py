@@ -1134,12 +1134,12 @@ def get_choose_statement(binded_streams, buffer_name, choose_order):
         else:
             if choose_order[2]:
                 choose_count = choose_order[2]
-        choose_statement += f"is_selection_successful = bg_get_first_n(&BG_{buffer_name}, {at_least}, {choose_count}, &chosen_streams);\n"
+        choose_statement += f"is_selection_successful = bg_get_first_n(&BG_{buffer_name}, {at_least}, &chosen_streams);\n"
     else:
         assert (choose_order[1] == "last")
         if choose_order[2]:
             choose_count = choose_order[2]
-        choose_statement = f"is_selection_successful = bg_get_last_n(&BG_{buffer_name}, {at_least}, {choose_count}, &chosen_streams);\n"
+        choose_statement = f"is_selection_successful = bg_get_last_n(&BG_{buffer_name}, {at_least}, &chosen_streams);\n"
     return choose_statement, choose_count
 
 def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order, stream_types, current_tail, inner_code, tree=None, choose_condition=None):
@@ -1181,6 +1181,7 @@ def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order,
 
         answer += f'''
 if({choose_code} ) {"{"}
+    current_matches_+=1;
     {inner_code}
 {"}"}
             '''
@@ -1194,7 +1195,7 @@ if({choose_code} ) {"{"}
             unique_index_code += f"if(index_{name} == index_{prev_name}){'{'} index_{name}++; continue;{'}'}\n"
         if index > 0:
             loop_code += f"index_{name} = 0;\n"
-        loop_code += f"while(index_{name} < {choose_count} && index_{name} < BG_{buffer_name}_size){'{'}\n"
+        loop_code += f"while(index_{name} < BG_{buffer_name}_size && current_matches_ < expected_matches_){'{'}\n"
         loop_code += f"{unique_index_code}\n"
     loop_code += get_local_inner_code()
     # close loops parenthesis
@@ -1206,9 +1207,12 @@ if({choose_code} ) {"{"}
     mtx_lock(&LOCK_{buffer_name});
     bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
     int BG_{buffer_name}_size = BG_{buffer_name}.size;
+    update_size_chosen_streams(BG_{buffer_name}_size);
     {choose_statement}
     mtx_unlock(&LOCK_{buffer_name});
     if (is_selection_successful) {"{"}
+        int expected_matches_ = {choose_count};
+        int current_matches_ = 0;
         {declare_indices()}
         {loop_code}
     {"}"}
@@ -1308,9 +1312,9 @@ def print_dll_node_code(buffer_group_name, buffer_to_src_idx):
     printf(\'{"}"}\\n\');
     char* e1_BG; size_t i1_BG; char* e2_BG; size_t i2_BG;
     int COUNT_BG_TEMP_ = shm_arbiter_buffer_peek(current->buffer, 5, (void**)&e1_BG, &i1_BG, (void**)&e2_BG, &i2_BG);
-    printf(\'{buffer_group_name}[%d].buffer{"{"}\\n\', i);
+    printf(\"{buffer_group_name}[%d].buffer{"{"}\\n\", i);
     print_buffer_prefix(current->buffer, {buffer_to_src_idx[buffer_group_type]}, i1_BG + i2_BG, COUNT_BG_TEMP_, e1_BG, i1_BG, e2_BG, i2_BG);
-    printf(\'{"}"}\\n\');
+    printf(\"{"}"}\\n\");
 '''
 
 def check_progress(rule_set_name, tree, existing_buffers):
@@ -1360,8 +1364,8 @@ def check_progress(rule_set_name, tree, existing_buffers):
         answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
 
     for (buffer_group, data) in TypeChecker.buffer_group_data.items():
-        answer += 'printf(\"***** BUFFER GROUPS *****\\n\")\n'
-        answer += f'printf(\"***** {buffer_group} *****\\n\")'
+        answer += f'printf(\"***** BUFFER GROUPS *****\\n\");\n'
+        answer += f'printf(\"***** {buffer_group} *****\\n\");\n'
         answer += f"dll_node *current = BG_{buffer_group}.head;\n"
         answer += f"{'{'}int i = 0; \n while (current){'{'} {print_dll_node_code(buffer_group, buffer_to_src_idx)} current = current->next;\n i+=1;\n{'}'}\n{'}'}"
 
@@ -1775,6 +1779,15 @@ shm_monitor_buffer *monitor_buffer;
 
 bool is_selection_successful;
 dll_node **chosen_streams; // used in rule set for get_first/last_n
+int current_size_chosen_stream = 0;
+
+void update_size_chosen_streams(const int s) {"{"}
+    if (s > current_size_chosen_stream) {"{"}
+        free(chosen_streams);
+        chosen_streams = (dll_node **) calloc(s, sizeof(dll_node*));
+        current_size_chosen_stream = s;
+    {"}"}
+{"}"}
 
 // globals code
 {get_globals_code(components, streams_to_events_map, stream_types)}
@@ -1973,7 +1986,6 @@ def get_c_program(components, ast, streams_to_events_map, stream_types, arbiter_
 int main(int argc, char **argv) {"{"}
     setup_signals();
 
-	chosen_streams = (dll_node **) calloc({TypeChecker.max_choose_size}, sizeof(dll_node*)); // the maximum size this can have is the total number of event sources
     arbiter_counter = 10;
 	{get_pure_c_code(components, 'startup')}
     {initialize_stream_args()}

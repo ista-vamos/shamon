@@ -5,7 +5,6 @@ endif()
 if (DYNAMORIO_SOURCES)
        add_subdirectory(drfun)
        add_subdirectory(drregex)
-       add_subdirectory(drregexrw)
        add_subdirectory(drsyscalls)
 endif()
 

@@ -7,7 +7,9 @@ on:
     branches: [ "main" ]
 
 env:
-  BUILD_TYPE: Debug
+  # FIXME: use a matrix of values instead of
+  # two config files
+  BUILD_TYPE: Release
 
 jobs:
   build:
@@ -24,9 +26,6 @@ jobs:
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-
-    - name: Install CBMC (for tests)
-      run: sudo apt install cbmc
 
     - name: Test
       working-directory: ${{github.workspace}}/build

@@ -87,7 +87,6 @@ static inline Value *getThreadJoinTid(Function *fun, CallInst *call) {
     return nullptr;
 }
 
-
 void RaceInstrumentation::instrumentThreadCreate(CallInst *call, Value *data) {
     Module *module = call->getModule();
     LLVMContext &ctx = module->getContext();
@@ -122,12 +121,20 @@ void RaceInstrumentation::instrumentThreadCreate(CallInst *call, Value *data) {
 static void instrumentThreadJoin(CallInst *call, Value *tid) {
     Module *module = call->getModule();
     LLVMContext &ctx = module->getContext();
-    const FunctionCallee &instr_fun = module->getOrInsertFunction(
-        "__vrd_thrd_join", Type::getVoidTy(ctx), Type::getInt64Ty(ctx));
+
+    const FunctionCallee &before_join_fun = module->getOrInsertFunction(
+        "__vrd_thrd_join", Type::getInt8PtrTy(ctx), Type::getInt64Ty(ctx));
     std::vector<Value *> args = {tid};
-    auto *new_call = CallInst::Create(instr_fun, args, "");
+    auto *new_call = CallInst::Create(before_join_fun, args, "");
     new_call->setDebugLoc(call->getDebugLoc());
     new_call->insertBefore(call);
+
+    const FunctionCallee &after_join_fun = module->getOrInsertFunction(
+        "__vrd_thrd_joined", Type::getVoidTy(ctx), Type::getInt8PtrTy(ctx));
+    args = {new_call};
+    new_call = CallInst::Create(after_join_fun, args, "");
+    new_call->setDebugLoc(call->getDebugLoc());
+    new_call->insertAfter(call);
 }
 
 static void insertMutexLockOrUnlock(CallInst *call, Value *mtx,

@@ -7,11 +7,11 @@
 #include <unistd.h>
 
 #include "event.h"
+#include "monitors-utils.h"
 #include "shamon.h"
 #include "signatures.h"
 #include "source.h"
 #include "stream-drregex.h"
-#include "utils.h"
 
 static inline void dump_args(shm_stream *stream, shm_event_drregex *ev,
                              const char *signature) {
@@ -50,9 +50,6 @@ static inline void dump_args(shm_stream *stream, shm_event_drregex *ev,
     }
 }
 
-shm_stream *create_stream(int argc, char *argv[], int arg_i,
-                          const char *expected_stream_name);
-
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "USAGE: prog shm1\n");
@@ -63,7 +60,7 @@ int main(int argc, char *argv[]) {
     shamon *shmn = shamon_create(NULL, NULL);
     assert(shmn);
 
-    shm_stream *fstream = create_stream(argc, argv, 1, "drregex-stream");
+    shm_stream *fstream = create_stream(argc, argv, 1, "drregex-stream", NULL);
     assert(fstream && "Creating stream failed");
     shamon_add_stream(shmn, fstream,
                       /* buffer capacity = */ 4 * 4096);
