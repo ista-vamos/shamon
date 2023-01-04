@@ -11,16 +11,20 @@ MON_COMPILER=../../gen/compile.sh
 SOURCE_LIBS=../../shmbuf/libshamon-shmbuf.a\
             ../../core/libshamon-source.a\
             ../../core/libshamon-signature.a\
+            ../../core/libshamon-ringbuf.a\
             ../../core/libshamon-event.a\
-            ../../core/libshamon-list.a
+            ../../core/libshamon-list.a\
+            ../../core/libshamon-utils.a
 
 MONITOR_LIBS= ../../core/libshamon-signature.a\
               ../../core/libshamon.a\
               ../../core/libshamon-arbiter.a\
               ../../core/libshamon-parallel-queue.a\
+              ../../core/libshamon-ringbuf.a\
               ../../core/libshamon-event.a\
               ../../streams/libshamon-streams.a\
-	      ../../shmbuf/libshamon-shmbuf.a
+	      ../../shmbuf/libshamon-shmbuf.a\
+              ../../core/libshamon-utils.a
 
 source.o: source.c
 	$(CC) -c $(CFLAGS) source.c -I ../.. -I ../../core
