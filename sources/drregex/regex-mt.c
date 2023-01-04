@@ -9,10 +9,11 @@
 #include <stdatomic.h>
 #include <string.h> /* memset */
 
-#include "buffer.h"
-#include "client.h"
 #include "dr_api.h"
 #include "drmgr.h"
+
+#include "buffer.h"
+#include "client.h"
 #include "list-embedded.h"
 #include "shm_string-macro.h"
 #include "signatures.h"
@@ -461,11 +462,9 @@ static inline void finish_line(int fd) {
 
 static void handle_event(per_thread_t *data) {
     DR_ASSERT(data->len > 0);
-    /*
     info("---- [fd: %d, len: %ld, size: %lu\n]"
                  "'%*s'\n",
             data->fd, data->len, data->size, (int)data->len, (char*)data->buf);
-            */
 
     const int fd = data->fd;
     assert(fd >= 0 && fd < 3);
@@ -475,6 +474,7 @@ static void handle_event(per_thread_t *data) {
     struct line *line = current_line[fd];
     size_t space = 0;
     while (n < data_len) {
+        dr_printf("line: %p, n: %lu, space: %lu\n", line, n, space);
         if (space == 0) {
             STRING_ENSURE_SPACE(line->data);
             assert(STRING_SIZE(line->data) < STRING_ALLOC_SIZE(line->data));
@@ -484,6 +484,7 @@ static void handle_event(per_thread_t *data) {
 
         while (n < data_len && space > 0) {
             char c = ((char *)data->buf)[n++];
+            dr_printf("c: %c\n", c);
             --space;
 
             if (c == '\n' || c == '\0') {
@@ -492,7 +493,9 @@ static void handle_event(per_thread_t *data) {
                 STRING_TOP(line->data) = '\0';
 
                 /* finish this line and start a new one */
+                dr_printf("finish: '%s'\n", line->data);
                 finish_line(fd);
+                dr_printf("new\n");
                 line = init_new_line(fd);
                 assert(STRING_SIZE(line->data) == 0);
 
@@ -611,16 +614,20 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     (void)id;
     dr_set_client_name("Shamon intercept write and read syscalls",
                        "http://...");
+
+    if (argc < 5) {
+        usage_and_exit(1);
+    }
+
+    if (get_exprs_num(argc, argv) <= 0) {
+        usage_and_exit(1);
+    }
+
     drmgr_init();
-    write_sysnum = get_write_sysnum();
-    read_sysnum = get_read_sysnum();
-    dr_register_filter_syscall_event(event_filter_syscall);
-    drmgr_register_pre_syscall_event(event_pre_syscall);
-    drmgr_register_post_syscall_event(event_post_syscall);
-    dr_register_exit_event(event_exit);
     tcls_idx = drmgr_register_cls_field(event_thread_context_init,
                                         event_thread_context_exit);
     DR_ASSERT(tcls_idx != -1);
+
     if (dr_is_notify_on()) {
 #ifdef WINDOWS
         /* ask for best-effort printing to cmd window.  must be called at init.
@@ -628,14 +635,6 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         dr_enable_console_printing();
 #endif
         info("Client Shamon-drrregex is running\n");
-    }
-
-    if (argc < 6) {
-        usage_and_exit(1);
-    }
-
-    if (get_exprs_num(argc, argv) <= 0) {
-        usage_and_exit(1);
     }
 
     char **exprs[3];
@@ -702,6 +701,13 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         free(control);
     }
 
+    write_sysnum = get_write_sysnum();
+    read_sysnum = get_read_sysnum();
+    dr_register_filter_syscall_event(event_filter_syscall);
+    drmgr_register_pre_syscall_event(event_pre_syscall);
+    drmgr_register_post_syscall_event(event_post_syscall);
+    dr_register_exit_event(event_exit);
+
     info("waiting for the monitor to attach... ");
     for (int i = 0; i < 3; ++i) {
         if (shmbuf[i] == NULL)
@@ -727,6 +733,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         abort();
     }
     info("done\n");
+
     info("Continue program\n");
 }
 
@@ -849,7 +856,10 @@ static void event_post_syscall(void *drcontext, int sysnum) {
     per_thread_t *data =
         (per_thread_t *)drmgr_get_cls_field(drcontext, tcls_idx);
 
+    /* we do not listen on this fd? */
     if (data->fd > 2)
+        return;
+    if (shmbuf[data->fd] == NULL)
         return;
 
     data->len = *((ssize_t *)&retval);
