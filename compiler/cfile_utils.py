@@ -807,7 +807,7 @@ bool are_buffers_done() {"{"}
 def merge_waiting_lists():
     answer = ""
     for buff_name in TypeChecker.buffer_group_data.keys():
-        answer += f"\t\tmerge_waiting_list(&BG_{buff_name}, {buff_name}_ORDER_EXP)\n"
+        answer += f"\t\tmerge_waiting_list(&BG_{buff_name}, {buff_name}_ORDER_EXP);\n"
     return answer
 
 def arbiter_code(tree, components):
