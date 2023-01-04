@@ -3,19 +3,18 @@
 set -e
 
 NUM=10000
-SHM_BUFSIZE=$1
-shift
 
 REP=$1
 shift
 
 RUNDIR=$1
+SHM_BUFSIZE=1000
 
 export PYTHON_OPTIMIZE=1
 #export PYTHONDONTWRITEBYTECODE=1
 
 for ARBITER_BUFSIZE in 4 16 32 64 128 256 512 1024 2048; do
-	echo "** SHM BUFSIZE: $SHM_BUFSIZE, ARBITER_BUFSIZE: $ARBITER_BUFSIZE **"
+	echo "** SHM BUFSIZE: $SHM_BUFSIZE elems, ARBITER_BUFSIZE: $ARBITER_BUFSIZE **"
 	echo " - Generating the monitor"
 	make -j4 BUFSIZE=$ARBITER_BUFSIZE 1>> $RUNDIR/make.stdout.txt 2>> $RUNDIR/make.stderr.txt
 
