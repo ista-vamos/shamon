@@ -27,11 +27,11 @@ bankmonitor-$(BUFSIZE).c: bankmonitor-$(BUFSIZE).vl tesslamon/Cargo.toml
 tesslamon/target/release/libmonitor.a: bankmonitor-$(BUFSIZE).c tesslamon/Cargo.toml
 	-cd ./tesslamon; cargo build
 
-../../intmap.o: ../../compiler/cfiles/intmap.cpp ../../compiler/cfiles/intmap.h
-	g++ -c ../../compiler/cfiles/intmap.cpp
+intmap.o: ../../compiler/cfiles/intmap.cpp ../../compiler/cfiles/intmap.h
+	g++ -c $< -o $@
 
 monitor$(BUFSIZE): tesslamon/target/release/libmonitor.a bankmonitor-$(BUFSIZE).c
-	../../gen/compile.sh bankmonitor-$(BUFSIZE).c ../../intmap.o -lstdc++ tesslamon/target/debug/libmonitor.a -ldl
+	../../gen/compile.sh bankmonitor-$(BUFSIZE).c intmap.o -lstdc++ tesslamon/target/debug/libmonitor.a -ldl
 	mv monitor monitor$(BUFSIZE)
 
 experiments: ../bank/interact ../bank/bank
