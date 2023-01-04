@@ -1355,14 +1355,16 @@ def check_progress(rule_set_name, tree, existing_buffers):
         if data['copies']:
             for i in range(data['copies']):
                 buffer_name = ev_source + str(i)
+                if buffer_name in buffers_to_peek.keys():
+                    answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
+                    answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, (void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
+                    answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
+        else:
+            buffer_name = ev_source
+            if buffer_name in buffers_to_peek.keys():
                 answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
                 answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, (void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
                 answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
-        else:
-            buffer_name = ev_source
-            answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
-            answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, (void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
-            answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
     answer += f"fprintf(stderr, \"No rule in rule set '{rule_set_name}' matched even though there was enough events, CYCLING WITH NO PROGRESS (exiting)!\\n\");"
     answer += "__work_done=1; abort();"
     answer += "}\n"
@@ -1371,11 +1373,21 @@ def check_progress(rule_set_name, tree, existing_buffers):
         \tRULE_SET_{rule_set_name}_nomatch_cnt = 0;"
     answer += f"\tfprintf(stderr, \"\\033[31mRule set '{rule_set_name}' cycles long time without progress\\033[0m\\n\");"
     for (ev_source, data) in TypeChecker.event_sources_data.items():
-        src_idx = buffer_to_src_idx[data['output_stream_type']]
-        answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
-        answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, (void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
-        answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
 
+        src_idx = buffer_to_src_idx[data['output_stream_type']]
+        if data['copies']:
+            for i in range(data['copies']):
+                buffer_name = ev_source + str(i)
+                if buffer_name in buffers_to_peek.keys():
+                    answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
+                    answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, (void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
+                    answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
+        else:
+            buffer_name = ev_source
+            if buffer_name in buffers_to_peek.keys():
+                answer += f"\tfprintf(stderr, \"Prefix of '{buffer_name}':\\n\");\n"
+                answer += f"\tcount_{buffer_name} = shm_arbiter_buffer_peek(BUFFER_{buffer_name}, 5, (void**)&e1_{buffer_name}, &i1_{buffer_name}, (void**)&e2_{buffer_name}, &i2_{buffer_name});\n"
+                answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
     for (buffer_group, data) in TypeChecker.buffer_group_data.items():
         answer += f'printf(\"***** BUFFER GROUPS *****\\n\");\n'
         answer += f'printf(\"***** {buffer_group} *****\\n\");\n'
