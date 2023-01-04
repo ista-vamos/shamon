@@ -69,7 +69,7 @@ def init_buffer_groups():
         includes_str = ""
         if data["arg_includes"] is not None:
             for i in range(data["arg_includes"]):
-                includes_str += f"\tbg_insert(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, BUFFER_{data['includes']}{i},stream_args_{data['includes']}_{i},{buff_name}_ORDER_EXP);\n"
+                includes_str += f"\tbg_add_to_waiting_list(&BG_{buff_name}, EV_SOURCE_{data['includes']}_{i}, BUFFER_{data['includes']}{i},stream_args_{data['includes']}_{i});\n"
         answer += f'''init_buffer_group(&BG_{buff_name});
         if (mtx_init(&LOCK_{buff_name}, mtx_plain) != 0) {"{"}
         printf("mutex init has failed for {buff_name} lock\\n");
@@ -84,11 +84,11 @@ def init_buffer_groups():
             if data['copies']:
                 for i in range(data['copies']):
                     answer += f'''
-\tbg_insert(&BG_{buff_name}, EV_SOURCE_{event_source}_{i}, BUFFER_{event_source}{i},stream_args_{event_source}_{i},{buff_name}_ORDER_EXP);\n
+\tbg_add_to_waiting_list(&BG_{buff_name}, EV_SOURCE_{event_source}_{i}, BUFFER_{event_source}{i},stream_args_{event_source}_{i});\n
         '''
             else:
                 answer += f'''
-\tbg_insert(&BG_{buff_name}, EV_SOURCE_{event_source}, BUFFER_{event_source},stream_args_{event_source},{buff_name}_ORDER_EXP);\n
+\tbg_add_to_waiting_list(&BG_{buff_name}, EV_SOURCE_{event_source}, BUFFER_{event_source},stream_args_{event_source});\n
         '''
 
     return answer
@@ -648,7 +648,7 @@ case {mapping_in[event_name]["enum"]}:
 STREAM_{stream_type}_ARGS * stream_args_temp = malloc(sizeof(STREAM_{stream_type}_ARGS));
 {init_stream_args_code}
 mtx_lock(&LOCK_{buffer_group});
-bg_insert(&BG_{buffer_group}, ev_source_temp, temp_buffer,stream_args_temp,{buffer_group}_ORDER_EXP);
+bg_add_to_waiting_list(&BG_{buffer_group}, ev_source_temp, temp_buffer,stream_args_temp);
 mtx_unlock(&LOCK_{buffer_group});
 '''
             stream_threshold_code = f""
