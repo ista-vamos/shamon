@@ -265,7 +265,7 @@ arbiter : GlobalEvent
         $$
         on T : | my_hole(n, mints, maxts)
         $$
-            printf("\033[36m[a] my_hole(n=%lu, mints=%lu, maxts=%lu)\033[0m\n", n, mints, maxts);
+            printf("\033[36m[a] my_hole(n=%d, mints=%lu, maxts=%lu)\033[0m\n", n, mints, maxts);
             if(mints<=nextts)
             {
                 skipcount+=n;

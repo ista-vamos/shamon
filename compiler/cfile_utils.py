@@ -1314,7 +1314,7 @@ def print_dll_node_code(buffer_group_name, buffer_to_src_idx):
         if arg_data['type'] in ['int', 'uint16_t', 'int16_t'] :
             interpol_code = "%d"
         elif arg_data['type'] in ['uint64_t']:
-            interpol_code = "%ull"
+            interpol_code = "%lu"
         else:
             raise Exception(f"implement interpolation code {arg_data['type']}")
         print_args_code+= f'\tprintf("{arg_data["name"]} = {interpol_code}\\n", ((STREAM_{buffer_group_type}_ARGS *) current->args)->{arg_data["name"]});\n' 
