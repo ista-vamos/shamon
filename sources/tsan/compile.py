@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-from subprocess import run
+from subprocess import run, PIPE
 from os.path import dirname, abspath, basename
 
 DIR = abspath(dirname(sys.argv[0]))
@@ -40,6 +40,13 @@ def get_compiler():
         for line in f:
             if line.startswith("set( SHAMON_C_COMPILER"):
                 return line.split()[2]
+    return None
+
+def get_llvm_version():
+    proc = run(["clang", "--version"], stdout=PIPE)
+    ver = proc.stdout.split()[2].split(b'-')[0].split(b'.')
+    if len(ver) == 3:
+        return int(ver[0]), int(ver[1]), int(ver[2])
     return None
 
 class CompileOptions:
@@ -119,6 +126,11 @@ def main(argv):
         print("WARNING: Shamon was build in Release mode but not with clang. "\
               "It may cause troubles with linking.")
 
+    opt_args = []
+    llvm_version = get_llvm_version()
+    if llvm_version is None or llvm_version[0] > 12:
+        opt_args.append("-enable-new-pm=0")
+
     output = opts.output
     compiled_files = [f"{file}.bc" for file in opts.files]
     for f, out in zip(opts.files, compiled_files):
@@ -132,14 +144,13 @@ def main(argv):
     cmd(
         [
             opt,
-            "-enable-new-pm=0",
             "-load",
             f"{LLVM_PASS_DIR}/race-instrumentation.so",
             "-vamos-race-instrumentation",
             f"{output}.tmp2.bc",
             "-o",
             f"{output}.tmp3.bc",
-        ]
+        ] + opt_args
     )
 
     cmd(

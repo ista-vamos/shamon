@@ -25,6 +25,12 @@ struct RaceInstrumentation : public FunctionPass {
     bool runOnFunction(Function &F) override {
         if (F.isDeclaration())
             return false;
+        if (F.getName().startswith("tsan.")) {
+            errs() << "Skipping: ";
+            errs().write_escaped(F.getName()) << '\n';
+            return false;
+        }
+
         errs() << "Instrumenting: ";
         errs().write_escaped(F.getName()) << '\n';
 
