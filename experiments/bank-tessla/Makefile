@@ -9,6 +9,7 @@ TESSLA_JAR=tessla-rust.jar
 all: monitor$(BUFSIZE) ../bank/bank ../bank/interact
 
 tesslamon/Cargo.toml: bank.tessla
+	test -e $(TESSLA_JAR) || echo "Download TeSSLa Rust bundle from https://www.tessla.io/download/ and rename it to tessla-rust.jar
 	java -jar $(TESSLA_JAR) compile-rust -p tesslamon bank.tessla
 
 ../bank/interact:
