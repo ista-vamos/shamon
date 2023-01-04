@@ -26,7 +26,6 @@ fi
 
 LDFLAGS=-lpthread
 LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
-           $SHAMONDIR/core/libshamon-monitor.a\
            $SHAMONDIR/core/libshamon-stream.a\
            $SHAMONDIR/shmbuf/libshamon-shmbuf.a\
            $SHAMONDIR/core/libshamon-parallel-queue.a\
@@ -36,6 +35,7 @@ LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
            $SHAMONDIR/core/libshamon-signature.a\
            $SHAMONDIR/core/libshamon-list.a\
            $SHAMONDIR/core/libshamon-utils.a\
+           $SHAMONDIR/core/libshamon-monitor-buffer.a\
            $SHAMONDIR/streams/libshamon-streams.a"
 
 test -z $CC && CC=cc

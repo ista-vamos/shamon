@@ -861,7 +861,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         stream_name = event_src_ref[1]
         out_type = stream_types[stream_name][1]
         if event_src_ref[2] is not None:
-            stream_name += f"_{str(event_src_ref[2])}"
+            stream_name += f"{str(event_src_ref[2])}"
         if context is not None:
             if stream_name in context.keys():
                 stream_name = context[stream_name]
@@ -1314,7 +1314,7 @@ def print_dll_node_code(buffer_group_name, buffer_to_src_idx):
         if arg_data['type'] in ['int', 'uint16_t', 'int16_t'] :
             interpol_code = "%d"
         elif arg_data['type'] in ['uint64_t']:
-            interpol_code = "%ull"
+            interpol_code = "%lu"
         else:
             raise Exception(f"implement interpolation code {arg_data['type']}")
         print_args_code+= f'\tprintf("{arg_data["name"]} = {interpol_code}\\n", ((STREAM_{buffer_group_type}_ARGS *) current->args)->{arg_data["name"]});\n' 
@@ -1336,11 +1336,12 @@ def check_progress(rule_set_name, tree, existing_buffers):
 
     answer = "_Bool ok = 1;\n"
     n = 0
-    for (buffer_name, desired_count) in buffers_to_peek.items():
-        answer += f"if (count_{buffer_name} >= {desired_count}) {'{'}"
-        n += 1
-    answer += "\tok = 0;\n"
-    answer += "}" * n
+    if buffers_to_peek:
+        for (buffer_name, desired_count) in buffers_to_peek.items():
+            answer += f"if (count_{buffer_name} >= {desired_count}) {'{'}"
+            n += 1
+        answer += "\tok = 0;\n"
+        answer += "}" * n
 
     answer += "\n"
 
