@@ -3,7 +3,13 @@ CFLAGS=-O3
 
 all: prepare
 
-prepare: primes primes-bad primes-java primes-python
+../../compiler/cfiles/compiler_utils.o: ../../compiler/cfiles/compiler_utils.c
+	$(CC) -c $< -o $@
+
+../../compiler/cfiles/intmap.o: ../../compiler/cfiles/intmap.cpp
+	$(CXX) -c $< -o $@
+
+prepare: primes primes-bad primes-java primes-python ../../compiler/cfiles/compiler_utils.o ../../compiler/cfiles/intmap.o
 	python3 shm_prepare_programs.py
 
 primes: primes.c
