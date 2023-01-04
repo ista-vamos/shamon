@@ -462,9 +462,11 @@ static inline void finish_line(int fd) {
 
 static void handle_event(per_thread_t *data) {
     DR_ASSERT(data->len > 0);
+    /*
     info("---- [fd: %d, len: %ld, size: %lu\n]"
                  "'%*s'\n",
             data->fd, data->len, data->size, (int)data->len, (char*)data->buf);
+            */
 
     const int fd = data->fd;
     assert(fd >= 0 && fd < 3);
@@ -474,7 +476,6 @@ static void handle_event(per_thread_t *data) {
     struct line *line = current_line[fd];
     size_t space = 0;
     while (n < data_len) {
-        dr_printf("line: %p, n: %lu, space: %lu\n", line, n, space);
         if (space == 0) {
             STRING_ENSURE_SPACE(line->data);
             assert(STRING_SIZE(line->data) < STRING_ALLOC_SIZE(line->data));
@@ -484,7 +485,6 @@ static void handle_event(per_thread_t *data) {
 
         while (n < data_len && space > 0) {
             char c = ((char *)data->buf)[n++];
-            dr_printf("c: %c\n", c);
             --space;
 
             if (c == '\n' || c == '\0') {
@@ -493,9 +493,7 @@ static void handle_event(per_thread_t *data) {
                 STRING_TOP(line->data) = '\0';
 
                 /* finish this line and start a new one */
-                dr_printf("finish: '%s'\n", line->data);
                 finish_line(fd);
-                dr_printf("new\n");
                 line = init_new_line(fd);
                 assert(STRING_SIZE(line->data) == 0);
 
@@ -866,7 +864,6 @@ static void event_post_syscall(void *drcontext, int sysnum) {
     if (data->len <= 0)
         return;
 
-    // dr_printf("Syscall: %i; len: %li; result: %lu\n",sysnum, len, len);
     handle_event(data);
 }
 
