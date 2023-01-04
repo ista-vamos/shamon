@@ -789,11 +789,11 @@ def are_buffers_done():
 
     for (buffer_group, data) in TypeChecker.buffer_group_data.items():
         code += f'''
-    int BG_{buffer_group}_size = BG_{buffer_group}.size;
-    update_size_chosen_streams(BG_{buffer_group}_size);
-    is_selection_successful = bg_get_first_n(&BG_{buffer_group}, 1, &chosen_streams);
-    for (int i = 0; i < BG_{buffer_group}_size; i++) {"{"}
-        if (!shm_arbiter_buffer_is_done(chosen_streams[i]->buffer)) return 0;
+    dll_node * BG_{buffer_group}_current = BG_{buffer_group}.head;
+    while (BG_{buffer_group}_current != NULL) {"{"}
+        if (!shm_arbiter_buffer_is_done(BG_{buffer_group}_current->buffer)) return 0;
+
+        BG_{buffer_group}_current = BG_{buffer_group}_current->next;
     {"}"}
 '''
 
@@ -807,7 +807,7 @@ bool are_buffers_done() {"{"}
 def merge_waiting_lists():
     answer = ""
     for buff_name in TypeChecker.buffer_group_data.keys():
-        answer += "\t\tmerge_waiting_list(&BG_{buff_name}, {buff_name}_ORDER_EXP)\n"
+        answer += f"\t\tmerge_waiting_list(&BG_{buff_name}, {buff_name}_ORDER_EXP)\n"
     return answer
 
 def arbiter_code(tree, components):
@@ -1143,23 +1143,20 @@ def process_where_condition(tree):
             assert (field_access[0] == "field_access")
             return process_arb_rule_stmt(field_access, None, None)
 
-def get_choose_statement(binded_streams, buffer_name, choose_order):
+def get_choose_statement(binded_streams, choose_order):
     at_least = len(binded_streams)
     choose_count = at_least
     if (choose_order is None) or (choose_order[1] == "first"):
-        choose_statement = ""
-        if choose_order is None:
-            choose_statement += "// does not specifies order, we take first n even sources\n"
-        else:
-            if choose_order[2]:
-                choose_count = choose_order[2]
-        choose_statement += f"is_selection_successful = bg_get_first_n(&BG_{buffer_name}, {at_least}, &chosen_streams);\n"
+        is_forward = True
+        if choose_order and choose_order[2]:
+            choose_count = choose_order[2]
     else:
+        is_forward = False
         assert (choose_order[1] == "last")
         if choose_order[2]:
             choose_count = choose_order[2]
-        choose_statement = f"is_selection_successful = bg_get_last_n(&BG_{buffer_name}, {at_least}, &chosen_streams);\n"
-    return choose_statement, choose_count
+    return choose_count, is_forward
+
 
 def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order, stream_types, current_tail, inner_code, tree=None, choose_condition=None):
     assert buffer_name in TypeChecker.buffer_group_data.keys()
@@ -1171,18 +1168,22 @@ def get_buff_groups_combinations_code(buffer_name, binded_streams, choose_order,
     
 
     stream_type = TypeChecker.buffer_group_data[buffer_name]["in_stream"]
+    choose_count, is_forward = get_choose_statement(binded_streams, choose_order)
     def declare_indices():
         answer = ""
         for (index, name) in enumerate(binded_streams):
-            answer += f"int index_{name} = {index};"
+            if is_forward:
+                answer += f"dll_node* index_{name} = BG_{buffer_name}.head;\n"
+            else:
+                answer += f"dll_node* index_{name} = BG_{buffer_name}.tail;\n"
         return answer
 
     def get_local_inner_code():
         answer = ""
         for name in binded_streams:
-            answer += f"shm_stream *{name} = chosen_streams[index_{name}]->stream;\n"
-            answer += f"shm_arbiter_buffer *BUFFER_{name} = chosen_streams[index_{name}]->buffer;\n"
-            answer += f"STREAM_{stream_type}_ARGS *stream_args_{name} = (STREAM_{stream_type}_ARGS *)chosen_streams[index_{name}]->args;\n"
+            answer += f"shm_stream *{name} = index_{name}->stream;\n"
+            answer += f"shm_arbiter_buffer *BUFFER_{name} = index_{name}->buffer;\n"
+            answer += f"STREAM_{stream_type}_ARGS *stream_args_{name} = (STREAM_{stream_type}_ARGS *)index_{name}->args;\n"
             buffer_peeks_res = dict()
             existing_buffers = set()
             existing_buffers.add(name)
@@ -1207,27 +1208,45 @@ if({choose_code} ) {"{"}
         return answer
 
     loop_code = ""
-    choose_statement, choose_count = get_choose_statement(binded_streams, buffer_name, choose_order)
+    
     for (index, name) in enumerate(binded_streams):
         unique_index_code = ""
         for prev_name in binded_streams[:index]:
-            unique_index_code += f"if(index_{name} == index_{prev_name}){'{'} index_{name}++; continue;{'}'}\n"
+            if is_forward:
+                unique_index_code += f'''
+                if(index_{name} == index_{prev_name}){'{'} 
+                    index_{name} = index_{name}->next;
+                    continue;
+                {'}'}
+                '''
+            else:
+                unique_index_code += f'''
+                if(index_{name} == index_{prev_name}){'{'} 
+                    index_{name} = index_{name}->prev;
+                    continue;
+                {'}'}
+                '''
         if index > 0:
-            loop_code += f"index_{name} = 0;\n"
-        loop_code += f"while(index_{name} < BG_{buffer_name}_size && current_matches_ < expected_matches_){'{'}\n"
+            if is_forward:
+                loop_code += f"index_{name} = BG_{buffer_name}.head;\n"
+            else:
+                loop_code += f"index_{name} = BG_{buffer_name}.tail;\n"
+            
+        loop_code += f"while(index_{name} != NULL && current_matches_ < expected_matches_){'{'}\n"
         loop_code += f"{unique_index_code}\n"
     loop_code += get_local_inner_code()
     # close loops parenthesis
     for name in binded_streams[::-1]:
-        loop_code += f"index_{name}++;\n"
+        if is_forward:
+            loop_code += f"index_{name} = index_{name}->next;"
+        else:
+            loop_code += f"index_{name} = index_{name}->prev;"
         loop_code += f"{'}'}\n"
     return f'''
 {"{"}
     bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
     int BG_{buffer_name}_size = BG_{buffer_name}.size;
-    update_size_chosen_streams(BG_{buffer_name}_size);
-    {choose_statement}
-    if (is_selection_successful) {"{"}
+    {"{"}
         int expected_matches_ = {choose_count};
         int current_matches_ = 0;
         {declare_indices()}
@@ -1465,7 +1484,6 @@ def destroy_all():
             answer += f"\tshm_arbiter_buffer_free(BUFFER_{event_source});\n"
 
     answer += "\tfree(monitor_buffer);\n"
-    answer += "\tfree(chosen_streams);\n"
 
     for (stream_name, data) in TypeChecker.event_sources_data.items():
         if len(data['input_stream_args']) > 0:
@@ -1808,17 +1826,6 @@ bool ARB_CHANGE_ = false;
 // monitor buffer
 shm_monitor_buffer *monitor_buffer;
 
-bool is_selection_successful;
-dll_node **chosen_streams; // used in rule set for get_first/last_n
-int current_size_chosen_stream = 0;
-
-void update_size_chosen_streams(const int s) {"{"}
-    if (s > current_size_chosen_stream) {"{"}
-        free(chosen_streams);
-        chosen_streams = (dll_node **) calloc(s, sizeof(dll_node*));
-        current_size_chosen_stream = s;
-    {"}"}
-{"}"}
 
 // globals code
 {get_globals_code(components, streams_to_events_map, stream_types)}
