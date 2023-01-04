@@ -189,7 +189,6 @@ def get_c_interface(components,ast, streams_to_events_map, stream_types,
 int main(int argc, char **argv) {"{"}
     setup_signals();
 
-	chosen_streams = (dll_node *) malloc({get_count_events_sources()}); // the maximum size this can have is the total number of event sources
 	arbiter_counter = malloc(sizeof(int));
 	*arbiter_counter = 10;
 	{get_pure_c_code(components, 'startup')}
