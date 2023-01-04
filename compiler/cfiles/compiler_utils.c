@@ -34,6 +34,9 @@ void bg_merge_waiting_list(buffer_group *bg, bool (*order_exp)(void *args1, void
         bg_insert(bg, current, order_exp);
         current = next;
     }
+
+    bg->waiting_list_head = NULL;
+    bg->waiting_list_tail = NULL;
 }
 
 void bg_add_to_waiting_list(buffer_group *bg, shm_stream *stream, void* buffer, void *args) {
