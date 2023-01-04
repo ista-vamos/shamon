@@ -1304,12 +1304,12 @@ def print_dll_node_code(buffer_group_name, buffer_to_src_idx):
             interpol_code = "%ull"
         else:
             raise Exception(f"implement interpolation code {arg_data['type']}")
-        print_args_code+= f'\tprintf("{arg_data["name"]} = {interpol_code}\\n", ((STREAM_{buffer_group_type}_ARGS *) current->args)->{arg_data["name"]})\n' 
+        print_args_code+= f'\tprintf("{arg_data["name"]} = {interpol_code}\\n", ((STREAM_{buffer_group_type}_ARGS *) current->args)->{arg_data["name"]});\n' 
     
     return f'''
-    printf(\'{buffer_group_name}[%d].ARGS{"{"}\', i);
+    printf(\"{buffer_group_name}[%d].ARGS{"{"}\", i);
 {print_args_code}
-    printf(\'{"}"}\\n\');
+    printf(\"{"}"}\\n\");
     char* e1_BG; size_t i1_BG; char* e2_BG; size_t i2_BG;
     int COUNT_BG_TEMP_ = shm_arbiter_buffer_peek(current->buffer, 5, (void**)&e1_BG, &i1_BG, (void**)&e2_BG, &i2_BG);
     printf(\"{buffer_group_name}[%d].buffer{"{"}\\n\", i);
