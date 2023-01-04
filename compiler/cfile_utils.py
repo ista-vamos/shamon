@@ -804,6 +804,11 @@ bool are_buffers_done() {"{"}
 {"}"}
     '''
 
+def merge_waiting_lists():
+    answer = ""
+    for buff_name in TypeChecker.buffer_group_data.keys():
+        answer += "\t\tmerge_waiting_list(&BG_{buff_name}, {buff_name}_ORDER_EXP)\n"
+    return answer
 
 def arbiter_code(tree, components):
     assert (tree[0] == "arbiter_def")
@@ -823,6 +828,9 @@ def arbiter_code(tree, components):
         while (!are_streams_done()) {"{"}
             ARB_CHANGE_ = false;
     {rule_set_invocations}
+
+            // merge waiting lists
+            {merge_waiting_lists()}
         {"}"}
         shm_monitor_set_finished(monitor_buffer);
         return 0;
