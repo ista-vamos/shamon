@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <regex.h>
+#include <stdatomic.h>
 #include <string.h> /* memset */
 
 #include "dr_api.h"
