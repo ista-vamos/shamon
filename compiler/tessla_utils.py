@@ -53,7 +53,9 @@ def get_rust_file_args(args):
     args_result = ""
     value_args = ""
 
-    for (arg, datatype) in args:
+    for a in args:
+        arg = a["name"]
+        datatype = a["type"]
         if args_result != "":
             args_result +=","
             value_args += ","
@@ -102,7 +104,8 @@ extern "C" fn moninit() -> Box<{state_type}>
 
 def received_events_declare_args(event_name, data):
     answer = ""
-    for (arg, datatype) in data["args"]:
+    for a in data["args"]:
+        arg, datatype = a["name"], a["type"]
         answer+=f"\t\t\t{datatype} {arg} = received_event->cases.{event_name}.{arg};\n"
     return answer
 
@@ -112,7 +115,8 @@ def rust_monitor_events_code(possible_events):
         if event_name.lower() != "hole":
             args = ""
 
-            for (arg, _) in data["args"]:
+            for a in data["args"]:
+                arg = a["name"]
                 if args != "":
                     args+=", "
                 args += f"{arg}"
@@ -168,7 +172,9 @@ def declare_extern_functions(mapping, arbiter_event_source):
         for (event_name, data) in possible_events.items():
             if event_name.lower() != "hole":
                 args = ""
-                for (arg, datatype) in data["args"]:
+                for a in data["args"]:
+                    arg = a["name"]
+                    datatype = a["type"]
                     if args != "":
                         args += ", "
                     args += f"{datatype} {arg}"
