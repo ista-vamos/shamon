@@ -21,8 +21,8 @@ target_include_directories(sendaddr PRIVATE ${CMAKE_SOURCE_DIR})
 
 target_include_directories(regex PRIVATE ${CMAKE_SOURCE_DIR})
 
-target_link_libraries(regex PRIVATE shamon-shmbuf shamon-signature)
-target_link_libraries(sendaddr PRIVATE shamon-shmbuf shamon-signature)
+target_link_libraries(regex    PRIVATE shamon-client)
+target_link_libraries(sendaddr PRIVATE shamon-client)
 
 if (IPO)
         set_property(TARGET sendaddr PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
