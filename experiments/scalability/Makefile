@@ -1,6 +1,7 @@
 all: source monitor
 
-CFLAGS=-g3 -O3 -flto  -fno-fat-lto-objects -fPIC -std=c11
+CC=clang
+CFLAGS=-g3 -O3 -flto -fno-fat-lto-objects -fPIC -std=c11
 CPPFLAGS=-D_POSIX_C_SOURCE=200809L -DNDEBUG
 LDFLAGS=-lpthread
 
@@ -22,10 +23,10 @@ MONITOR_LIBS= ../../core/libshamon-signature.a\
 	      ../../shmbuf/libshamon-shmbuf.a
 
 source.o: source.c
-	$(CC) -c source.c -I ../.. -I ../../core $(CFLAGS)
+	$(CC) -c $(CFLAGS) source.c -I ../.. -I ../../core
 
 source: source.o
-	$(CC) source.o -o source $(SOURCE_LIBS)
+	$(CC) $(CFLAGS) source.o -o source $(SOURCE_LIBS)
 
 monitor.c: monitor.txt
 	python3 $(MON_COMPILER_PY) monitor.txt -o monitor.c
