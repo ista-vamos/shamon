@@ -22,7 +22,7 @@ void destroy_buffer_group(buffer_group *bg) {
 }
 
 void bg_insert(buffer_group *bg, shm_stream *stream, void* buffer, void *args, bool (*order_exp)(void *args1, void *args2)) {
-    dll_node *new_node =  malloc(sizeof(dll_node));
+    dll_node *new_node =  (dll_node *) malloc(sizeof(dll_node));
     new_node->stream = stream;
     new_node->buffer = buffer;
     new_node->args = args;
