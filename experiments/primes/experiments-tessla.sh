@@ -8,10 +8,9 @@ rm -f /tmp/log.txt
 cd $(dirname 0)
 
 SRCDIR="$(readlink -f $(dirname $0)/../..)"
-SHM_BUFSIZE_FILE="${SRCDIR}/shmbuf/buffer-size.h"
 VLCC="python3 $SRCDIR/compiler/main.py"
 GENCC="$SRCDIR/gen/compile.sh"
-TESSLA_JAR=/opt/vamos/tessla/tessla-rust.jar
+TESSLA_JAR=../tessla/tessla-rust.jar
 
 # compile the tessla monitor
 java -jar $TESSLA_JAR compile-rust primes.tessla -b tessla-monitor
@@ -19,7 +18,6 @@ java -jar $TESSLA_JAR compile-rust primes.tessla -b tessla-monitor
 for SHM_BUFSIZE in 8; do
 #for SHM_BUFSIZE in 8 16; do
         make clean -j  -C $SRCDIR
-        sed -i "s/#define\\s*SHM_BUFFER_SIZE_PAGES.*/#define SHM_BUFFER_SIZE_PAGES $SHM_BUFSIZE/" $SHM_BUFSIZE_FILE
         make -j -C $SRCDIR
 	make primes
 
@@ -32,7 +30,7 @@ for SHM_BUFSIZE in 8; do
 		# generate monitor spec
 	        cpp -P $SPEC_IN -DARBITER_BUFSIZE=$ARBITER_BUFSIZE >$SPEC
 		# compile it
-		$VLCC $SPEC monitor-tessla.c
+		$VLCC $SPEC -b $ARBITER_BUFSIZE -o monitor-tessla.c
 		$GENCC monitor-tessla.c
 		mv monitor vamos-tessla
 
@@ -48,7 +46,7 @@ for SHM_BUFSIZE in 8; do
 		sed -i s@SRCDIR@$SRCDIR@ $SPEC
 
 		# compile it
-		$VLCC $SPEC monitor-tessla.c
+		$VLCC $SPEC -b $ARBITER_BUFSIZE -o monitor-tessla.c
 		$GENCC monitor-tessla.c ./intmap.o $SRCDIR/compiler/cfiles/compiler_utils.c -lstdc++
 		mv monitor vamos-tessla
 
@@ -63,7 +61,7 @@ for SHM_BUFSIZE in 8; do
 		# generate monitor spec
 		sed s@ARBITER_BUFSIZE@$ARBITER_BUFSIZE@ $SPEC_IN > $SPEC
 		# compile it
-		$VLCC $SPEC monitor-tessla.c
+		$VLCC $SPEC -b $ARBITER_BUFSIZE -o monitor-tessla.c
 		$GENCC monitor-tessla.c
 		mv monitor vamos-tessla
 
