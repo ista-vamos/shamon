@@ -789,11 +789,9 @@ def are_buffers_done():
 
     for (buffer_group, data) in TypeChecker.buffer_group_data.items():
         code += f'''
-    mtx_lock(&LOCK_{buffer_group});
     int BG_{buffer_group}_size = BG_{buffer_group}.size;
     update_size_chosen_streams(BG_{buffer_group}_size);
     is_selection_successful = bg_get_first_n(&BG_{buffer_group}, 1, &chosen_streams);
-    mtx_unlock(&LOCK_{buffer_group});
     for (int i = 0; i < BG_{buffer_group}_size; i++) {"{"}
         if (!shm_arbiter_buffer_is_done(chosen_streams[i]->buffer)) return 0;
     {"}"}
@@ -988,7 +986,7 @@ def process_arb_rule_stmt(tree, mapping, output_ev_source) -> str:
         return f"\tshm_arbiter_buffer_drop(BUFFER_{event_source_name}, {tree[PPARB_RULE_STMT_DROP_INT]});\n"
     if tree[0] == "remove":
         buffer_group = tree[2][1];
-        return f"mtx_lock(&LOCK_{buffer_group});\nbg_remove(&BG_{buffer_group}, {tree[1]});\nmtx_unlock(&LOCK_{buffer_group});\n"
+        return f"\nbg_remove(&BG_{buffer_group}, {tree[1]});\n"
     if tree == 'continue':
         return "local_continue_ = true;"
     assert (tree[0] == "field_access")
@@ -1217,12 +1215,10 @@ if({choose_code} ) {"{"}
         loop_code += f"{'}'}\n"
     return f'''
 {"{"}
-    mtx_lock(&LOCK_{buffer_name});
     bg_update(&BG_{buffer_name}, {buffer_name}_ORDER_EXP);
     int BG_{buffer_name}_size = BG_{buffer_name}.size;
     update_size_chosen_streams(BG_{buffer_name}_size);
     {choose_statement}
-    mtx_unlock(&LOCK_{buffer_name});
     if (is_selection_successful) {"{"}
         int expected_matches_ = {choose_count};
         int current_matches_ = 0;
