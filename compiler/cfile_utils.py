@@ -807,7 +807,7 @@ bool are_buffers_done() {"{"}
 def merge_waiting_lists():
     answer = ""
     for buff_name in TypeChecker.buffer_group_data.keys():
-        answer += f"\t\tmerge_waiting_list(&BG_{buff_name}, {buff_name}_ORDER_EXP)\n"
+        answer += f"\t\tmerge_waiting_list(&BG_{buff_name}, {buff_name}_ORDER_EXP);\n"
     return answer
 
 def arbiter_code(tree, components):
@@ -1337,7 +1337,7 @@ def print_dll_node_code(buffer_group_name, buffer_to_src_idx):
         if arg_data['type'] in ['int', 'uint16_t', 'int16_t'] :
             interpol_code = "%d"
         elif arg_data['type'] in ['uint64_t']:
-            interpol_code = "%ull"
+            interpol_code = "%lu"
         else:
             raise Exception(f"implement interpolation code {arg_data['type']}")
         print_args_code+= f'\tprintf("{arg_data["name"]} = {interpol_code}\\n", ((STREAM_{buffer_group_type}_ARGS *) current->args)->{arg_data["name"]});\n' 
