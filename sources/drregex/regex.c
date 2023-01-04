@@ -359,7 +359,9 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     assert(control);
 
     dr_fprintf(STDERR, "[shamon-info]: creating shared buffer '%s'\n", shmkey);
-    const size_t capacity = 256;
+    /* 8 pages for event size of 24 bytes */
+    /* FIXME: allow capacity to be specified in pages */
+    const size_t capacity = 1342;
     shm = create_shared_buffer(shmkey, capacity, control);
     assert(shm);
     events = buffer_get_avail_events(shm, &events_num);

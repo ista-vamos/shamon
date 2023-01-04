@@ -17,6 +17,7 @@ CPPFLAGS="-D_POSIX_C_SOURCE=200809L -I${GENDIR} -I$SHAMONDIR\
 if grep -q 'CMAKE_BUILD_TYPE.*=Debug' $GENDIR/../CMakeCache.txt; then
 	CFLAGS="-g -O0"
 else
+	CC=clang
 	CFLAGS="-g3 -O3 -flto  -fno-fat-lto-objects -fPIC -std=c11"
         CPPFLAGS="$CPPFLAGS -DNDEBUG"
 fi
