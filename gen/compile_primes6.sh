@@ -27,13 +27,15 @@ LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
            $SHAMONDIR/core/libshamon-stream.a\
            $SHAMONDIR/shmbuf/libshamon-shmbuf.a\
            $SHAMONDIR/core/libshamon-parallel-queue.a\
+           $SHAMONDIR/core/libshamon-ringbuf.a\
            $SHAMONDIR/core/libshamon-event.a\
            $SHAMONDIR/core/libshamon-source.a\
            $SHAMONDIR/core/libshamon-signature.a\
            $SHAMONDIR/core/libshamon-list.a\
            $SHAMONDIR/streams/libshamon-streams.a\
+           $SHAMONDIR/core/libshamon-utils.a\
 	   $SHAMONDIR/compiler/cfiles/compiler_utils.o\
 	   $SHAMONDIR/compiler/cfiles/intmap.o"
 
 test -z $CC && CC=cc
-${CC} $CFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC -lstdc++ $@ $LIBRARIES $LDFLAGS
+$CC $CFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC $@ $LIBRARIES -lstdc++ $LDFLAGS
