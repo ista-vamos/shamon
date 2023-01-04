@@ -861,7 +861,7 @@ def rule_set_streams_condition(tree, mapping, stream_types, inner_code="", is_sc
         stream_name = event_src_ref[1]
         out_type = stream_types[stream_name][1]
         if event_src_ref[2] is not None:
-            stream_name += f"_{str(event_src_ref[2])}"
+            stream_name += f"{str(event_src_ref[2])}"
         if context is not None:
             if stream_name in context.keys():
                 stream_name = context[stream_name]

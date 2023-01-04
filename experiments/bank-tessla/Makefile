@@ -4,7 +4,7 @@ VLCC=python3 ../../compiler/main.py
 SHAMON_LIB=../../core/libshamon-lib.so  # for dependency
 BUFSIZE=1024
 #TESSLA_JAR=../../tessla/tessla.jar
-TESSLA_JAR=tessla-rust.jar
+TESSLA_JAR=../tessla/tessla-rust.jar
 
 all: monitor$(BUFSIZE) ../bank/bank ../bank/interact
 
