@@ -691,7 +691,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
             return;
         }
 
-        const size_t capacity = 256;
+        const size_t capacity = 1000;
         shmbuf[i] = create_shared_buffer(extended_shmkey, capacity, control);
         /* create the shared buffer */
         assert(shmbuf[i]);
