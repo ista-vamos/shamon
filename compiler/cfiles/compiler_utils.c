@@ -23,7 +23,7 @@ void destroy_buffer_group(buffer_group *bg) {
     //free(bg);
 }
 
-void merge_waiting_list(buffer_group *bg, bool (*order_exp)(void *args1, void *args2)) {
+void bg_merge_waiting_list(buffer_group *bg, bool (*order_exp)(void *args1, void *args2)) {
     dll_node * current = bg->waiting_list_head;
     while(current != NULL) {
         shm_stream *s = current->stream;
@@ -36,7 +36,7 @@ void merge_waiting_list(buffer_group *bg, bool (*order_exp)(void *args1, void *a
     }
 }
 
-void add_to_waiting_list(buffer_group *bg, shm_stream *stream, void* buffer, void *args) {
+void bg_add_to_waiting_list(buffer_group *bg, shm_stream *stream, void* buffer, void *args) {
     dll_node *new_node =  (dll_node *) malloc(sizeof(dll_node));
     new_node->stream = stream;
     new_node->buffer = buffer;

@@ -21,9 +21,9 @@ void init_buffer_group(buffer_group *bg);
 
 void destroy_buffer_group(buffer_group *bg);
 
-void merge_waiting_list(buffer_group *bg, bool (*order_exp)(void *args1, void *args2));
+void bg_merge_waiting_list(buffer_group *bg, bool (*order_exp)(void *args1, void *args2));
 
-void add_to_waiting_list(buffer_group *bg, shm_stream *stream, void* buffer, void *args);
+void bg_add_to_waiting_list(buffer_group *bg, shm_stream *stream, void* buffer, void *args);
 
 void bg_insert(buffer_group *bg, dll_node *new_node, bool (*order_exp)(void *args1, void *args2));
 
