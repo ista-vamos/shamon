@@ -380,13 +380,13 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 name = f"{stream_name}_{i}"
                 answer += f"\t// connect to event source {name}\n"
                 answer += f"""
-                shm_stream_hole_handling hh = {{
+                shm_stream_hole_handling hh_{name} = {{
                   .hole_event_size = sizeof({out_event}),
                   .init = &init_hole_{hole_name},
                   .update = &update_hole_{hole_name}
                 }};\n
                 """
-                answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
+                answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh_{name});\n"
                 answer += f"\tif (!EV_SOURCE_{name}) {{\n"
                 answer += f"\t\tfprintf(stderr, \"Failed creating stream {name}\\n\");"
                 answer +=  "\tabort();}\n"
@@ -405,13 +405,13 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
             name = f"{stream_name}"
             answer += f"\t// connect to event source {name}\n"
             answer += f"""
-                shm_stream_hole_handling hh = {{
+                shm_stream_hole_handling hh_{name} = {{
                   .hole_event_size = sizeof({out_event}),
                   .init = &init_hole_{hole_name},
                   .update = &update_hole_{hole_name}
                 }};\n
                 """
-            answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
+            answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh_{name});\n"
             answer += f"\tBUFFER_{stream_name} = shm_arbiter_buffer_create(EV_SOURCE_{name},  sizeof(STREAM_{out_name}_out), {buff_size});\n\n"
             if min_size_uninterrupt is not None:
                 answer += f"\tshm_arbiter_buffer_set_drop_space_threshold(BUFFER_{stream_name},{min_size_uninterrupt});\n"
@@ -1293,11 +1293,23 @@ def buffer_peeks(tree, existing_buffers):
 def print_dll_node_code(buffer_group_name, buffer_to_src_idx):
     buffer_group_type = TypeChecker.buffer_group_data[buffer_group_name]['in_stream']
     assert(buffer_group_type in buffer_to_src_idx.keys())
+
+    print_args_code = ""
+    
+    for arg_data in TypeChecker.stream_types_data[buffer_group_type]['arg_types']:
+        iterpol_code = ""
+        if arg_data['type'] in ['int', 'uint16_t', 'int16_t'] :
+            interpol_code = "%d"
+        elif arg_data['type'] in ['uint64_t']:
+            interpol_code = "%ull"
+        else:
+            raise Exception(f"implement interpolation code {arg_data['type']}")
+        print_args_code+= f'\tprintf("{arg_data["name"]} = {interpol_code}\\n", ((STREAM_{buffer_group_type}_ARGS *) current->args)->{arg_data["name"]})\n' 
     
     return f'''
-    printf(\"{buffer_group_name}[%d].ARGS{"{"}\", i);
-
-    printf(\"{"}"}\\n\");
+    printf(\'{buffer_group_name}[%d].ARGS{"{"}\', i);
+{print_args_code}
+    printf(\'{"}"}\\n\');
     char* e1_BG; size_t i1_BG; char* e2_BG; size_t i2_BG;
     int COUNT_BG_TEMP_ = shm_arbiter_buffer_peek(current->buffer, 5, (void**)&e1_BG, &i1_BG, (void**)&e2_BG, &i2_BG);
     printf(\"{buffer_group_name}[%d].buffer{"{"}\\n\", i);
@@ -1312,10 +1324,10 @@ def check_progress(rule_set_name, tree, existing_buffers):
     answer = "_Bool ok = 1;\n"
     n = 0
     for (buffer_name, desired_count) in buffers_to_peek.items():
-        answer += f"if (count_{buffer_name} >= {desired_count}) {{"
+        answer += f"if (count_{buffer_name} >= {desired_count}) {'{'}"
         n += 1
-        answer += "\tok = 0;\n"
-        answer += "}" * n
+    answer += "\tok = 0;\n"
+    answer += "}" * n
 
     answer += "\n"
 
@@ -1323,12 +1335,7 @@ def check_progress(rule_set_name, tree, existing_buffers):
 
     buffer_to_src_idx = { bn : -1 for bn in existing_buffers}
     for (event_source_index, stream_type )in enumerate(TypeChecker.stream_types_data.keys()):
-
-        if stream_type in existing_buffers:
-            buffer_to_src_idx[stream_type] = event_source_index
-        else:
-            buffer_to_src_idx[stream_type] = -1
-
+        buffer_to_src_idx[stream_type] = event_source_index
 
     for (ev_source, data) in TypeChecker.event_sources_data.items():
         src_idx = buffer_to_src_idx[data['output_stream_type']]
