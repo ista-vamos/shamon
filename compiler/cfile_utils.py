@@ -787,6 +787,18 @@ def are_buffers_done():
         else:
             code += f"\tif (!shm_arbiter_buffer_is_done(BUFFER_{event_source})) return 0;\n"
 
+    for (buffer_group, data) in TypeChecker.buffer_group_data.items():
+        code += f'''
+    mtx_lock(&LOCK_{buffer_group});
+    int BG_{buffer_group}_size = BG_{buffer_group}.size;
+    update_size_chosen_streams(BG_{buffer_group}_size);
+    is_selection_successful = bg_get_first_n(&BG_{buffer_group}, 1, &chosen_streams);
+    mtx_unlock(&LOCK_{buffer_group});
+    for (int i = 0; i < BG_{buffer_group}_size; i++) {"{"}
+        if (!shm_arbiter_buffer_is_done(chosen_streams[i]->buffer)) return 0;
+    {"}"}
+'''
+
     return f'''
 bool are_buffers_done() {"{"}
 {code}
