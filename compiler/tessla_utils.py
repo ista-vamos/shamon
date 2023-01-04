@@ -195,8 +195,7 @@ def get_c_interface(components,ast, streams_to_events_map, stream_types,
 int main(int argc, char **argv) {"{"}
     setup_signals();
 
-	arbiter_counter = malloc(sizeof(int));
-	*arbiter_counter = 10;
+	arbiter_counter = 10;
 	{get_pure_c_code(components, 'startup')}
 {initialize_stream_args()}
 
