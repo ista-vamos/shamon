@@ -4,11 +4,12 @@ VLCC=python3 ../../compiler/main.py
 SHAMON_LIB=../../core/libshamon-lib.so  # for dependency
 BUFSIZE=1024
 #TESSLA_JAR=../../tessla/tessla.jar
-TESSLA_JAR=/opt/vamos/tessla/tessla-rust.jar
+TESSLA_JAR=tessla-rust.jar
 
 all: monitor$(BUFSIZE) ../bank/bank ../bank/interact
 
 tesslamon/Cargo.toml: bank.tessla
+	test -e $(TESSLA_JAR) || echo "Download TeSSLa Rust bundle from https://www.tessla.io/download/ and rename it to tessla-rust.jar
 	java -jar $(TESSLA_JAR) compile-rust -p tesslamon bank.tessla
 
 ../bank/interact:

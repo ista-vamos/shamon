@@ -25,9 +25,6 @@ SHAMON_LIBS = [
     f"{SHAMONDIR}/streams/libshamon-streams.a",
 ]
 
-opt = "opt"
-link = "llvm-link"
-
 def get_build_type():
     config = f"{SHAMONDIR}/shamonConfig.cmake"
     with open(config, "r") as f:
@@ -44,8 +41,8 @@ def get_compiler():
                 return line.split()[2]
     return None
 
-def get_llvm_version():
-    proc = run(["clang", "--version"], stdout=PIPE)
+def get_llvm_version(cc="clang"):
+    proc = run([cc, "--version"], stdout=PIPE)
     ver = proc.stdout.split()[2].split(b'-')[0].split(b'.')
     if len(ver) == 3:
         return int(ver[0]), int(ver[1]), int(ver[2])
@@ -56,10 +53,12 @@ class CompileOptions:
         self.files = []
         self.files_noinst = []
         self.cc = "clang"
-        self.llvm_cc = "clang"
+        self.clang = "clang"
         self.output = "a.out"
         self.cflags = []
         self.link = []
+        self.linkcmd = "llvm-link"
+        self.optcmd = "opt"
         self.link_asm = []
         self.link_and_instrument = []
 
@@ -75,9 +74,15 @@ def get_opts(argv):
         elif argv[i] == "-cc":
             i += 1
             opts.cc = argv[i]
-        elif argv[i] == "-llvm-cc":
+        elif argv[i] == "-clang":
             i += 1
-            opts.llvm_cc = argv[i]
+            opts.clang = argv[i]
+        elif argv[i] == "-llvm-link":
+            i += 1
+            opts.linkcmd = argv[i]
+        elif argv[i] == "-opt":
+            i += 1
+            opts.optcmd = argv[i]
         elif argv[i] == "-li":
             i += 1
             opts.link_and_instrument.append(argv[i])
@@ -118,18 +123,20 @@ def main(argv):
     assert opts.files, "No input files given"
 
     build_type = get_build_type()
-    if build_type is None or build_type == "Release":
-        CFLAGS.extend(("-g3", "-O3", "-flto", "-DNDEBUG",
-                       "-fno-fat-lto-objects", ))
+    release = build_type == "Release"
+    if build_type is None or release:
+        CFLAGS.extend(("-g3", "-O3","-DNDEBUG"))
+        lto_flags = ["-flto", "-fno-fat-lto-objects"]
     else:
         CFLAGS.append("-g")
+        lto_flags = []
 
     if build_type == "Release" and basename(get_compiler()) != "clang":
         print("WARNING: Shamon was build in Release mode but not with clang. "\
               "It may cause troubles with linking.")
 
     opt_args = []
-    llvm_version = get_llvm_version()
+    llvm_version = get_llvm_version(opts.clang)
     if llvm_version is None or llvm_version[0] > 12:
         opt_args.append("-enable-new-pm=0")
 
@@ -137,15 +144,15 @@ def main(argv):
     compiled_files = [f"{file}.bc" for file in opts.files]
     for f, out in zip(opts.files, compiled_files):
         cmd(
-            [opts.llvm_cc, "-emit-llvm", "-c", "-fsanitize=thread", "-O0", "-o", f"{out}", f]
+            [opts.clang, "-emit-llvm", "-c", "-fsanitize=thread", "-O0", "-o", f"{out}", f]
             + CFLAGS
             + opts.cflags
         )
-    cmd([link, "-o", f"{output}.tmp2.bc"] + compiled_files + opts.link_and_instrument)
+    cmd([opts.linkcmd, "-o", f"{output}.tmp2.bc"] + compiled_files + opts.link_and_instrument)
 
     cmd(
         [
-            opt,
+            opts.optcmd,
             "-load",
             f"{LLVM_PASS_DIR}/race-instrumentation.so",
             "-vamos-race-instrumentation",
@@ -157,7 +164,7 @@ def main(argv):
 
     cmd(
         [
-            opts.llvm_cc,
+            opts.clang,
             "-std=c11",
             "-emit-llvm",
             "-c",
@@ -171,25 +178,25 @@ def main(argv):
     compiled_files_link = [f"{file}.bc" for file in opts.files_noinst]
     for f, out in zip(opts.files_noinst, compiled_files_link):
         cmd(
-            [opts.llvm_cc, "-emit-llvm", "-c", "-g", "-o", f"{out}", f]
+            [opts.clang, "-emit-llvm", "-c", "-g", "-o", f"{out}", f]
             + CFLAGS
             + opts.cflags
         )
     cmd(
-        [link, f"{DIR}/tsan_impl.bc", f"{output}.tmp3.bc", "-o", f"{output}.tmp4.bc"]
+        [opts.linkcmd, f"{DIR}/tsan_impl.bc", f"{output}.tmp3.bc", "-o", f"{output}.tmp4.bc"]
         + opts.link
         + compiled_files_link
     )
 
-    cmd([opt, "-O3", f"{output}.tmp4.bc", "-o", f"{output}.tmp5.bc"])
-    cmd([opts.llvm_cc, f"{output}.tmp5.bc", "-c", "-o", f"{output}.tmp5.o"]
+    cmd([opts.optcmd, "-O3", f"{output}.tmp4.bc", "-o", f"{output}.tmp5.bc"])
+    cmd([opts.clang, f"{output}.tmp5.bc", "-c", "-o", f"{output}.tmp5.o"]
         + opts.link_asm
         + opts.cflags
         + CFLAGS)
     cmd(
         [opts.cc, "-pthread", f"{output}.tmp5.o", "-o", output]
         + opts.cflags
-        + CFLAGS
+        + CFLAGS + lto_flags
         + SHAMON_LIBS
     )
 
