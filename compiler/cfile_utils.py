@@ -382,8 +382,8 @@ def event_sources_conn_code(event_sources, streams_to_events_map) -> str:
                 answer += f"""
                 shm_stream_hole_handling hh = {{
                   .hole_event_size = sizeof({out_event}),
-                  .init = &init_hole_{processor_name},
-                  .update = &update_hole_{processor_name}
+                  .init = &init_hole_{hole_name},
+                  .update = &update_hole_{hole_name}
                 }};\n
                 """
                 answer += f"\tEV_SOURCE_{name} = shm_stream_create_from_argv(\"{name}\", argc, argv, &hh);\n"
@@ -1295,14 +1295,14 @@ def print_dll_node_code(buffer_group_name, buffer_to_src_idx):
     assert(buffer_group_type in buffer_to_src_idx.keys())
     
     return f'''
-    printf(\'{buffer_group_name}[%d].ARGS{"{"}\', i);
+    printf(\"{buffer_group_name}[%d].ARGS{"{"}\", i);
 
-    printf(\'{"}"}\\n\');
+    printf(\"{"}"}\\n\");
     char* e1_BG; size_t i1_BG; char* e2_BG; size_t i2_BG;
     int COUNT_BG_TEMP_ = shm_arbiter_buffer_peek(current->buffer, 5, (void**)&e1_BG, &i1_BG, (void**)&e2_BG, &i2_BG);
-    printf(\'{buffer_group_name}[%d].buffer{"{"}\\n\', i);
+    printf(\"{buffer_group_name}[%d].buffer{"{"}\\n\", i);
     print_buffer_prefix(current->buffer, {buffer_to_src_idx[buffer_group_type]}, i1_BG + i2_BG, COUNT_BG_TEMP_, e1_BG, i1_BG, e2_BG, i2_BG);
-    printf(\'{"}"}\\n\');
+    printf(\"{"}"}\\n\");
 '''
 
 def check_progress(rule_set_name, tree, existing_buffers):
@@ -1357,8 +1357,8 @@ def check_progress(rule_set_name, tree, existing_buffers):
         answer += f"\tprint_buffer_prefix(BUFFER_{buffer_name}, {src_idx}, i1_{buffer_name} + i2_{buffer_name}, count_{buffer_name}, e1_{buffer_name}, i1_{buffer_name}, e2_{buffer_name}, i2_{buffer_name});\n"
 
     for (buffer_group, data) in TypeChecker.buffer_group_data.items():
-        answer += 'printf(\"***** BUFFER GROUPS *****\n\")\n'
-        answer += f'printf(\"***** {buffer_group} *****\n\")'
+        answer += f'printf(\"***** BUFFER GROUPS *****\\n\");\n'
+        answer += f'printf(\"***** {buffer_group} *****\\n\");\n'
         answer += f"dll_node *current = BG_{buffer_group}.head;\n"
         answer += f"{'{'}int i = 0; \n while (current){'{'} {print_dll_node_code(buffer_group, buffer_to_src_idx)} current = current->next;\n i+=1;\n{'}'}\n{'}'}"
 
@@ -1774,7 +1774,7 @@ bool is_selection_successful;
 dll_node **chosen_streams; // used in rule set for get_first/last_n
 int current_size_chosen_stream = 0;
 
-void update_size_chosen_streams(const int &s) {"{"}
+void update_size_chosen_streams(const int s) {"{"}
     if (s > current_size_chosen_stream) {"{"}
         free(chosen_streams);
         chosen_streams = (dll_node **) calloc(s, sizeof(dll_node*));
