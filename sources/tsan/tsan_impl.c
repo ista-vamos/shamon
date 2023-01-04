@@ -361,7 +361,7 @@ void __tsan_write1(void *addr) {
     buffer_finish_push(shm);
 
 #ifdef DEBUG_STDOUT
-    printf("[%lu] thread %lu: write2(%p)\n", rt_timestamp(),
+    printf("[%lu] thread %lu: write1(%p)\n", rt_timestamp(),
            thread_data.thread_id, addr);
 #endif
 }
@@ -401,6 +401,11 @@ void __tsan_write8(void *addr) {
            thread_data.thread_id, addr);
 #endif
 }
+
+void __tsan_unaligned_write8(void *addr) { __tsan_write8(addr); }
+void __tsan_unaligned_write4(void *addr) { __tsan_write4(addr); }
+void __tsan_unaligned_write2(void *addr) { __tsan_write2(addr); }
+void __tsan_unaligned_write1(void *addr) { __tsan_write1(addr); }
 
 void __vrd_mutex_lock(void *addr) {
     struct buffer *shm = thread_data.shmbuf;

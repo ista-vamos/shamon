@@ -2,7 +2,7 @@
 
 import sys
 from subprocess import run, Popen, PIPE, DEVNULL, TimeoutExpired
-from os.path import dirname, abspath, basename
+from os.path import dirname, abspath, basename, isfile
 
 from randomharness import gen_harness
 
@@ -17,6 +17,7 @@ timecmd = "/bin/time"
 DIR = abspath(dirname(sys.argv[0]))
 TIMEOUT = 5
 REPEAT_NUM = 10
+CSVFILE="results.csv"
 
 
 def cmd(args):
@@ -207,36 +208,55 @@ def get_stats(results):
     return [x / len(results) for x in ret]
 
 
-def run_rep(infile):
+def run_rep(infile, csvfile):
     compile_file(infile)
     results = []
     i = 0
     n = 0
+    csvstream = None
+    if csvfile:
+        if isfile(csvfile):
+            print("Appending to the old CSV output file: ", csvfile)
+            csvstream = open(csvfile, "a")
+        else:
+            print("Creating a new CSV output file: ", csvfile)
+            csvstream = open(csvfile, "w")
+            # write the header
+            print("benchmark,tsan-races,tsan-usertime,tsan-systime,tsan-time,tsan-maxmem"\
+                  "helgrind-races,helgrind-usertime,helgrind-systime,helgrind-time,helgrind-maxmem"\
+                  "vamos-races,vamos-usertime,vamos-systime,vamos-time,vamos-maxmem,vamos-eventsnum,vamos-dropped,vamos-holes",
+                  file=csvstream)
+
     while True:
         i += 1
         if i > 2 * REPEAT_NUM:
             raise RuntimeError("Failed measuring")
         result = run_once()
         print("RESULT", basename(infile), ",".join((str(r) for r in result)))
+        if csvstream:
+            print(basename(infile),",", ",".join((str(r) for r in result)), file=csvstream)
+
         sys.stdout.flush()
        #if None in result:
        #    continue
         assert len(result) == 18
-        results.append(result)
+        #results.append(result)
         n += 1
         if n == REPEAT_NUM:
             break
 
     #stats = get_stats(results)
     #print("RESULT", basename(infile), ",".join((f"{r:.2f}" for r in stats)))
-    return results
+    #return results
+    if csvfile:
+        csvstream.close()
 
 def main(argv):
-    if len(argv) != 2:
-        print("Usage: ./run.py file.c")
+    if not (2 <= len(argv) <= 3):
+        print("Usage: ./run.py file.c [output.csv]")
         exit(1)
 
-    run_rep(argv[1])
+    run_rep(argv[1], argv[2] if len(argv) > 2 else None)
 
 if __name__ == "__main__":
     main(sys.argv)
