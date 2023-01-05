@@ -9,14 +9,14 @@ rm -f log.txt
 SRCDIR="$(dirname $0)/../.."
 
 
-REP=1
+REP=10
 
 echo "Logs of make are in /tmp/make*.txt"
 
 for i in `seq 1 $REP`; do
 # the numbers correspond to 1 8 16 32 pages of memory
 #for SHM_BUFSIZE in 145 1340 2705 5436; do
-# run only for 1 page if not said otherwise
+# run only for 8 pages (= 1340 elements) if not said otherwise
 for SHM_BUFSIZE in 1340 ; do
 	echo "make clean"
 	make clean 1>/tmp/make-clean.stdout.txt
