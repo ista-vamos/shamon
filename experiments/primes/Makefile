@@ -9,7 +9,7 @@ all: prepare
 ../../compiler/cfiles/intmap.o: ../../compiler/cfiles/intmap.cpp
 	$(CXX) -c $< -o $@
 
-prepare: primes primes-bad primes-java primes-python ../../compiler/cfiles/compiler_utils.o ../../compiler/cfiles/intmap.o
+prepare: primes primes-bad primes-python ../../compiler/cfiles/compiler_utils.o ../../compiler/cfiles/intmap.o
 	python3 shm_prepare_programs.py
 
 primes: primes.c
@@ -18,8 +18,8 @@ primes-bad: primes-bad.c
 
 #primes-2: primes-2.c
 
-primes-java: primes.java
-	javac -Werror $<
+#primes-java: primes.java
+#        javac -Werror $<
 
 primes-python: primes.py
 	python3 -O -m compileall *.py
