@@ -2,6 +2,7 @@
 from operator import pos
 from cfile_utils import *
 import os
+import shutil
 
 state_type = '''State<
 (),
@@ -11,7 +12,7 @@ fn(TesslaOption<TesslaValue<(TesslaInt, TesslaInt)>>, i64) -> Result<(), ()>,
 fn(TesslaOption<TesslaValue<(TesslaInt, TesslaInt)>>, i64) -> Result<(), ()>,
 >'''
 
-def update_toml(output_dir: str) -> None:
+def update_toml(output_dir: str, vendor) -> None:
     toml_file_path = f"{output_dir}/Cargo.toml"
     current_part = ""
     sections = dict()
@@ -33,6 +34,11 @@ def update_toml(output_dir: str) -> None:
                         sections[current_part].add(line)
 
         sections["[lib]"].add('crate-type = [\"staticlib\"]')
+
+        if vendor is not None:
+            shutil.copy(vendor, f"{output_dir}/vendor", dirs_exist_ok=True)
+            sections["[source.crates-io]"]={'replace-with = "vendored-sources"'}
+            sections["[source.vendored-sources]"]={'directory = "vendor"'}
 
         answer = ""
         for (section, lib) in sections.items():
