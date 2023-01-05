@@ -16,11 +16,15 @@ SHAMONDIR=$(readlink -f "$GENDIR/..")
 CC=clang
 CPPFLAGS="-D_POSIX_C_SOURCE=200809L -I${GENDIR} -I$SHAMONDIR\
 	   -I$SHAMONDIR/streams -I$SHAMONDIR/core -I$SHAMONDIR/shmbuf"
+LTOFLAGS=""
 if grep -q 'CMAKE_BUILD_TYPE.*=Debug' $GENDIR/../CMakeCache.txt; then
 	CFLAGS="-g -O0"
 	# CFLAGS="$CFLAGS -fsanitize=address,undefined"
 else
-	CFLAGS="-g3 -O3 -flto  -fno-fat-lto-objects -fPIC -std=c11"
+	CFLAGS="-g3 -O3 -fPIC -std=c11"
+	if [ -z "$NOLTO" ]; then
+		LTOFLAGS="-flto -fno-fat-lto-objects"
+	fi
         CPPFLAGS="$CPPFLAGS -DNDEBUG"
 fi
 
@@ -39,4 +43,4 @@ LIBRARIES="$SHAMONDIR/core/libshamon-arbiter.a\
            $SHAMONDIR/streams/libshamon-streams.a"
 
 test -z $CC && CC=cc
-${CC} $CFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC $@ $LIBRARIES $LDFLAGS -DSHMBUF_ARBITER_BUFSIZE=$ARBITER_BUFSIZE
+${CC} $CFLAGS $LTOFLAGS $CPPFLAGS -o $CURDIR/monitor $MONITORSRC $@ $LIBRARIES $LDFLAGS -DSHMBUF_ARBITER_BUFSIZE=$ARBITER_BUFSIZE
