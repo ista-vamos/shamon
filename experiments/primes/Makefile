@@ -28,8 +28,11 @@ primes-python: primes.py
 experiments: prepare
 	./experiments.sh
 
+experiments-tessla:
+	./experiments-tessla.sh
+
 clean:
 	-rm *.o primes primes-2 primes-bad
 	-rm -rf __pycache__
 
-.PHONY: clean all experiments
+.PHONY: clean all experiments experiments-tessla

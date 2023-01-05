@@ -24,22 +24,22 @@ open_log()
 open_csvlog(BS, ABS, NUM)
 
 lprint(f"Enumerating primes up to {NUM}th prime...")
-lprint(f"Taking average of {repeat_num()} runs...\n")
+#lprint(f"Taking average of {repeat_num()} runs...\n")
 
 EMPTY_MONITOR_PATH = f"{PRIMESPATH}/programs/empty_monitor{ABS}"
 MONITOR_PATH = f"{PRIMESPATH}/programs/monitor{ABS}"
 
 ###############################################################################
 
-# c_native = ParseTime(withwaitstats=False)
-# measure("'C primes' native",
-#         [Command(f"{PRIMESPATH}/primes", NUM).withparser(c_native)])
-# c_native.report('c-native')
-# 
-# c_drio = ParseTime(withwaitstats=False)
-# measure("'C primes' DynamoRIO (no monitor)",
-#         [Command(*DRIO, "--", f"{PRIMESPATH}/primes", NUM).withparser(c_drio)])
-# c_drio.report('c-drio')
+c_native = ParseTime(withwaitstats=False)
+measure("'C primes' native",
+        [Command(f"{PRIMESPATH}/primes", NUM).withparser(c_native)])
+c_native.report('c-native')
+
+c_drio = ParseTime(withwaitstats=False)
+measure("'C primes' DynamoRIO (no monitor)",
+        [Command(*DRIO, "--", f"{PRIMESPATH}/primes", NUM).withparser(c_drio)])
+c_drio.report('c-drio')
 ###############################################################################
 
 WORKINGDIR = mkdtemp(prefix="midmon.", dir="/tmp")
@@ -50,21 +50,21 @@ lprint(f"-- Working directory is {WORKINGDIR} --")
 primes1 = rand_shm_name('primes1')
 primes2 = rand_shm_name('primes2')
 
-# lprint(f"--  Using empty monitor: {EMPTY_MONITOR_PATH} --")
-# 
-# dm_drio_consume_time_c1 = ParseTime()
-# dm_drio_consume_time_c2 = ParseTime()
-# measure("'Empty monitor C/C for primes' DynamoRIO sources",
-#         [Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
-#                  primes1, "Prime", "#([0-9]+): ([0-9]+)", "ii", "--",
-#                  f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_consume_time_c1),
-#          Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
-#                  primes2, "Prime", "#([0-9]+): ([0-9]+)", "ii", "--",
-#                  f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_consume_time_c2)],
-#         [Command(EMPTY_MONITOR_PATH, f"Left:drregex:{primes1}", f"Right:drregex:{primes2}",
-#                  stdout=PIPE)])
-# dm_drio_consume_time_c1.report('c-c-empty', msg="C (1) program")
-# dm_drio_consume_time_c2.report('c-c-empty', msg="C (2) program")
+lprint(f"--  Using empty monitor: {EMPTY_MONITOR_PATH} --")
+
+dm_drio_consume_time_c1 = ParseTime()
+dm_drio_consume_time_c2 = ParseTime()
+measure("'Empty monitor C/C for primes' DynamoRIO sources",
+        [Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
+                 primes1, "Prime", "#([0-9]+): ([0-9]+)", "ii", "--",
+                 f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_consume_time_c1),
+         Command(*DRIO, "-c", f"{SHAMONPATH}/sources/drregex/libdrregex.so",
+                 primes2, "Prime", "#([0-9]+): ([0-9]+)", "ii", "--",
+                 f"{PRIMESPATH}/primes", NUM).withparser(dm_drio_consume_time_c2)],
+        [Command(EMPTY_MONITOR_PATH, f"Left:drregex:{primes1}", f"Right:drregex:{primes2}",
+                 stdout=PIPE)])
+dm_drio_consume_time_c1.report('c-c-empty', msg="C (1) program")
+dm_drio_consume_time_c2.report('c-c-empty', msg="C (2) program")
 
 ###############################################################################
 
