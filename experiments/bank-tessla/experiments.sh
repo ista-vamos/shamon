@@ -10,8 +10,9 @@ SRCDIR="$(dirname $0)/../.."
 
 REP=10
 
-RUNDIR="$(dirname $0)/rundata$(date +%Y%m%d-%H%M%S)"
-mkdir $RUNDIR
+# RUNDIR="$(dirname $0)/rundata$(date +%Y%m%d-%H%M%S)"
+# mkdir $RUNDIR
+RUNDIR="$(dirname $0)"
 
 echo "Logs of make are in /tmp/make*.txt"
 
