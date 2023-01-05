@@ -63,6 +63,7 @@ def compile_file(infile):
             f"{DIR}/svcomp_atomic.c",
             "-g",
             "-fsanitize=thread",
+            "-pthread",
             "-O3",
             "-o",
             "a.tsan.out",
@@ -78,6 +79,7 @@ def compile_file(infile):
             f"{DIR}/svcomp_atomic.c",
             "-g",
             "-O3",
+            "-pthread",
             "-o",
             "a.helgrind.out",
         ]
