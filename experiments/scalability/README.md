@@ -10,8 +10,6 @@ To run the experiments, type
 make experiments
 ```
 
-Each set of measurements is repeated 10 times. To change the number of
-repetitions, change the value of `REP` variable in `experiments.sh`.
+To change the number of repetitions, change the value of `REPEAT` variable in `../setup.sh`.
+To change `NUM`, change the variable `SCALABILITY_NUM` in `../setup.sh`.
 
-`NUM` can be modified in `run.py`. Tested arbiter buffers can be set up
-in `experiments.sh`.
