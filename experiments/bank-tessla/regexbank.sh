@@ -10,7 +10,7 @@ shift
 DIR=$(dirname $0)
 BANK_DIR="$DIR/../bank"
 
-DRIOPATH="/vamos/dynamorio/"
+DRIOPATH="/opt/vamos/dynamorio/"
 DRRUN="$DRIOPATH/build/bin64/drrun\
 	-root $DRIOPATH/build/\
 	-c ../../sources/drregex/libdrregex-mt.so"

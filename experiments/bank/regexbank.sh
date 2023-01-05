@@ -5,7 +5,7 @@ set -e
 NUM=$1
 shift
 
-DRIOPATH="/vamos/dynamorio/"
+DRIOPATH="/opt/vamos/dynamorio/"
 DRRUN="$DRIOPATH/build/bin64/drrun\
 	-root $DRIOPATH/build/\
 	-c ../../sources/drregex/libdrregex-mt.so"
