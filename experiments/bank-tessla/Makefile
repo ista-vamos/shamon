@@ -25,13 +25,13 @@ bankmonitor-$(BUFSIZE).c: bankmonitor-$(BUFSIZE).vl tesslamon/Cargo.toml
 	python3 ../../compiler/main.py -o bankmonitor-$(BUFSIZE).c -t -d tesslamon bankmonitor-$(BUFSIZE).vl
 
 tesslamon/target/release/libmonitor.a: bankmonitor-$(BUFSIZE).c tesslamon/Cargo.toml
-	-cd ./tesslamon; cargo build
+	-cd ./tesslamon; cargo build --release
 
 intmap.o: ../../compiler/cfiles/intmap.cpp ../../compiler/cfiles/intmap.h
 	g++ -c $< -o $@
 
 monitor$(BUFSIZE): tesslamon/target/release/libmonitor.a bankmonitor-$(BUFSIZE).c intmap.o
-	../../gen/compile.sh bankmonitor-$(BUFSIZE).c intmap.o -lstdc++ tesslamon/target/debug/libmonitor.a -ldl
+	../../gen/compile.sh bankmonitor-$(BUFSIZE).c intmap.o -lstdc++ tesslamon/target/release/libmonitor.a -ldl
 	mv monitor monitor$(BUFSIZE)
 
 experiments: ../bank/interact ../bank/bank
