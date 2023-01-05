@@ -24,6 +24,9 @@ monitor: monitor.c monitor.o compiler_utils.o
 run: monitor
 	./monitor Program:generic:/vrd
 
+experiments: monitor
+	./experiments.sh
+
 clean:
 	-rm monitor.c monitor.o
 

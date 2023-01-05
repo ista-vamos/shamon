@@ -17,7 +17,7 @@ for i in `seq 1 $REP`; do
 # the numbers correspond to 1 8 16 32 pages of memory
 #for SHM_BUFSIZE in 145 1340 2705 5436; do
 # run only for 1 page if not said otherwise
-for SHM_BUFSIZE in 145 ; do
+for SHM_BUFSIZE in 1340 ; do
 	echo "make clean"
 	make clean 1>/tmp/make-clean.stdout.txt
         make clean -j -C $SRCDIR 1>>/tmp/make-clean.stdout.txt

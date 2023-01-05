@@ -8,8 +8,8 @@ SHAMONPATH=abspath(pathjoin(dirname(argv[0]), "../..")) # "/opt/shamon"
 csvlog = None
 csvlogf = None
 
-def open_csvlog(BS, NUM):
-    csv_name = f"numbers-{BS}-{NUM}.csv"
+def open_csvlog(BS, NUM, SRCNUM=1):
+    csv_name = f"numbers-{BS}-{NUM}-{SRCNUM}.csv"
 
     global csvlogf
     csvlogf = open(csv_name, 'a')
