@@ -20,12 +20,12 @@ for i in `seq 1 $REP`; do
 	echo " - Running"
 	rm -f out.txt err.txt
 	./regexbank.sh $NUM >out.txt 2>err.txt
-	./parse_results.py out.txt 0 >> bank-1000-$ARBITER_BUFSIZE-$NUM.csv
+	./parse_results.py out.txt 0 >> bank-1-$ARBITER_BUFSIZE-$NUM.csv
 
 	for ERR_FREQ in 5 10 100 1000; do
 	    echo " - Running with $ERR_FREQ errors freq"
 	    ./regexbank.sh $NUM errors $ERR_FREQ >out.txt 2>err.txt
-	    ./parse_results.py out.txt $ERR_FREQ >> bank-1000-$ARBITER_BUFSIZE-$NUM.csv
+	    ./parse_results.py out.txt $ERR_FREQ >> bank-1-$ARBITER_BUFSIZE-$NUM.csv
 	done
     done
 done
