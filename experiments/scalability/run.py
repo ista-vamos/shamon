@@ -9,7 +9,7 @@ from sys import argv
 from run_common import *
 from subprocess import run, TimeoutExpired
 
-NUM="100000"
+NUM="10000000"
 TIMEOUT=None #10  # timeout for one experiment
 
 if len(argv) > 1:

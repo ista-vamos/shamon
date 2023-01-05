@@ -28,7 +28,7 @@ experiments: monitor
 	./experiments.sh
 
 clean:
-	-rm monitor.c monitor.o
+	-rm monitor.c monitor.o *.bc *.o
 
 .PHONY: all clean
 
