@@ -12,9 +12,12 @@ VLCC="python3 $SRCDIR/compiler/main.py"
 GENCC="$SRCDIR/gen/compile.sh"
 TESSLA_JAR=../tessla/tessla-rust.jar
 
+REP=10
+
 # compile the tessla monitor
 java -jar $TESSLA_JAR compile-rust primes.tessla -b tessla-monitor
 
+for i in `seq 1 $REP`; do
 for SHM_BUFSIZE in 8; do
 #for SHM_BUFSIZE in 8 16; do
         make clean -j  -C $SRCDIR
@@ -74,4 +77,5 @@ for SHM_BUFSIZE in 8; do
 
 
         done
+done
 done
