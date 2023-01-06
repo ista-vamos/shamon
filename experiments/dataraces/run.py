@@ -224,8 +224,8 @@ def run_rep(infile, csvfile):
             print("Creating a new CSV output file: ", csvfile)
             csvstream = open(csvfile, "w")
             # write the header
-            print("benchmark,tsan-races,tsan-usertime,tsan-systime,tsan-time,tsan-maxmem"\
-                  "helgrind-races,helgrind-usertime,helgrind-systime,helgrind-time,helgrind-maxmem"\
+            print("benchmark,tsan-races,tsan-usertime,tsan-systime,tsan-time,tsan-maxmem,"\
+                  "helgrind-races,helgrind-usertime,helgrind-systime,helgrind-time,helgrind-maxmem,"\
                   "vamos-races,vamos-usertime,vamos-systime,vamos-time,vamos-maxmem,vamos-eventsnum,vamos-dropped,vamos-holes",
                   file=csvstream)
 
