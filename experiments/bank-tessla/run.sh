@@ -2,7 +2,7 @@
 
 set -e
 
-NUM=100000
+test -z $BANK_NUM && BANK_NUM=100000
 
 REP=$1
 shift
@@ -20,15 +20,15 @@ for ARBITER_BUFSIZE in 4 16 32 64 128 256 512 1024 2048; do
 
 	for i in `seq 1 $REP`; do
 	echo " - Running"
-	./regexbank.sh $NUM $ARBITER_BUFSIZE >$RUNDIR/out-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$NUM-$i.txt 2>$RUNDIR/err-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$NUM-$i.txt
-	python3 parse_results.py $RUNDIR/out-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$NUM-$i.txt 0 >> $RUNDIR/bank-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$NUM.csv
+	./regexbank.sh $BANK_NUM $ARBITER_BUFSIZE >$RUNDIR/out-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$BANK_NUM-$i.txt 2>$RUNDIR/err-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$BANK_NUM-$i.txt
+	python3 parse_results.py $RUNDIR/out-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$BANK_NUM-$i.txt 0 >> $RUNDIR/bank-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$BANK_NUM.csv
 	done
 
 	for ERR_FREQ in 5 10 100 1000; do
 		for i in `seq 1 $REP`; do
 	    echo " - Running with $ERR_FREQ errors freq"
-	    ./regexbank.sh $NUM $ARBITER_BUFSIZE errors $ERR_FREQ >$RUNDIR/out-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$NUM-ERR-$ERR_FREQ-$i.txt 2>$RUNDIR/err-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$NUM-ERR-$ERR_FREQ-$i.txt
-	    python3 parse_results.py $RUNDIR/out-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$NUM-ERR-$ERR_FREQ-$i.txt $ERR_FREQ >> $RUNDIR/bank-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$NUM-ERR-$ERR_FREQ.csv
+	    ./regexbank.sh $BANK_NUM $ARBITER_BUFSIZE errors $ERR_FREQ >$RUNDIR/out-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$BANK_NUM-ERR-$ERR_FREQ-$i.txt 2>$RUNDIR/err-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$BANK_NUM-ERR-$ERR_FREQ-$i.txt
+	    python3 parse_results.py $RUNDIR/out-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$BANK_NUM-ERR-$ERR_FREQ-$i.txt $ERR_FREQ >> $RUNDIR/bank-$SHM_BUFSIZE-$ARBITER_BUFSIZE-$BANK_NUM-ERR-$ERR_FREQ.csv
 		done
     done
 done

@@ -8,7 +8,7 @@ rm -f log.txt
 
 SRCDIR="$(dirname $0)/../.."
 
-REP=10
+source ../setup.sh
 
 # RUNDIR="$(dirname $0)/rundata$(date +%Y%m%d-%H%M%S)"
 # mkdir $RUNDIR
@@ -22,4 +22,4 @@ make clean -j -C $SRCDIR 1>>/tmp/make-clean.stdout.txt 2>>/tmp/make-clean.stderr
 echo "make shamon"
 make -j -C "$SRCDIR"  1>/tmp/make.stdout.txt 2>/tmp/make.stderr.txt
 
-./run.sh $REP "$RUNDIR"
+./run.sh $REPEAT "$RUNDIR"
