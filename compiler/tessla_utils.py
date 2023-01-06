@@ -4,7 +4,6 @@ from cfile_utils import *
 import os
 import shutil
 
-x_state_type = 'aaa'
 old_state_type = '''State<
 (),
 fn(TesslaValue<(TesslaInt, TesslaInt, TesslaInt)>, i64) -> Result<(), ()>,
@@ -98,6 +97,8 @@ extern "C" fn RUST_FFI_{event_name} (bs : &mut {state_type}, {args} ts : c_long)
     return answer
 
 def try_parse_state_type(lines) -> str:
+    if lines is None:
+        return old_state_type
     found=0
     bracketcount=0
     buffer=""
@@ -145,9 +146,8 @@ def try_parse_state_type(lines) -> str:
                 break
     return ret
 
-def get_rust_file(mapping, arbiter_event_source,origlines) -> str:
+def get_rust_file(mapping, arbiter_event_source, origlines) -> str:
     state_type = try_parse_state_type(origlines)
-    print("STATE TYPE: "+state_type)
     possible_events = mapping[arbiter_event_source]
     return f'''
 #[no_mangle]
