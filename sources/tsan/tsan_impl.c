@@ -86,6 +86,8 @@ static void (*old_sigsegv_handler)(int);
 
 static void sig_handler(int sig) {
     printf("signal %d caught...\n", sig);
+    fprintf(stderr, "info: number of emitted events: %lu\n", timestamp - 1);
+
     if (top_shmbuf) {
         destroy_shared_buffer(top_shmbuf);
         top_shmbuf = NULL;
