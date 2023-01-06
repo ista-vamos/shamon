@@ -44,7 +44,7 @@ The compiler will update the `Cargo.toml` file and generate a Foreign Function I
 
 `vamosc.py` can be used similarly but it also containts other flags and options to generate and run an executable. It compiles a VAMOS/TESSLA specification and generates the following:
 
-1. A compile script that links all the libraries to be able to compile the C into an executable. The path of this file is specified by the flag  `--compilescript` or `-s`. Other flags to customize the generated compile script are available (try `python vamosc.py -h` to see all available options).
+1. A compile script that links all the libraries to be able to compile the C file of the monitor into an executable. The path of this file is specified by the flag  `--compilescript` or `-s`. Other flags to customize the generated compile script are available (try `python vamosc.py -h` to see all available options).
 
 2. An executable, for which you can specify the path through `--executable` or `e`.
 
