@@ -41,6 +41,7 @@ experiments: ../bank/interact ../bank/bank
 
 clean:
 	-rm bankmonitor-*.c bankmonitor-*.vl *.o monitor* *.o
+	-rm out*.txt err*.txt
 	-rm -rf tesslamon
 
 .PHONY: clean all
