@@ -107,11 +107,12 @@ if args.with_tessla is not None:
 	file.write(c_interface)
 	file.close()
 
-	# BEGIN writing rust file
-	program = get_rust_file(streams_to_events_map, arbiter_event_source)
+
 	file = open(f"{args.dir}/src/monitor.rs", "r")
 	lines = file.readlines()
 	file.close()
+	# BEGIN writing rust file
+	program = get_rust_file(streams_to_events_map, arbiter_event_source, lines)
 
 	file = open(f"{args.dir}/src/monitor.rs", "w")
 	extern_keyword_found = False
