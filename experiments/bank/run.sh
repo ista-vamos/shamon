@@ -2,7 +2,7 @@
 
 set -e
 
-test -z BANK_NUM && BANK_NUM=100000
+test -z $BANK_NUM && BANK_NUM=100000
 
 export PYTHON_OPTIMIZE=1
 #export PYTHONDONTWRITEBYTECODE=1
