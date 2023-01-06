@@ -2,6 +2,7 @@
 
 set -e
 
+source ../setup.sh
 test -z $BANK_NUM && BANK_NUM=100000
 
 export PYTHON_OPTIMIZE=1
