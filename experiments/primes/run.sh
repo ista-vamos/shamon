@@ -2,12 +2,12 @@
 
 set -e  # exit on any error
 
-REP=10
+source ../setup.sh
 
 export PYTHON_OPTIMIZE=1
 #export PYTHONDONTWRITEBYTECODE=1
 
-for i in `seq 1 $REP`; do
+for i in `seq 1 $REPEAT`; do
         ./run-c.py $@
 done
 

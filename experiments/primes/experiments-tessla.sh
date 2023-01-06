@@ -12,12 +12,17 @@ VLCC="python3 $SRCDIR/compiler/main.py"
 GENCC="$SRCDIR/gen/compile.sh"
 TESSLA_JAR=../tessla/tessla-rust.jar
 
-REP=10
+source ../setup.sh
 
 # compile the tessla monitor
 java -jar $TESSLA_JAR compile-rust primes.tessla -b tessla-monitor
 
-for i in `seq 1 $REP`; do
+PRIMES_NUM=40000
+if [ "$PRIMES_10000" = "yes" ]; then
+	PRIMES_NUM=10000
+fi
+
+for i in `seq 1 $REPEAT`; do
 for SHM_BUFSIZE in 8; do
 #for SHM_BUFSIZE in 8 16; do
         make clean -j  -C $SRCDIR
@@ -38,10 +43,9 @@ for SHM_BUFSIZE in 8; do
 		mv monitor vamos-tessla
 
                 #for PRIMES_NUM in 10000 20000 30000 40000; do
-                for PRIMES_NUM in 40000; do
-                	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "forward"
-                	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "forward" "bad"
-                done
+                ./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "forward"
+                ./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "forward" "bad"
+		#done
 
 		SPEC_IN="primes-align-tessla.txt.in"
 		# generate monitor spec
@@ -54,10 +58,9 @@ for SHM_BUFSIZE in 8; do
 		mv monitor vamos-tessla
 
                 #for PRIMES_NUM in 10000 20000 30000 40000; do
-                for PRIMES_NUM in 40000; do
-                	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "align"
-                	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "align" "bad"
-                done
+                ./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "align"
+                ./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "align" "bad"
+		#done
 
 
 		SPEC_IN="primes-align2-tessla.txt.in"
@@ -69,12 +72,9 @@ for SHM_BUFSIZE in 8; do
 		mv monitor vamos-tessla
 
                 # for PRIMES_NUM in 10000 20000 30000 40000; do
-                for PRIMES_NUM in 40000; do
-                	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "alternate"
-                	./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "alternate" "bad"
-                done
-
-
+                ./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "alternate"
+                ./run-tessla.sh $SHM_BUFSIZE $ARBITER_BUFSIZE $PRIMES_NUM "alternate" "bad"
+		#done
 
         done
 done
