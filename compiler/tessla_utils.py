@@ -3,7 +3,8 @@ from operator import pos
 from cfile_utils import *
 import os
 
-state_type = '''State<
+x_state_type = 'aaa'
+old_state_type = '''State<
 (),
 fn(TesslaValue<(TesslaInt, TesslaInt, TesslaInt)>, i64) -> Result<(), ()>,
 fn(TesslaValue<(TesslaInt, TesslaInt, TesslaInt)>, i64) -> Result<(), ()>,
@@ -70,7 +71,7 @@ def get_rust_file_args(args):
     return args_result, value_args
 
 
-def get_rust_code(possible_events):
+def get_rust_code(possible_events, state_type):
     answer = ""
 
     for (event_name, data) in possible_events.items():
@@ -82,7 +83,7 @@ def get_rust_code(possible_events):
             Value_args = f"Value(({Value_args}))"
             answer+=f'''
 #[no_mangle]
-extern "C" fn RUST_FFI_{event_name} (mut bs : &mut {state_type}, {args} ts : c_long) {"{"}
+extern "C" fn RUST_FFI_{event_name} (bs : &mut {state_type}, {args} ts : c_long) {"{"}
     bs.step(ts.into(), false).expect("Step failed");
     bs.set_{event_name}({Value_args});
     bs.flush().expect("Flush failed");
@@ -90,7 +91,57 @@ extern "C" fn RUST_FFI_{event_name} (mut bs : &mut {state_type}, {args} ts : c_l
 '''
     return answer
 
-def get_rust_file(mapping, arbiter_event_source) -> str:
+def try_parse_state_type(lines) -> str:
+    found=0
+    bracketcount=0
+    buffer=""
+    ret=old_state_type
+    for line in lines:
+        if found==0:
+            if line.strip().startswith("impl Default"):
+                buffer=buffer+line.strip()[12:].strip()
+                found=1
+                continue
+        if found==1:
+            buffer=buffer+line.strip()
+            if(buffer.startswith("for State<")):
+                bracketcount=1
+                ret=buffer[4:]
+                buffer=buffer[10:]
+                found=2
+                while bracketcount>0 and len(buffer)>0:
+                    if buffer[0:2]=="->":
+                        ret=ret+buffer[0]
+                        buffer=buffer[1:]
+                    elif buffer[0]=="<":
+                        bracketcount=bracketcount+1
+                    elif buffer[0]==">":
+                        bracketcount=bracketcount-1
+                    ret=ret+buffer[0]
+                    buffer=buffer[1:]
+                continue
+            elif len(buffer)>=10:
+                found=0
+                buffer=""
+        if found==2:
+            buffer=buffer+line.strip()
+            while bracketcount>0 and len(buffer)>0:
+                if buffer[0:2]=="->":
+                    ret=ret+buffer[0]
+                    buffer=buffer[1:]
+                elif buffer[0]=="<":
+                    bracketcount=bracketcount+1
+                elif buffer[0]==">":
+                    bracketcount=bracketcount-1
+                ret=ret+buffer[0]
+                buffer=buffer[1:]
+            if(bracketcount==0):
+                break
+    return ret
+
+def get_rust_file(mapping, arbiter_event_source,origlines) -> str:
+    state_type = try_parse_state_type(origlines)
+    print("STATE TYPE: "+state_type)
     possible_events = mapping[arbiter_event_source]
     return f'''
 #[no_mangle]
@@ -99,7 +150,7 @@ extern "C" fn moninit() -> Box<{state_type}>
     Box::new(State::default())
 {"}"}
 
-{get_rust_code(possible_events)}
+{get_rust_code(possible_events, state_type)}
 '''
 
 def received_events_declare_args(event_name, data):
