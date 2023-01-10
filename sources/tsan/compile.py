@@ -29,7 +29,7 @@ def get_build_type():
     config = f"{SHAMONDIR}/shamonConfig.cmake"
     with open(config, "r") as f:
         for line in f:
-            if line.startswith("set( SHAMON_BUILD_TYPE"):
+            if line.startswith("set( shamon_BUILD_TYPE"):
                 return line.split()[2]
     return None
 
@@ -37,7 +37,7 @@ def get_compiler():
     config = f"{SHAMONDIR}/shamonConfig.cmake"
     with open(config, "r") as f:
         for line in f:
-            if line.startswith("set( SHAMON_C_COMPILER"):
+            if line.startswith("set( shamon_C_COMPILER"):
                 return line.split()[2]
     return None
 
