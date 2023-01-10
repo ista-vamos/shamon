@@ -5,11 +5,11 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "event.h"
-#include "shamon.h"
-#include "signatures.h"
-#include "source.h"
-#include "stream-regex.h"
+#include "shamon/core/event.h"
+#include "shamon/core/shamon.h"
+#include "shamon/core/signatures.h"
+#include "shamon/core/source.h"
+#include "shamon/streams/stream-regex.h"
 #include "monitors-utils.h"
 
 static inline void dump_args(shm_stream *stream, shm_event_regex *ev,

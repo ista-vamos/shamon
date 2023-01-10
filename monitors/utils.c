@@ -3,9 +3,8 @@
 #include <string.h>
 
 #include "monitors-utils.h"
-#include "source.h"
-#include "stream.h"
-#include "streams.h"
+#include "shamon/core/stream.h"
+#include "shamon/streams/streams.h"
 
 shm_stream *create_stream(int argc, char *argv[], int arg_i,
                           const char *expected_stream_name,

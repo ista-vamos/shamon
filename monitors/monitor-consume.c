@@ -7,11 +7,11 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "arbiter.h"
-#include "event.h"
+#include "shamon/core/arbiter.h"
+#include "shamon/core/event.h"
 #include "monitors-utils.h"
-#include "signatures.h"
-#include "stream.h"
+#include "shamon/core/signatures.h"
+#include "shamon/core/stream.h"
 
 #define SLEEP_NS_INIT (50)
 #define SLEEP_THRESHOLD_NS (10000000)

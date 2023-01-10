@@ -6,12 +6,12 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "event.h"
+#include "shamon/core/event.h"
 #include "monitors-utils.h"
-#include "shamon.h"
-#include "signatures.h"
-#include "source.h"
-#include "stream-drregex.h"
+#include "shamon/core/shamon.h"
+#include "shamon/core/signatures.h"
+#include "shamon/core/source.h"
+#include "shamon/streams/stream-drregex.h"
 
 static inline void dump_args(shm_stream *stream, shm_event_drregex *ev,
                              const char *signature) {

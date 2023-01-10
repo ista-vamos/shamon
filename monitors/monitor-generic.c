@@ -7,16 +7,15 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "arbiter.h"
-#include "event.h"
+#include "shamon/core/arbiter.h"
+#include "shamon/core/event.h"
 #include "monitors-utils.h"
-#include "shamon.h"
-#include "signatures.h"
-#include "source.h"
-#include "stream-generic.h"
-#include "stream.h"
-#include "utils.h"
-#include "vector.h"
+#include "shamon/core/shamon.h"
+#include "shamon/core/signatures.h"
+#include "shamon/core/source.h"
+#include "shamon/streams/stream-generic.h"
+#include "shamon/core/stream.h"
+#include "shamon/core/utils.h"
 
 //#define CHECK_IDS
 #define CHECK_IDS_ABORT
