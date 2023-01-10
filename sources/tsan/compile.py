@@ -26,7 +26,7 @@ SHAMON_LIBS = [
 ]
 
 def get_build_type():
-    config = f"{SHAMONDIR}/shamonConfig.cmake"
+    config = f"{SHAMONDIR}/cmake/shamon/shamonConfig.cmake"
     with open(config, "r") as f:
         for line in f:
             if line.startswith("set( shamon_BUILD_TYPE"):
@@ -34,7 +34,7 @@ def get_build_type():
     return None
 
 def get_compiler():
-    config = f"{SHAMONDIR}/shamonConfig.cmake"
+    config = f"{SHAMONDIR}/cmake/shamon/shamonConfig.cmake"
     with open(config, "r") as f:
         for line in f:
             if line.startswith("set( shamon_C_COMPILER"):
